@@ -114,3 +114,8 @@ export async function loginAction(
 export async function logoutAction() {
   await signOut({ redirectTo: "/" });
 }
+
+export async function googleSignInAction(formData: FormData) {
+  const callbackUrl = String(formData.get("callbackUrl") ?? "/dashboard");
+  await signIn("google", { redirectTo: callbackUrl });
+}
