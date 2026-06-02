@@ -6,6 +6,7 @@ const UserSchema = new Schema(
     passwordHash: { type: String, required: false },
     name: { type: String, required: true, trim: true },
     image: { type: String },
+    role: { type: String, enum: ["user", "admin"], default: "user", index: true },
     plan: { type: String, enum: ["free", "standard"], default: "free" },
     consultationsRemaining: { type: Number, default: 1 },
     resetAt: { type: Date },

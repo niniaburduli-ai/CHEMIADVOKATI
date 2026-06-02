@@ -36,6 +36,14 @@ export async function Header() {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              {user.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  ადმინი
+                </Link>
+              )}
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user.name ?? user.email}
               </span>

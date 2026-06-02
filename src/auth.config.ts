@@ -8,7 +8,10 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
+      const isAdmin = auth?.user?.role === "admin";
+      const isAdminArea = nextUrl.pathname.startsWith("/admin");
       const isProtected =
+        isAdminArea ||
         nextUrl.pathname.startsWith("/dashboard") ||
         nextUrl.pathname.startsWith("/chat") ||
         nextUrl.pathname.startsWith("/billing");
@@ -21,6 +24,9 @@ export const authConfig = {
         url.searchParams.set("callbackUrl", nextUrl.pathname);
         return Response.redirect(url);
       }
+      if (isAdminArea && isLoggedIn && !isAdmin) {
+        return Response.redirect(new URL("/dashboard", nextUrl));
+      }
       if (isAuthPage && isLoggedIn) {
         return Response.redirect(new URL("/dashboard", nextUrl));
       }
@@ -28,13 +34,15 @@ export const authConfig = {
     },
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as { id?: string }).id;
+        token.id = user.id;
+        token.role = user.role ?? "user";
       }
       return token;
     },
     async session({ session, token }) {
-      if (token?.id && session.user) {
-        (session.user as { id?: string }).id = token.id as string;
+      if (session.user) {
+        if (token?.id) session.user.id = token.id as string;
+        session.user.role = (token.role as "user" | "admin") ?? "user";
       }
       return session;
     },

@@ -40,6 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           image: user.image ?? null,
+          role: user.role ?? "user",
         };
       },
     }),
@@ -60,6 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await User.updateOne({ _id: existing._id }, { $set: patch });
         }
         user.id = String(existing._id);
+        user.role = existing.role ?? "user";
       } else {
         const created = await User.create({
           email: user.email,
@@ -69,6 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           consultationsRemaining: 1,
         });
         user.id = String(created._id);
+        user.role = created.role ?? "user";
       }
       return true;
     },
