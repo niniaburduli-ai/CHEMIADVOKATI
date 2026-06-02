@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FileUpload } from "@/components/site/file-upload";
 
 type Message = {
   id: string;
@@ -141,6 +142,14 @@ export default function ChatPage() {
               send(input);
             }
           }}
+        />
+        <FileUpload
+          disabled={loading}
+          onUploaded={(f) =>
+            setInput((prev) =>
+              prev ? `${prev}\n${f.url}` : f.url
+            )
+          }
         />
         <Button type="submit" size="icon" disabled={loading}>
           <Send className="h-4 w-4" />

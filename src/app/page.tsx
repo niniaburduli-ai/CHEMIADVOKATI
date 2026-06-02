@@ -70,7 +70,7 @@ export default function Home() {
         <Badge variant="secondary" className="mb-4">
           ახალი — AI იურისტი ქართულად
         </Badge>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight md:leading-[1.2]">
           იურიდიული რჩევა ისე, როგორც გესმის
         </h1>
         <p className="mt-6 text-lg text-muted-foreground">
