@@ -5,14 +5,22 @@ import { Send, Sparkles, BookOpen, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/site/file-upload";
+
+type Source = {
+  url: string;
+  lawTitle: string;
+  chapter: string | null;
+  article: string;
+  articleTitle: string | null;
+  label: string;
+};
 
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: { title: string; ref: string }[];
+  sources?: Source[];
 };
 
 const sampleQuestions = [
@@ -22,38 +30,84 @@ const sampleQuestions = [
   "ალიმენტი როგორ გამოითვლება?",
 ];
 
-const mockReply = (q: string): Message => ({
-  id: crypto.randomUUID(),
-  role: "assistant",
-  content:
-    `მოკლე პასუხი: ${q.slice(0, 40)}... — ეს დემო პასუხია. რეალურ ვერსიაში ` +
-    `AI იურისტი დაგეხმარება ქართული კანონმდებლობის საფუძველზე, მარტივი ` +
-    `ენით ახსნით. გადახედე ციტირებულ მუხლებს ქვემოთ.`,
-  sources: [
-    { title: "სამოქალაქო კოდექსი", ref: "მუხლი 286" },
-    { title: "შრომის კოდექსი", ref: "მუხლი 47" },
-  ],
-});
-
 export default function ChatPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const send = (text: string) => {
-    if (!text.trim()) return;
+  const send = async (text: string) => {
+    if (!text.trim() || loading) return;
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: text,
     };
-    setMessages((m) => [...m, userMsg]);
+    const assistantId = crypto.randomUUID();
+    setMessages((m) => [
+      ...m,
+      userMsg,
+      { id: assistantId, role: "assistant", content: "" },
+    ]);
     setInput("");
     setLoading(true);
-    setTimeout(() => {
-      setMessages((m) => [...m, mockReply(text)]);
+
+    const patch = (fn: (msg: Message) => Message) =>
+      setMessages((m) => m.map((msg) => (msg.id === assistantId ? fn(msg) : msg)));
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text }),
+      });
+
+      const ct = res.headers.get("content-type") ?? "";
+
+      // No-match / error path returns JSON { answer, sources }.
+      if (ct.includes("application/json")) {
+        const data = await res.json();
+        patch((msg) => ({
+          ...msg,
+          content: data.answer ?? data.error ?? "შეცდომა.",
+          sources: data.sources ?? [],
+        }));
+        return;
+      }
+
+      // Streaming path: text/plain body + sources in header.
+      let sources: Source[] = [];
+      const raw = res.headers.get("X-Legal-Sources");
+      if (raw) {
+        try {
+          sources = JSON.parse(decodeURIComponent(raw));
+        } catch {
+          sources = [];
+        }
+      }
+
+      if (!res.body) {
+        patch((msg) => ({ ...msg, content: "შეცდომა — პასუხი ვერ მივიღე.", sources }));
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        patch((msg) => ({ ...msg, content: acc }));
+      }
+      patch((msg) => ({ ...msg, content: acc, sources }));
+    } catch {
+      patch((msg) => ({
+        ...msg,
+        content: "შეცდომა — სერვისთან კავშირი ვერ დამყარდა.",
+      }));
+    } finally {
       setLoading(false);
-    }, 900);
+    }
   };
 
   return (
@@ -100,18 +154,39 @@ export default function ChatPage() {
             </div>
             <Card className="flex-1">
               <CardContent className="py-3">
-                <p className="text-sm whitespace-pre-wrap">{m.content}</p>
-                {m.sources && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {m.sources.map((s) => (
-                      <Badge
-                        key={s.ref}
-                        variant="secondary"
-                        className="text-xs"
+                {m.content ? (
+                  <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">წერს...</p>
+                )}
+                {m.sources && m.sources.length > 0 && (
+                  <div className="mt-3 space-y-1.5 border-t pt-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      წყაროები:
+                    </p>
+                    {m.sources.map((s, i) => (
+                      <a
+                        key={`${s.url}-${s.article}-${i}`}
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="flex items-start gap-1.5 text-xs hover:underline"
                       >
-                        <BookOpen className="h-3 w-3 mr-1" />
-                        {s.title} — {s.ref}
-                      </Badge>
+                        <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+                        <span>
+                          <span className="font-medium">{s.lawTitle}</span>
+                          {s.chapter && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {s.chapter}
+                            </span>
+                          )}
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {s.label}
+                          </span>
+                        </span>
+                      </a>
                     ))}
                   </div>
                 )}
@@ -119,9 +194,6 @@ export default function ChatPage() {
             </Card>
           </div>
         ))}
-        {loading && (
-          <div className="text-sm text-muted-foreground pl-11">წერს...</div>
-        )}
       </div>
 
       <form
