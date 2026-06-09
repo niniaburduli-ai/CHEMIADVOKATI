@@ -7,21 +7,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/site/file-upload";
 
-type Source = {
-  url: string;
-  lawTitle: string;
-  chapter: string | null;
+type LegalBasisItem = {
   article: string;
-  articleTitle: string | null;
-  label: string;
+  paragraph: string | null;
+  subparagraph: string | null;
+};
+
+type LegalBasisGroup = {
+  lawName: string;
+  url: string;
+  items: LegalBasisItem[];
 };
 
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
+  legalBasis?: LegalBasisGroup[];
 };
+
+// Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts. When the model
+// can't answer from the approved text we must not show citations beside it.
+const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
+
+/** "მუხლი 37, პუნქტი 2, ქვეპუნქტი „ა“" from a single citation item. */
+function formatItem(it: LegalBasisItem): string {
+  let s = it.article;
+  if (it.paragraph) s += `, პუნქტი ${it.paragraph}`;
+  if (it.subparagraph) s += `, ქვეპუნქტი „${it.subparagraph}“`;
+  return s;
+}
 
 const sampleQuestions = [
   "როგორ გავხსნა ინდმეწარმე?",
@@ -66,27 +81,28 @@ export default function ChatPage() {
       // No-match / error path returns JSON { answer, sources }.
       if (ct.includes("application/json")) {
         const data = await res.json();
+        const content = data.answer ?? data.error ?? "შეცდომა.";
         patch((msg) => ({
           ...msg,
-          content: data.answer ?? data.error ?? "შეცდომა.",
-          sources: data.sources ?? [],
+          content,
+          legalBasis: content.trim() === NOT_FOUND_MSG ? [] : data.legalBasis ?? [],
         }));
         return;
       }
 
-      // Streaming path: text/plain body + sources in header.
-      let sources: Source[] = [];
-      const raw = res.headers.get("X-Legal-Sources");
+      // Streaming path: text/plain body + legal basis in header.
+      let legalBasis: LegalBasisGroup[] = [];
+      const raw = res.headers.get("X-Legal-Basis");
       if (raw) {
         try {
-          sources = JSON.parse(decodeURIComponent(raw));
+          legalBasis = JSON.parse(decodeURIComponent(raw));
         } catch {
-          sources = [];
+          legalBasis = [];
         }
       }
 
       if (!res.body) {
-        patch((msg) => ({ ...msg, content: "შეცდომა — პასუხი ვერ მივიღე.", sources }));
+        patch((msg) => ({ ...msg, content: "შეცდომა — პასუხი ვერ მივიღე.", legalBasis }));
         return;
       }
 
@@ -99,7 +115,12 @@ export default function ChatPage() {
         acc += decoder.decode(value, { stream: true });
         patch((msg) => ({ ...msg, content: acc }));
       }
-      patch((msg) => ({ ...msg, content: acc, sources }));
+      // A not-found answer has no real citations.
+      patch((msg) => ({
+        ...msg,
+        content: acc,
+        legalBasis: acc.trim() === NOT_FOUND_MSG ? [] : legalBasis,
+      }));
     } catch {
       patch((msg) => ({
         ...msg,
@@ -159,34 +180,34 @@ export default function ChatPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">წერს...</p>
                 )}
-                {m.sources && m.sources.length > 0 && (
-                  <div className="mt-3 space-y-1.5 border-t pt-3">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      წყაროები:
+                {m.legalBasis && m.legalBasis.length > 0 && (
+                  <div className="mt-3 space-y-3 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      იურიდიული საფუძველი:
                     </p>
-                    {m.sources.map((s, i) => (
-                      <a
-                        key={`${s.url}-${s.article}-${i}`}
-                        href={s.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="flex items-start gap-1.5 text-xs hover:underline"
-                      >
-                        <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                        <span>
-                          <span className="font-medium">{s.lawTitle}</span>
-                          {s.chapter && (
-                            <span className="text-muted-foreground">
-                              {" "}
-                              · {s.chapter}
-                            </span>
-                          )}
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · {s.label}
-                          </span>
-                        </span>
-                      </a>
+                    {m.legalBasis.map((g) => (
+                      <div key={g.url} className="space-y-1">
+                        <p className="text-xs font-medium">{g.lawName}:</p>
+                        <ul className="ml-1 space-y-0.5">
+                          {g.items.map((it, i) => (
+                            <li
+                              key={`${it.article}-${it.paragraph ?? ""}-${it.subparagraph ?? ""}-${i}`}
+                              className="text-xs text-muted-foreground"
+                            >
+                              {formatItem(it)}
+                            </li>
+                          ))}
+                        </ul>
+                        <a
+                          href={g.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="flex items-start gap-1.5 text-xs text-primary hover:underline"
+                        >
+                          <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>წყარო</span>
+                        </a>
+                      </div>
                     ))}
                   </div>
                 )}

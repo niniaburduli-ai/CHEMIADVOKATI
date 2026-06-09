@@ -1,10 +1,16 @@
 import type { FetchedSource } from "./fetch-source";
 
 /**
- * Lightweight keyword search over fetched source text. No embeddings: we split
- * each document into article-sized chunks and score them by how many query
- * keywords they contain. Good enough to feed only the relevant slices to the
- * model (hard rule #4: find relevant legal text from the approved sources).
+ * Hybrid lexical search over fetched source text. We split each document into
+ * article-sized chunks and score them against a WEIGHTED multi-query:
+ *   - the user's original wording (weight 1),
+ *   - LLM-extracted legal keywords / synonyms (weight 2 — strongest signal),
+ *   - an LLM hypothetical answer in legal register (HyDE, weight ~1.2).
+ *
+ * The keyword + HyDE terms are produced by query-understanding.ts, so a question
+ * phrased in everyday language still matches the formal legal text even with no
+ * literal word overlap. No embeddings needed (hard rule #4: find relevant legal
+ * text from the approved sources).
  */
 
 export type Chunk = {
@@ -19,13 +25,20 @@ export type Chunk = {
   articleTitle?: string;
   /** Combined human label, e.g. "მუხლი 32. შვებულების მიცემის წესი". */
   label: string;
+  /** This window's text (used for scoring). */
   text: string;
+  /** Stable per-article key (url + article) for aggregation. */
+  articleKey: string;
+  /** Full article text (capped) — returned to the model so late notes survive. */
+  fullText: string;
 };
 
 export type ScoredChunk = Chunk & { score: number };
 
 const MIN_TOKEN_LEN = 3;
-const MAX_CHUNK_CHARS = 900;
+// Cap retained per article. Generous so a trailing "შენიშვნა" note is included
+// in fullText; the model-side cleanChunk later keeps head+tail within budget.
+const ARTICLE_CAP = 7000;
 
 // Georgian article marker, e.g. "მუხლი 286" / "მუხლი 1421".
 const ARTICLE_RE = /მუხლი\s+\d+[¹²³\d.\-–]*/g;
@@ -69,39 +82,79 @@ function chunkDocument(src: FetchedSource): Chunk[] {
     // No article structure — chunk by size on paragraph boundaries.
     const paras = text.split(/\n{2,}/);
     let buf = "";
-    const push = (t: string) =>
-      chunks.push({ url: src.url, lawTitle: src.title, article: src.title, label: src.title, text: t.trim() });
+    let n = 0;
+    const push = (t: string) => {
+      const body = t.trim();
+      if (!body) return;
+      chunks.push({
+        url: src.url,
+        lawTitle: src.title,
+        article: src.title,
+        label: src.title,
+        text: body,
+        articleKey: `${src.url}#${n++}`,
+        fullText: body.slice(0, ARTICLE_CAP),
+      });
+    };
     for (const p of paras) {
-      if ((buf + "\n\n" + p).length > MAX_CHUNK_CHARS && buf) {
+      if ((buf + "\n\n" + p).length > WINDOW_CHARS && buf) {
         push(buf);
         buf = p;
       } else {
         buf = buf ? `${buf}\n\n${p}` : p;
       }
     }
-    if (buf.trim()) push(buf);
+    push(buf);
     return chunks;
   }
 
   for (let i = 0; i < markers.length; i++) {
     const start = markers[i].index;
     const end = i + 1 < markers.length ? markers[i + 1].index : text.length;
-    let body = text.slice(start, end).trim();
-    if (body.length > MAX_CHUNK_CHARS) body = body.slice(0, MAX_CHUNK_CHARS);
+    const body = text.slice(start, end).trim();
     if (!body) continue;
     const article = markers[i].label.replace(/\.$/, "");
     const articleTitle = extractArticleTitle(body);
-    chunks.push({
-      url: src.url,
-      lawTitle: src.title,
-      chapter: chapterAt(start),
-      article,
-      articleTitle,
-      label: articleTitle ? `${article}. ${articleTitle}` : article,
-      text: body,
-    });
+    const chapter = chapterAt(start);
+    const label = articleTitle ? `${article}. ${articleTitle}` : article;
+    const articleKey = `${src.url}|${article}`;
+    const fullText = body.slice(0, ARTICLE_CAP);
+
+    // Score against overlapping windows (so a rule buried late in a long
+    // article still matches the search), but every window carries the whole
+    // article's text — searchSources aggregates per article and returns
+    // fullText, so trailing "შენიშვნა" notes reach the model intact.
+    for (const piece of windows(body)) {
+      chunks.push({
+        url: src.url,
+        lawTitle: src.title,
+        chapter,
+        article,
+        articleTitle,
+        label,
+        text: piece,
+        articleKey,
+        fullText,
+      });
+    }
   }
   return chunks;
+}
+
+const WINDOW_CHARS = 1200;
+const WINDOW_OVERLAP = 200;
+const MAX_WINDOWS = 10;
+
+/** Split a long article body into overlapping windows (or return it whole). */
+function windows(body: string): string[] {
+  if (body.length <= WINDOW_CHARS) return [body];
+  const out: string[] = [];
+  let pos = 0;
+  while (pos < body.length && out.length < MAX_WINDOWS) {
+    out.push(body.slice(pos, pos + WINDOW_CHARS));
+    pos += WINDOW_CHARS - WINDOW_OVERLAP;
+  }
+  return out;
 }
 
 /**
@@ -133,12 +186,51 @@ const TITLE_ZONE_CHARS = 80;
 const FREQ_CAP = 3; // low cap so dense repetition can't bury concise articles
 const TITLE_WEIGHT = 5;
 
-function scoreChunk(chunkText: string, stems: string[]): number {
+// Relative weights of the three query channels.
+const W_ORIGINAL = 1;
+const W_KEYWORD = 2;
+const W_HYPOTHETICAL = 1.2;
+
+/** Structured, weighted query. A plain string is treated as `original` only. */
+export type SearchQuery = {
+  original: string;
+  keywords?: string[];
+  hypothetical?: string;
+};
+
+/**
+ * Collapse all three channels into one stem→weight map, keeping the highest
+ * weight when the same stem appears in multiple channels (so a term that is both
+ * in the question and an extracted keyword scores at the keyword weight, not the
+ * sum — prevents double counting).
+ */
+function buildWeightedStems(query: SearchQuery): Map<string, number> {
+  const weighted = new Map<string, number>();
+  const add = (text: string, weight: number) => {
+    for (const stem of tokenize(text)) {
+      const prev = weighted.get(stem) ?? 0;
+      if (weight > prev) weighted.set(stem, weight);
+    }
+  };
+  add(query.original, W_ORIGINAL);
+  if (query.hypothetical) add(query.hypothetical, W_HYPOTHETICAL);
+  for (const kw of query.keywords ?? []) add(kw, W_KEYWORD);
+  return weighted;
+}
+
+type ChunkScore = { score: number; distinct: number; titleHit: boolean };
+
+function scoreChunk(
+  chunkText: string,
+  weightedStems: Map<string, number>
+): ChunkScore {
   const hay = chunkText.toLowerCase();
   const title = hay.slice(0, TITLE_ZONE_CHARS);
   let score = 0;
   let distinct = 0;
-  for (const s of stems) {
+  let titleHit = false;
+
+  for (const [s, weight] of weightedStems) {
     let from = 0;
     let count = 0;
     for (;;) {
@@ -149,37 +241,70 @@ function scoreChunk(chunkText: string, stems: string[]): number {
       if (count >= FREQ_CAP) break;
     }
     if (count > 0) distinct++;
-    score += count;
-    if (title.includes(s)) score += TITLE_WEIGHT;
+    score += count * weight;
+    if (title.includes(s)) {
+      score += TITLE_WEIGHT * weight;
+      titleHit = true;
+    }
   }
-  // Reward chunks that hit several distinct keywords, not one repeated word.
-  return score + distinct * 2;
+  // Reward chunks that hit several distinct terms, not one repeated word.
+  return { score: score + distinct * 2, distinct, titleHit };
 }
 
 /**
- * Search across all fetched sources, return the top matching chunks.
+ * Search across all fetched sources, return the top matching ARTICLES.
+ *
+ * Windows are scored for recall (a rule buried late in a long article still
+ * matches), but results are aggregated per article — each returned chunk holds
+ * the article's full text, so trailing "შენიშვნა" notes reach the model rather
+ * than being lost to whichever single window happened to rank.
+ *
  * Returns [] when nothing meaningfully matches (hard rule #7: don't guess).
  */
 export function searchSources(
   sources: FetchedSource[],
-  query: string,
-  topK = 4
+  query: string | SearchQuery,
+  topK = 5
 ): ScoredChunk[] {
-  const stems = tokenize(query);
-  if (stems.length === 0) return [];
+  const q: SearchQuery = typeof query === "string" ? { original: query } : query;
+  const weightedStems = buildWeightedStems(q);
+  if (weightedStems.size === 0) return [];
 
-  const scored: ScoredChunk[] = [];
+  // Best-scoring window per article, plus a small bonus for multiple matching
+  // windows (broad relevance across the article).
+  const best = new Map<
+    string,
+    { chunk: Chunk; score: number; hits: number }
+  >();
   for (const src of sources) {
     for (const chunk of chunkDocument(src)) {
-      const score = scoreChunk(chunk.text, stems);
-      if (score > 0) scored.push({ ...chunk, score });
+      const { score, distinct, titleHit } = scoreChunk(chunk.text, weightedStems);
+      if (!((titleHit || distinct >= 2) && score >= 3)) continue;
+      const prev = best.get(chunk.articleKey);
+      if (!prev) {
+        best.set(chunk.articleKey, { chunk, score, hits: 1 });
+      } else {
+        prev.hits += 1;
+        if (score > prev.score) {
+          prev.score = score;
+          prev.chunk = chunk;
+        }
+      }
     }
+  }
+
+  const articles: ScoredChunk[] = [];
+  for (const { chunk, score, hits } of best.values()) {
+    // Return the FULL article text (not the single matched window).
+    articles.push({
+      ...chunk,
+      text: chunk.fullText,
+      score: score + Math.min(hits - 1, 4) * 2,
+    });
   }
 
   // Stable sort (score desc); ties keep document order, so general/foundational
   // articles (which appear earlier in a legal code) rank ahead of later ones.
-  scored.sort((a, b) => b.score - a.score);
-  // Require a title-relevance hit or a genuine multi-keyword match, not a single
-  // incidental mention — keeps the not-found path honest (hard rule #7).
-  return scored.filter((c) => c.score >= 4).slice(0, topK);
+  articles.sort((a, b) => b.score - a.score);
+  return articles.slice(0, topK);
 }
