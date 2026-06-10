@@ -1,4 +1,4 @@
-import { isAllowedHost, isApprovedUrl } from "./sources";
+import { isAllowedHost, isApprovedUrl, stripCitations } from "./sources";
 
 /**
  * Fetches an approved Matsne source, strips it to plain text, and caches the
@@ -17,7 +17,26 @@ export type FetchedSource = {
 type CacheEntry = { value: FetchedSource; expires: number };
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
-const FETCH_TIMEOUT_MS = 15_000;
+const FETCH_TIMEOUT_MS = 30_000; // matsne law pages can be 5–8 MB
+const MAX_ATTEMPTS = 2; // matsne's WAF returns flaky "Access Denied" stubs
+const RETRY_DELAY_MS = 600;
+const MIN_DOC_CHARS = 400; // shorter than this ⇒ not a real law page
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * matsne occasionally answers with an HTTP 200 "Access Denied" / error stub
+ * instead of the document. Reject anything that doesn't look like a law page so
+ * we never cache or serve garbage.
+ */
+function looksLikeLaw(text: string): boolean {
+  if (text.length < MIN_DOC_CHARS) return false;
+  if (!/მუხლი/.test(text)) return false;
+  if (/Access Denied|could not be accessed|Something went wrong/i.test(text)) {
+    return false;
+  }
+  return true;
+}
 
 // Survives hot reload in dev; per-instance in prod (fine — it's just a cache).
 declare global {
@@ -41,10 +60,17 @@ function stripHtml(html: string): { title: string; text: string } {
     .replace(/<[^>]+>/g, " ");
 
   body = decodeEntities(body)
-    .replace(/[ \t\f\v]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/^[ \t]+|[ \t]+$/gm, "")
+    .replace(/[^\S\r\n]+/g, " ") // collapse spaces/tabs, keep newlines
+    // matsne pages pad articles with long runs of blank lines — collapse any
+    // run of (whitespace) newlines to a single paragraph break so real content
+    // isn't pushed past the chunk size limit.
+    .replace(/(?:[ \t]*\r?\n){2,}/g, "\n\n")
+    .replace(/[ \t]*\r?\n[ \t]*/g, "\n")
+    .replace(/\n{2,}/g, "\n\n")
     .trim();
+
+  // Drop amendment-citation / publication noise that bloats articles.
+  body = stripCitations(body).replace(/\n{2,}/g, "\n\n").trim();
 
   return { title: rawTitle, text: body };
 }
@@ -92,32 +118,38 @@ export async function fetchApprovedSource(
     return cached.value;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "ChemiAdvokati/1.0 (+legal-assistant; approved-sources-only)",
-        Accept: "text/html",
-      },
-    });
-    if (!res.ok) {
-      // Serve stale on failure if we have it; otherwise give up gracefully.
-      return cached?.value ?? null;
+  // Retry a couple of times — matsne's WAF intermittently denies requests.
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "ka,en;q=0.8",
+        },
+      });
+      if (res.ok) {
+        const html = await res.text();
+        const { title, text } = stripHtml(html);
+        // Only cache/serve content that actually looks like a law page.
+        if (looksLikeLaw(text)) {
+          const value: FetchedSource = { url, title: title || fallbackTitle, text };
+          cache.set(url, { value, expires: Date.now() + TTL_MS });
+          return value;
+        }
+      }
+    } catch {
+      // timeout / network error — fall through to retry
+    } finally {
+      clearTimeout(timer);
     }
-    const html = await res.text();
-    const { title, text } = stripHtml(html);
-    const value: FetchedSource = {
-      url,
-      title: title || fallbackTitle,
-      text,
-    };
-    cache.set(url, { value, expires: Date.now() + TTL_MS });
-    return value;
-  } catch {
-    return cached?.value ?? null;
-  } finally {
-    clearTimeout(timer);
+    if (attempt < MAX_ATTEMPTS) await sleep(RETRY_DELAY_MS);
   }
+
+  // All attempts failed or returned a non-law page: serve stale if we have it.
+  return cached?.value ?? null;
 }

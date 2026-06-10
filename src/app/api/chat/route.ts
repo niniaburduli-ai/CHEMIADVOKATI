@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
 import { ConsultationCreateSchema } from "@/lib/validators";
-import { APPROVED_SOURCES } from "@/lib/legal/sources";
+import { APPROVED_SOURCES, cleanLawName } from "@/lib/legal/sources";
 import { fetchApprovedSource } from "@/lib/legal/fetch-source";
-import { searchSources } from "@/lib/legal/search";
+import { searchSources, type SearchQuery } from "@/lib/legal/search";
+import { expandQuery } from "@/lib/legal/query-understanding";
+import { buildLegalBasis } from "@/lib/legal/citations";
 import {
   SYSTEM_PROMPT,
+  FEWSHOT,
+  NOT_FOUND_MSG,
   buildGroundedPrompt,
-  streamLegalAnswer,
+  generateLegalAnswer,
+  parseAnswer,
+  streamText,
 } from "@/lib/legal/openrouter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -31,62 +35,88 @@ export async function POST(req: Request) {
   }
   const question = parsed.data.question;
 
-  // Hard rule #3: fetch/read only the approved sources before answering.
-  const fetched = (
-    await Promise.all(
-      APPROVED_SOURCES.map((s) => fetchApprovedSource(s.url, s.title))
-    )
-  ).filter((s): s is NonNullable<typeof s> => s !== null);
+  // Understand + classify the question first, then fetch ONLY the law(s) it is
+  // about (hard rule #3: read only approved sources). If the classifier can't
+  // decide (empty), fall back to all sources so we never wrongly refuse.
+  const expanded = await expandQuery(question);
+  const selected =
+    expanded.sourceIds.length > 0
+      ? APPROVED_SOURCES.filter((s) => expanded.sourceIds.includes(s.id))
+      : APPROVED_SOURCES;
+
+  const fetchedRaw = await Promise.all(
+    selected.map((s) => fetchApprovedSource(s.url, s.title))
+  );
+  const fetched = fetchedRaw.filter(
+    (s): s is NonNullable<typeof s> => s !== null
+  );
 
   if (fetched.length === 0) {
     return NextResponse.json(
-      { answer: NOT_FOUND_MSG, sources: [] },
+      { answer: NOT_FOUND_MSG, legalBasis: [] },
       { status: 200 }
     );
   }
 
-  // Hard rule #4: find relevant text. #7: if nothing matches, don't guess.
-  const matches = searchSources(fetched, question, 3);
+  // Hard rule #4: find relevant text via the weighted multi-query (original +
+  // legal keywords + HyDE). #7: if nothing matches, don't guess.
+  const searchQuery: SearchQuery = {
+    original: expanded.original,
+    keywords: expanded.keywords,
+    hypothetical: expanded.hypothetical,
+  };
+  const matches = searchSources(fetched, searchQuery, 4);
   if (matches.length === 0) {
     return NextResponse.json(
-      { answer: NOT_FOUND_MSG, sources: [] },
+      { answer: NOT_FOUND_MSG, legalBasis: [] },
       { status: 200 }
     );
   }
 
-  // One citation per matched article (hard rule #6: include source + where).
-  const sourceMeta = matches.map((m) => ({
-    url: m.url,
-    lawTitle: m.lawTitle,
-    chapter: m.chapter ?? null,
-    article: m.article,
-    articleTitle: m.articleTitle ?? null,
-    label: m.label,
-  }));
+  // Pass ONLY matched source text (clean law names) to the model to summarize.
+  const userPrompt = buildGroundedPrompt(
+    question,
+    matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) }))
+  );
 
-  // Hard rule #4/#5/#8: pass ONLY matched source text to the model to summarize.
-  const userPrompt = buildGroundedPrompt(question, matches);
-
-  let stream: ReadableStream<Uint8Array>;
+  let full: string;
   try {
-    stream = await streamLegalAnswer([
+    full = await generateLegalAnswer([
       { role: "system", content: SYSTEM_PROMPT },
+      ...FEWSHOT,
       { role: "user", content: userPrompt },
     ]);
   } catch (err) {
     return NextResponse.json(
-      { error: "AI service unavailable", detail: String(err instanceof Error ? err.message : err) },
+      {
+        error: "AI service unavailable",
+        detail: String(err instanceof Error ? err.message : err),
+      },
       { status: 502 }
     );
   }
 
-  // Stream plain text answer; matched sources travel in a header so the client
-  // can show citations (hard rule #6: include the source link used).
-  return new Response(stream, {
+  // Split prose from the model's structured citation block.
+  const { prose, citations } = parseAnswer(full);
+  const answer = prose || NOT_FOUND_MSG;
+
+  // No grounded answer → no citations (hard rule #7).
+  if (answer.trim() === NOT_FOUND_MSG) {
+    return NextResponse.json(
+      { answer: NOT_FOUND_MSG, legalBasis: [] },
+      { status: 200 }
+    );
+  }
+
+  // Build the grounded Legal Basis (validated against the provided articles).
+  const legalBasis = buildLegalBasis(matches, citations);
+
+  // Stream the prose; the Legal Basis travels in a header (hard rule #6).
+  return new Response(streamText(answer), {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store",
-      "X-Legal-Sources": encodeURIComponent(JSON.stringify(sourceMeta)),
+      "X-Legal-Basis": encodeURIComponent(JSON.stringify(legalBasis)),
     },
   });
 }
