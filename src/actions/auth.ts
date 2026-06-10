@@ -26,6 +26,24 @@ export async function registerAction(
     email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),
   };
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const consentAccepted = formData.get("consentAccepted");
+
+  if (consentAccepted !== "on") {
+    return {
+      ok: false,
+      fields: { consentAccepted: ["გთხოვთ დაეთანხმოთ მომსახურების პირობებსა და კონფიდენციალურობის პოლიტიკას"] },
+      values: { name: raw.name, email: raw.email },
+    };
+  }
+
+  if (raw.password !== confirmPassword) {
+    return {
+      ok: false,
+      fields: { confirmPassword: ["პაროლები არ ემთხვევა"] },
+      values: { name: raw.name, email: raw.email },
+    };
+  }
 
   const parsed = RegisterSchema.safeParse(raw);
   if (!parsed.success) {
@@ -53,6 +71,8 @@ export async function registerAction(
     passwordHash,
     plan: "free",
     consultationsRemaining: 1,
+    consentAcceptedAt: new Date(),
+    consentVersion: "1.0",
   });
 
   try {

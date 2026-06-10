@@ -45,6 +45,16 @@ declare global {
 const cache: Map<string, CacheEntry> =
   globalThis.__legalSourceCache ?? (globalThis.__legalSourceCache = new Map());
 
+// Maps ASCII digit chars to their Unicode superscript equivalents.
+// Used to survive matsne's <sup>N</sup> encoding of indexed articles (153⁶, 156¹…).
+const SUP_MAP: Record<string, string> = {
+  "0": "⁰", "1": "¹", "2": "²", "3": "³",
+  "4": "⁴", "5": "⁵", "6": "⁶",
+  "7": "⁷", "8": "⁸", "9": "⁹",
+};
+const supToUnicode = (digits: string) =>
+  digits.split("").map((d) => SUP_MAP[d] ?? d).join("");
+
 function stripHtml(html: string): { title: string; text: string } {
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const rawTitle = titleMatch ? decodeEntities(titleMatch[1]).trim() : "";
@@ -55,6 +65,10 @@ function stripHtml(html: string): { title: string; text: string } {
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
     .replace(/<head[\s\S]*?<\/head>/gi, " ")
+    // Preserve indexed-article superscripts BEFORE all other tags are stripped.
+    // matsne encodes "153⁶" as "153<sup>6</sup>"; without this the article label
+    // becomes "153  6  " which ARTICLE_RE fails to match.
+    .replace(/<sup>(\d+)<\/sup>/gi, (_, d: string) => supToUnicode(d))
     // keep paragraph/line structure
     .replace(/<\/(p|div|br|li|tr|h[1-6])>/gi, "\n")
     .replace(/<[^>]+>/g, " ");

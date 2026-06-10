@@ -7,9 +7,13 @@ const UserSchema = new Schema(
     name: { type: String, required: true, trim: true },
     image: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user", index: true },
-    plan: { type: String, enum: ["free", "standard"], default: "free" },
+    plan: { type: String, enum: ["free", "standard", "premium"], default: "free" },
     consultationsRemaining: { type: Number, default: 1 },
+    docGenerationRemaining: { type: Number, default: 1 },
+    docReviewRemaining: { type: Number, default: 1 },
     resetAt: { type: Date },
+    consentAcceptedAt: { type: Date },
+    consentVersion: { type: String, default: "" },
   },
   { timestamps: true }
 );

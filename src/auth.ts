@@ -69,6 +69,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image ?? undefined,
           plan: "free",
           consultationsRemaining: 1,
+          docGenerationRemaining: 1,
+          docReviewRemaining: 1,
+          consentAcceptedAt: new Date(),
+          consentVersion: "1.0",
         });
         user.id = String(created._id);
         user.role = created.role ?? "user";

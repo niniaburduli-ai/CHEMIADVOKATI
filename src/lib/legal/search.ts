@@ -40,12 +40,16 @@ const MIN_TOKEN_LEN = 3;
 // in fullText; the model-side cleanChunk later keeps head+tail within budget.
 const ARTICLE_CAP = 7000;
 
-// Georgian article marker, e.g. "მუხლი 286" / "მუხლი 1421".
-const ARTICLE_RE = /მუხლი\s+\d+[¹²³\d.\-–]*/g;
+// Georgian article marker, e.g. "მუხლი 286" / "მუხლი 153⁶".
+// Character class covers full Unicode superscript range (⁰¹²³⁴⁵⁶⁷⁸⁹) so indexed
+// articles like 153⁶ or 156¹ are matched as a single label, not truncated at the
+// superscript boundary. Previously only ¹²³ (U+00B9/B2/B3) were included, causing
+// any article indexed with ⁴–⁹ (U+2074–2079) to be split into two ghost chunks.
+const ARTICLE_RE = /მუხლი\s+\d+[¹²³⁴⁵⁶⁷⁸⁹⁰\d.\-–]*/g;
 // Chapter ("topic") marker, e.g. "თავი VI. შვებულება".
-const CHAPTER_RE = /თავი\s+[IVXLCDM\d¹²³]+\s*\.?\s*[^\n\r]{0,60}/g;
+const CHAPTER_RE = /თავი\s+[IVXLCDM\d¹²³⁴⁵⁶⁷⁸⁹⁰]+\s*\.?\s*[^\n\r]{0,60}/g;
 // Strip one or more leading "მუხლი N." duplicates from a heading line.
-const ARTICLE_PREFIX_RE = /^(?:მუხლი\s+\d+[¹²³\d.\-–]*\s*\.?\s*)+/;
+const ARTICLE_PREFIX_RE = /^(?:მუხლი\s+\d+[¹²³⁴⁵⁶⁷⁸⁹⁰\d.\-–]*\s*\.?\s*)+/;
 
 /** Heading text on the first line of a chunk, minus the "მუხლი N." prefix. */
 function extractArticleTitle(chunkText: string): string | undefined {

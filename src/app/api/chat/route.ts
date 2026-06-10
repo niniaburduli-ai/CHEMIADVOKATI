@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { dbConnect } from "@/lib/db";
+import { User } from "@/lib/models/user";
+import { Consultation } from "@/lib/models/consultation";
 import { ConsultationCreateSchema } from "@/lib/validators";
 import { APPROVED_SOURCES, cleanLawName } from "@/lib/legal/sources";
 import { fetchApprovedSource } from "@/lib/legal/fetch-source";
@@ -19,6 +23,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -35,9 +44,19 @@ export async function POST(req: Request) {
   }
   const question = parsed.data.question;
 
-  // Understand + classify the question first, then fetch ONLY the law(s) it is
-  // about (hard rule #3: read only approved sources). If the classifier can't
-  // decide (empty), fall back to all sources so we never wrongly refuse.
+  await dbConnect();
+  const user = await User.findById(session.user.id).lean();
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  const isAdmin = user.role === "admin";
+  if (!isAdmin && (user.consultationsRemaining ?? 0) <= 0) {
+    return NextResponse.json(
+      { error: "Consultation quota exceeded. Please upgrade your plan." },
+      { status: 403 }
+    );
+  }
+
   const expanded = await expandQuery(question);
   const selected =
     expanded.sourceIds.length > 0
@@ -58,14 +77,12 @@ export async function POST(req: Request) {
     );
   }
 
-  // Hard rule #4: find relevant text via the weighted multi-query (original +
-  // legal keywords + HyDE). #7: if nothing matches, don't guess.
   const searchQuery: SearchQuery = {
     original: expanded.original,
     keywords: expanded.keywords,
     hypothetical: expanded.hypothetical,
   };
-  const matches = searchSources(fetched, searchQuery, 4);
+  const matches = searchSources(fetched, searchQuery, 6);
   if (matches.length === 0) {
     return NextResponse.json(
       { answer: NOT_FOUND_MSG, legalBasis: [] },
@@ -73,7 +90,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Pass ONLY matched source text (clean law names) to the model to summarize.
   const userPrompt = buildGroundedPrompt(
     question,
     matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) }))
@@ -96,11 +112,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // Split prose from the model's structured citation block.
   const { prose, citations } = parseAnswer(full);
   const answer = prose || NOT_FOUND_MSG;
 
-  // No grounded answer → no citations (hard rule #7).
   if (answer.trim() === NOT_FOUND_MSG) {
     return NextResponse.json(
       { answer: NOT_FOUND_MSG, legalBasis: [] },
@@ -108,10 +122,29 @@ export async function POST(req: Request) {
     );
   }
 
-  // Build the grounded Legal Basis (validated against the provided articles).
   const legalBasis = buildLegalBasis(matches, citations);
 
-  // Stream the prose; the Legal Basis travels in a header (hard rule #6).
+  // Save consultation and decrement quota after a successful AI answer.
+  const sources = legalBasis.flatMap((g) =>
+    g.items.map((i) => ({
+      title: g.lawName,
+      code: g.lawName,
+      articleNumber:
+        i.article +
+        (i.paragraph ? ` პ.${i.paragraph}` : "") +
+        (i.subparagraph ? ` ქ.${i.subparagraph}` : ""),
+      url: g.url,
+    }))
+  );
+
+  const saveOps: Promise<unknown>[] = [
+    Consultation.create({ userId: session.user.id, question, answer, sources }),
+  ];
+  if (!isAdmin) {
+    saveOps.push(User.findByIdAndUpdate(session.user.id, { $inc: { consultationsRemaining: -1 } }));
+  }
+  await Promise.all(saveOps);
+
   return new Response(streamText(answer), {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

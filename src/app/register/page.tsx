@@ -14,7 +14,7 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={null}>
-            <GoogleButton label="რეგისტრაცია Google-ით" />
+            <GoogleButton label="რეგისტრაცია Google-ით" requireConsent />
           </Suspense>
           <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" />
@@ -25,11 +25,6 @@ export default function RegisterPage() {
           <p className="mt-6 text-sm text-center text-muted-foreground">
             უკვე გაქვს ანგარიში?{" "}
             <Link href="/login" className="text-foreground font-medium">შესვლა</Link>
-          </p>
-          <p className="mt-4 text-xs text-center text-muted-foreground">
-            რეგისტრაციით ეთანხმები{" "}
-            <Link href="/terms" className="underline">წესებს</Link> და{" "}
-            <Link href="/privacy" className="underline">კონფიდენციალურობის პოლიტიკას</Link>.
           </p>
         </CardContent>
       </Card>

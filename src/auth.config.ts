@@ -14,19 +14,15 @@ export const authConfig = {
         isAdminArea ||
         nextUrl.pathname.startsWith("/dashboard") ||
         nextUrl.pathname.startsWith("/chat") ||
-        nextUrl.pathname.startsWith("/billing");
+        nextUrl.pathname.startsWith("/billing") ||
+        nextUrl.pathname.startsWith("/generate") ||
+        nextUrl.pathname.startsWith("/review");
       const isAuthPage =
         nextUrl.pathname.startsWith("/login") ||
         nextUrl.pathname.startsWith("/register");
 
-      if (isProtected && !isLoggedIn) {
-        const url = new URL("/login", nextUrl);
-        url.searchParams.set("callbackUrl", nextUrl.pathname);
-        return Response.redirect(url);
-      }
-      if (isAdminArea && isLoggedIn && !isAdmin) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
-      }
+      if (isProtected && !isLoggedIn) return false;
+      if (isAdminArea && isLoggedIn && !isAdmin) return false;
       if (isAuthPage && isLoggedIn) {
         return Response.redirect(new URL("/dashboard", nextUrl));
       }

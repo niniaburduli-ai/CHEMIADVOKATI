@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MessagesSquare, FileText, CreditCard, Clock } from "lucide-react";
+import { MessagesSquare, FileText, CreditCard, Clock, Search, FileCheck } from "lucide-react";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { Consultation } from "@/lib/models/consultation";
+import { Subscription } from "@/lib/models/subscription";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -15,98 +16,226 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PLAN_LIMITS, type Plan } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
-const PLAN_TOTAL = { free: 1, standard: 10 } as const;
+function UsageRow({
+  label,
+  used,
+  total,
+}: {
+  label: string;
+  used: number;
+  total: number;
+}) {
+  const remaining = Math.max(0, total - used);
+  const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
+  return (
+    <div className="mb-4 last:mb-0">
+      <div className="flex justify-between text-sm mb-1">
+        <span className="font-medium">{label}</span>
+        <span className="text-muted-foreground">
+          გამოყენებული: <span className="font-semibold text-foreground">{used} / {total}</span>
+          {" · "}დარჩენილი: <span className="font-semibold text-foreground">{remaining}</span>
+        </span>
+      </div>
+      <div className="h-2 w-full bg-muted rounded overflow-hidden">
+        <div
+          className="h-full bg-primary transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login?callbackUrl=/dashboard");
 
   await dbConnect();
-  const user = await User.findById(session.user.id).select("-passwordHash").lean();
+  const [user, sub] = await Promise.all([
+    User.findById(session.user.id).select("-passwordHash").lean(),
+    Subscription.findOne({ userId: session.user.id }).lean(),
+  ]);
   if (!user) redirect("/login");
 
   const history = await Consultation.find({ userId: session.user.id })
     .sort({ createdAt: -1 })
-    .limit(10)
+    .limit(5)
     .lean();
 
-  const plan = (user.plan ?? "free") as keyof typeof PLAN_TOTAL;
-  const total = PLAN_TOTAL[plan];
-  const remaining = user.consultationsRemaining ?? 0;
-  const used = Math.max(0, total - remaining);
-  const percent = total > 0 ? (used / total) * 100 : 0;
+  const plan = (user.plan ?? "free") as Plan;
+  const limits = PLAN_LIMITS[plan];
+
+  const consultUsed = Math.max(0, limits.consultations - (user.consultationsRemaining ?? 0));
+  const docGenUsed = Math.max(0, limits.docGeneration - (user.docGenerationRemaining ?? 0));
+  const reviewUsed = Math.max(0, limits.docReview - (user.docReviewRemaining ?? 0));
+
+  const subStatus = sub?.status ?? null;
+  const periodEnd = sub?.currentPeriodEnd
+    ? new Date(sub.currentPeriodEnd as unknown as Date).toLocaleDateString("ka-GE")
+    : null;
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-5xl">
       <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">გამარჯობა, {user.name}</h1>
-          <p className="text-muted-foreground mt-1">აქ ხარ შენი იურიდიული ცენტრი</p>
+          <p className="text-muted-foreground mt-1">შენი იურიდიული ცენტრი</p>
         </div>
         <Link href="/chat" className={buttonVariants()}>
           <MessagesSquare className="mr-2 h-4 w-4" /> ახალი კონსულტაცია
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>დარჩენილი კონსულტაცია</CardDescription>
-            <CardTitle className="text-3xl">{remaining}/{total}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-2 w-full bg-muted rounded overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {user.resetAt
-                ? `განახლდება ${new Date(user.resetAt).toLocaleDateString("ka-GE")}`
-                : "უფასო ლიმიტი — განახლება ხელით"}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Quick actions */}
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <Link href="/chat" className="block">
+          <Card className="hover:border-primary/50 transition-colors h-full">
+            <CardHeader className="pb-2">
+              <CardDescription>კონსულტაცია</CardDescription>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessagesSquare className="h-4 w-4" /> AI იურისტი
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                დარჩენილი: {user.consultationsRemaining ?? 0}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/generate" className="block">
+          <Card className="hover:border-primary/50 transition-colors h-full">
+            <CardHeader className="pb-2">
+              <CardDescription>დოკუმენტი</CardDescription>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-4 w-4" /> გენერაცია
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                დარჩენილი: {user.docGenerationRemaining ?? 0}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/review" className="block">
+          <Card className="hover:border-primary/50 transition-colors h-full">
+            <CardHeader className="pb-2">
+              <CardDescription>მიმოხილვა</CardDescription>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Search className="h-4 w-4" /> ანალიზი
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                დარჩენილი: {user.docReviewRemaining ?? 0}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>გეგმა</CardDescription>
-            <CardTitle className="text-2xl flex items-center gap-2 capitalize">
-              {plan === "standard" ? "სტანდარტი" : "უფასო"}
-              {plan === "standard" && <Badge>$5/თვე</Badge>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* My Plan & Usage */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle>ჩემი გეგმა და გამოყენება</CardTitle>
+              <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
+                <span className="capitalize font-medium">
+                  {plan === "standard" ? "სტანდარტი — $5/თვე" : "უფასო"}
+                </span>
+                {subStatus && (
+                  <Badge variant={subStatus === "active" ? "default" : "secondary"}>
+                    {subStatus}
+                  </Badge>
+                )}
+                {periodEnd && (
+                  <span className="text-xs">მოქმედია {periodEnd}-მდე</span>
+                )}
+              </CardDescription>
+            </div>
             <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" })}>
               <CreditCard className="mr-2 h-4 w-4" /> მართვა
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <UsageRow label="კონსულტაციები" used={consultUsed} total={limits.consultations} />
+          <UsageRow label="დოკუმენტის გენერაცია" used={docGenUsed} total={limits.docGeneration} />
+          <UsageRow label="დოკუმენტის მიმოხილვა" used={reviewUsed} total={limits.docReview} />
+          {plan === "free" && (
+            <p className="text-xs text-muted-foreground mt-3">
+              მეტი ლიმიტისთვის{" "}
+              <Link href="/pricing" className="underline text-primary">
+                გადადი სტანდარტ გეგმაზე
+              </Link>
+              .
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>კონსულტაციები</CardDescription>
-            <CardTitle className="text-3xl">{history.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link href="/legislation" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              <FileText className="mr-2 h-4 w-4" /> კანონმდებლობა
-            </Link>
-          </CardContent>
-        </Card>
+      {/* History links */}
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <Link href="/dashboard/consultations">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessagesSquare className="h-4 w-4" /> კონსულტაციების ისტორია
+              </CardTitle>
+              <CardDescription>ყველა შეკითხვა და პასუხი</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/dashboard/documents">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" /> გენერირებული დოკუმენტები
+              </CardTitle>
+              <CardDescription>ჩამოტვირთვა და ნახვა</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/dashboard/reviews">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileCheck className="h-4 w-4" /> მიმოხილვის შედეგები
+              </CardTitle>
+              <CardDescription>ანალიზის ისტორია</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
       </div>
 
+      {/* Recent consultations */}
       <Card>
-        <CardHeader>
-          <CardTitle>კონსულტაციების ისტორია</CardTitle>
-          <CardDescription>ბოლო ნახული შეკითხვები</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>ბოლო კონსულტაციები</CardTitle>
+            <CardDescription>უახლესი 5 შეკითხვა</CardDescription>
+          </div>
+          <Link
+            href="/dashboard/consultations"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
+            ყველა →
+          </Link>
         </CardHeader>
         <CardContent>
           {history.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
-              ჯერ არცერთი კონსულტაცია არ გაქვს. დაიწყე{" "}
-              <Link href="/chat" className="underline">აქ</Link>.
+              ჯერ კონსულტაცია არ გაქვს.{" "}
+              <Link href="/chat" className="underline">
+                დაიწყე აქ
+              </Link>
+              .
             </p>
           ) : (
             <div className="space-y-3">
@@ -116,7 +245,7 @@ export default async function DashboardPage() {
                 return (
                   <div key={id}>
                     <Link
-                      href={`/chat/${id}`}
+                      href={`/dashboard/consultations#${id}`}
                       className="flex items-start justify-between gap-4 py-2 hover:bg-muted/40 -mx-2 px-2 rounded"
                     >
                       <div className="flex-1 min-w-0">

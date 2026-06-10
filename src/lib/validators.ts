@@ -44,11 +44,41 @@ export const UploadNoteSchema = z.object({
 });
 export type UploadNoteInput = z.infer<typeof UploadNoteSchema>;
 
+export const DOC_TYPES = {
+  complaint: "საჩივარი",
+  "rental-agreement": "ქირავნობის ხელშეკრულება",
+  "employment-contract": "შრომის ხელშეკრულება",
+  "power-of-attorney": "მინდობილობა",
+  "demand-letter": "სამართლებრივი მოთხოვნა",
+  "termination-notice": "სამსახურიდან გათავისუფლება",
+} as const;
+
+export type DocType = keyof typeof DOC_TYPES;
+
+export const GenerateDocSchema = z.object({
+  type: z.enum([
+    "complaint",
+    "rental-agreement",
+    "employment-contract",
+    "power-of-attorney",
+    "demand-letter",
+    "termination-notice",
+  ]),
+  details: z.string().min(10).max(2000),
+});
+export type GenerateDocInput = z.infer<typeof GenerateDocSchema>;
+
+export const ReviewDocTextSchema = z.object({
+  text: z.string().min(20).max(10000),
+  fileName: z.string().max(200).optional(),
+});
+export type ReviewDocTextInput = z.infer<typeof ReviewDocTextSchema>;
+
 export const AdminUserUpdateSchema = z
   .object({
     name: z.string().trim().min(2).max(80).optional(),
     role: z.enum(["user", "admin"]).optional(),
-    plan: z.enum(["free", "standard"]).optional(),
+    plan: z.enum(["free", "standard", "premium"]).optional(),
     consultationsRemaining: z.coerce.number().int().min(0).max(9999).optional(),
   })
   .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" });
