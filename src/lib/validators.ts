@@ -21,6 +21,11 @@ export const ConsultationCreateSchema = z.object({
 });
 export type ConsultationCreateInput = z.infer<typeof ConsultationCreateSchema>;
 
+export const CheckoutSchema = z.object({
+  plan: z.enum(["standard", "premium"]),
+});
+export type CheckoutInput = z.infer<typeof CheckoutSchema>;
+
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024; // 2MB
 export const ALLOWED_UPLOAD_TYPES = [
   "image/jpeg",

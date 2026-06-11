@@ -3,8 +3,21 @@ import { Check } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { UpgradeButton } from "@/components/site/upgrade-button";
 
-const plans = [
+type PricingPlan = {
+  name: string;
+  price: string;
+  period: string;
+  desc: string;
+  highlight?: boolean;
+  items: string[];
+  cta: string;
+  href: string;
+  plan?: "standard" | "premium";
+};
+
+const plans: PricingPlan[] = [
   {
     name: "უფასო",
     price: "0₾",
@@ -33,6 +46,7 @@ const plans = [
     ],
     cta: "შეუერთდი",
     href: "/billing",
+    plan: "standard",
   },
   {
     name: "პრო",
@@ -47,6 +61,7 @@ const plans = [
     ],
     cta: "შეუერთდი",
     href: "/billing",
+    plan: "premium",
   },
 ];
 
@@ -105,15 +120,23 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href={p.href}
-                className={buttonVariants({
-                  variant: p.highlight ? "default" : "outline",
-                  className: "mt-6 w-full",
-                })}
-              >
-                {p.cta}
-              </Link>
+              {p.plan ? (
+                <UpgradeButton
+                  plan={p.plan}
+                  label={p.cta}
+                  variant={p.highlight ? "default" : "outline"}
+                />
+              ) : (
+                <Link
+                  href={p.href}
+                  className={buttonVariants({
+                    variant: p.highlight ? "default" : "outline",
+                    className: "mt-6 w-full",
+                  })}
+                >
+                  {p.cta}
+                </Link>
+              )}
             </CardContent>
           </Card>
         ))}

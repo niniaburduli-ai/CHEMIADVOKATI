@@ -12,6 +12,10 @@ const UserSchema = new Schema(
     docGenerationRemaining: { type: Number, default: 1 },
     docReviewRemaining: { type: Number, default: 1 },
     resetAt: { type: Date },
+    // Dodo Payments subscription state.
+    dodoCustomerId: { type: String, index: true },
+    dodoSubscriptionId: { type: String, index: true },
+    subscriptionStatus: { type: String, default: "" }, // active | on_hold | cancelled | expired | failed
     consentAcceptedAt: { type: Date },
     consentVersion: { type: String, default: "" },
   },

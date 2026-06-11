@@ -15,6 +15,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { UpgradeButton } from "@/components/site/upgrade-button";
 import { dbConnect } from "@/lib/db";
 import {
   Consultation,
@@ -91,6 +92,7 @@ const plans = [
     badge: "ყველაზე პოპულარული",
     cta: "აირჩიეთ პაკეტი",
     href: "/register",
+    plan: "standard" as const,
     highlighted: true,
     items: [
       "29 კონსულტაცია AI იურისტთან",
@@ -106,6 +108,7 @@ const plans = [
     badge: null,
     cta: "აირჩიეთ პაკეტი",
     href: "/register",
+    plan: "premium" as const,
     highlighted: false,
     items: [
       "შეუზღუდავი კონსულტაცია AI იურისტთან",
@@ -288,17 +291,30 @@ export default async function Home() {
               </ul>
 
               {/* CTA */}
-              <Link
-                href={p.href}
-                className={[
-                  "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors",
-                  p.highlighted
-                    ? "bg-[#4338ca] hover:bg-[#3730a3] text-white"
-                    : "border border-[#c7d2fe] text-[#4338ca] hover:bg-[#ededff]",
-                ].join(" ")}
-              >
-                {p.cta}
-              </Link>
+              {"plan" in p && p.plan ? (
+                <UpgradeButton
+                  plan={p.plan}
+                  label={p.cta}
+                  className={[
+                    "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60",
+                    p.highlighted
+                      ? "bg-[#4338ca] hover:bg-[#3730a3] text-white"
+                      : "border border-[#c7d2fe] text-[#4338ca] hover:bg-[#ededff]",
+                  ].join(" ")}
+                />
+              ) : (
+                <Link
+                  href={p.href}
+                  className={[
+                    "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors",
+                    p.highlighted
+                      ? "bg-[#4338ca] hover:bg-[#3730a3] text-white"
+                      : "border border-[#c7d2fe] text-[#4338ca] hover:bg-[#ededff]",
+                  ].join(" ")}
+                >
+                  {p.cta}
+                </Link>
+              )}
             </div>
           ))}
         </div>
