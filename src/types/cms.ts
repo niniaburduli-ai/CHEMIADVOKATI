@@ -22,14 +22,84 @@ export interface NavItem {
 }
 export interface NavMenuData { items: NavItem[]; status: CMSStatus }
 
+// ── Homepage sub-types ────────────────────────────────────────────────────────
+
+export interface HomePageServiceCard {
+  _id: string
+  title: string
+  subtitle: string
+  href: string
+  icon: string        // lucide icon name e.g. "MessageSquare"
+  comingSoon: boolean
+  visible: boolean
+  order: number
+}
+
+export interface HomePageStatCard {
+  _id: string
+  label: string
+  value: string       // display value set manually, e.g. "19+"
+  icon: string        // lucide icon name
+  visible: boolean
+  order: number
+}
+
+export interface HomePageFeature {
+  _id: string
+  title: string
+  body: string
+  icon: string
+  order: number
+  visible: boolean
+}
+
+export interface HomePagePlan {
+  _id: string
+  name: string
+  price: string
+  badge: string
+  ctaText: string
+  ctaHref: string
+  plan: string        // "" | "standard" | "premium" — controls which CTA component renders
+  highlighted: boolean
+  visible: boolean
+  order: number
+  items: string[]
+}
+
 export interface HomePageData {
-  hero: { title: string; subtitle: string; ctaText: string; ctaHref: string; imageUrl: string; imagePubId: string }
-  stats: Array<{ label: string; value: string }>
-  features: Array<{ _id: string; title: string; body: string; icon: string; order: number }>
-  services: Array<{ _id: string; title: string; description: string; href: string; icon: string; order: number }>
-  ctaSection: { title: string; subtitle: string; buttonText: string; buttonHref: string }
+  sections: {
+    hero: boolean
+    stats: boolean
+    features: boolean
+    pricing: boolean
+    cta: boolean
+  }
+  hero: {
+    title: string
+    subtitle: string
+    ctaText: string
+    ctaHref: string
+    imageUrl: string
+    imagePubId: string
+  }
+  serviceCards: HomePageServiceCard[]
+  statsHeading: string
+  stats: HomePageStatCard[]
+  featuresHeading: string
+  features: HomePageFeature[]
+  pricingHeading: string
+  plans: HomePagePlan[]
+  ctaSection: {
+    title: string
+    subtitle: string
+    buttonText: string
+    buttonHref: string
+  }
   status: CMSStatus
 }
+
+// ── Other CMS types (unchanged) ───────────────────────────────────────────────
 
 export interface AboutPageData {
   title: string
