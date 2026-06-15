@@ -119,14 +119,20 @@ export function HomePageForm() {
   async function save(status: HomePageData["status"]) {
     setSaving(true)
     setMsg("")
-    await fetch("/api/admin/cms/homepage", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, status }),
-    })
-    setData((p) => ({ ...p, status }))
-    setMsg("შენახულია")
-    setSaving(false)
+    try {
+      const res = await fetch("/api/admin/cms/homepage", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, status }),
+      })
+      if (!res.ok) throw new Error(`${res.status}`)
+      setData((p) => ({ ...p, status }))
+      setMsg("შენახულია")
+    } catch {
+      setMsg("შეცდომა — ვერ შეინახა")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const upd = <K extends keyof HomePageData>(key: K, val: HomePageData[K]) =>
