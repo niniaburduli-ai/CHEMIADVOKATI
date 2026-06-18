@@ -7,7 +7,8 @@ const UserSchema = new Schema(
     name: { type: String, required: true, trim: true },
     image: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user", index: true },
-    plan: { type: String, enum: ["free", "standard", "premium"], default: "free" },
+    // Plan is a DB-backed plan key (see models/Plan.ts) — no fixed enum.
+    plan: { type: String, default: "free", index: true },
     consultationsRemaining: { type: Number, default: 1 },
     docGenerationRemaining: { type: Number, default: 1 },
     docReviewRemaining: { type: Number, default: 1 },

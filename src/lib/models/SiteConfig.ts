@@ -16,6 +16,7 @@ const SiteConfigSchema = new Schema(
       linkedin: { type: String, default: "" },
       youtube: { type: String, default: "" },
     },
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
@@ -24,6 +25,7 @@ export type SiteConfigDoc = {
   logoUrl: string; logoPubId: string; siteName: string; tagline: string
   favicon: string; contactEmail: string; contactPhone: string; contactAddress: string
   socialLinks: { facebook?: string; twitter?: string; linkedin?: string; youtube?: string }
+  locale: string
   _id: unknown; createdAt: Date; updatedAt: Date
 }
 

@@ -1,27 +1,31 @@
 import Link from "next/link";
 import { Mail, Phone, MapPin, Globe, TriangleAlert } from "lucide-react";
 import { getFooter, getSiteConfig } from "@/lib/cms";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDict } from "@/lib/i18n/dictionaries";
 
 const DEFAULT_DISCLAIMER =
   "გაფრთხილება: პასუხები გენერირებულია ხელოვნური ინტელექტის მიერ და ეფუძნება მოქმედ კანონმდებლობას. ოფიციალური იურიდიული დასკვნისთვის მიმართეთ იურისტს.";
 const DEFAULT_COPYRIGHT = `© 2026 ჩემი იურისტი. ყველა უფლება დაცულია.`;
 
-const staticNav = [
-  { href: "/", label: "მთავარი" },
-  { href: "/about", label: "ჩვენ შესახებ" },
-  { href: "/services", label: "მომსახურებები" },
-  { href: "/legislation", label: "კანონმდებლობა" },
-  { href: "/blog", label: "ბლოგი" },
-];
-
-const staticLegal = [
-  { href: "/privacy", label: "კონფიდენციალურობის პოლიტიკა" },
-  { href: "/terms", label: "გამოყენების პირობები" },
-  { href: "/disclaimer", label: "პასუხისმგებლობის შეზღუდვა" },
-];
-
 export async function Footer() {
-  const [footer, config] = await Promise.all([getFooter(), getSiteConfig()]);
+  const locale = await getLocale();
+  const d = getDict(locale);
+  const [footer, config] = await Promise.all([getFooter(locale), getSiteConfig(locale)]);
+
+  const staticNav = [
+    { href: "/", label: d.footer.nav.home },
+    { href: "/about", label: d.footer.nav.about },
+    { href: "/services", label: d.footer.nav.services },
+    { href: "/legislation", label: d.footer.nav.legislation },
+    { href: "/blog", label: d.footer.nav.blog },
+  ];
+
+  const staticLegal = [
+    { href: "/privacy", label: d.footer.legal.privacy },
+    { href: "/terms", label: d.footer.legal.terms },
+    { href: "/disclaimer", label: d.footer.legal.disclaimer },
+  ];
 
   const disclaimer = footer.disclaimer?.trim() || DEFAULT_DISCLAIMER;
   const copyright = footer.copyright?.trim() || DEFAULT_COPYRIGHT;
@@ -43,14 +47,13 @@ export async function Footer() {
             <p className="text-indigo-300 text-xs mt-0.5">{tagline}</p>
           </div>
           <p className="text-indigo-200 text-xs leading-relaxed">
-            AI-ზე დაფუძნებული იურიდიული პლატფორმა, რომელიც გთავაზობს
-            მარტივად ინტელექტურ პასუხებს სწრაფად და გასაგებ ენაზე.
+            {d.footer.brandBlurb}
           </p>
         </div>
 
         {/* Col 2 — navigation */}
         <div>
-          <p className="font-semibold text-white mb-4">ნავიგაცია</p>
+          <p className="font-semibold text-white mb-4">{d.footer.navigation}</p>
           <ul className="space-y-2.5">
             {staticNav.map((n) => (
               <li key={n.href}>
@@ -68,7 +71,7 @@ export async function Footer() {
 
         {/* Col 3 — legal info */}
         <div>
-          <p className="font-semibold text-white mb-4">სასარგებლო ინფორმაცია</p>
+          <p className="font-semibold text-white mb-4">{d.footer.usefulInfo}</p>
           <ul className="space-y-2.5">
             {staticLegal.map((l) => (
               <li key={l.href}>
@@ -86,7 +89,7 @@ export async function Footer() {
 
         {/* Col 4 — contact */}
         <div>
-          <p className="font-semibold text-white mb-4">კონტაქტი</p>
+          <p className="font-semibold text-white mb-4">{d.footer.contact}</p>
           <ul className="space-y-3">
             {contactEmail && (
               <li className="flex items-center gap-2.5 text-indigo-200">

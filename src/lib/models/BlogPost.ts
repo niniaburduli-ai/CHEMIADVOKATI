@@ -13,6 +13,7 @@ const BlogPostSchema = new Schema(
     author: { type: String, default: "" },
     status: { type: String, enum: ["draft", "published", "hidden"], default: "draft", index: true },
     publishedAt: { type: Date },
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
@@ -21,7 +22,7 @@ export type BlogPostDoc = {
   title: string; slug: string; body: object; excerpt: string
   coverImageUrl: string; coverImagePubId: string; category: unknown
   tags: string[]; author: string; status: string; publishedAt?: Date
-  _id: unknown; createdAt: Date; updatedAt: Date
+  locale: string; _id: unknown; createdAt: Date; updatedAt: Date
 }
 
 export const BlogPost: Model<BlogPostDoc> =

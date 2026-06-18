@@ -11,11 +11,12 @@ const FAQSchema = new Schema(
         status: { type: String, enum: ["draft", "published", "hidden"], default: "draft" },
       },
     ],
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
 
-export type FAQDoc = { items: Array<{ _id: unknown; question: string; answer: string; category: string; order: number; status: string }>; _id: unknown }
+export type FAQDoc = { items: Array<{ _id: unknown; question: string; answer: string; category: string; order: number; status: string }>; locale: string; _id: unknown }
 
 export const FAQ: Model<FAQDoc> =
   (models.FAQ as Model<FAQDoc>) || model<FAQDoc>("FAQ", FAQSchema)

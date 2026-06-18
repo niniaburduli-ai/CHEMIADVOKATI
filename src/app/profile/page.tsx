@@ -124,7 +124,7 @@ export default async function ProfilePage() {
   if (!user) redirect("/login");
 
   const plan = (user.plan ?? "free") as Plan;
-  const limits = PLAN_LIMITS[plan];
+  const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
   const initials = (user.name ?? "?")
     .split(" ")
     .map((w: string) => w[0] ?? "")

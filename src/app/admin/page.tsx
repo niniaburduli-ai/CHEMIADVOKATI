@@ -71,7 +71,7 @@ export default async function AdminPage() {
     email: u.email,
     image: u.image ?? null,
     role: (u.role ?? "user") as "user" | "admin",
-    plan: (u.plan ?? "free") as "free" | "standard",
+    plan: (u.plan ?? "free") as string,
     consultationsRemaining: u.consultationsRemaining ?? 0,
     docGenerationRemaining: u.docGenerationRemaining ?? 0,
     docReviewRemaining: u.docReviewRemaining ?? 0,
@@ -120,13 +120,7 @@ export default async function AdminPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">ადმინ პანელი</h1>
-        <p className="text-muted-foreground mt-1">
-          მომხმარებლები, კონსულტაციები, დოკუმენტები, მიმოხილვები
-        </p>
-      </div>
+    <div className="container mx-auto max-w-7xl px-4 py-6">
       <AdminDashboard
         initialUploads={uploadRows}
         initialUsers={userRows}

@@ -8,6 +8,11 @@ import {
 import { buttonVariants } from "@/components/ui/button"
 import { UpgradeButton } from "@/components/site/upgrade-button"
 import { getHomePage } from "@/lib/cms"
+import { getVisiblePlans } from "@/lib/plans-db"
+import { getFeatureFlags, isPathEnabled } from "@/lib/features"
+import { getPublicStats, resolveMetric } from "@/lib/stats"
+import { getLocale } from "@/lib/i18n/locale"
+import { pick, pickArr } from "@/lib/i18n/loc"
 import { HOME_SEED } from "@/lib/homepage-defaults"
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -20,7 +25,12 @@ function resolveIcon(name: string): LucideIcon {
 }
 
 export default async function Home() {
-  const cms = await getHomePage()
+  const locale = await getLocale()
+  const [cms, flags, publicStats] = await Promise.all([
+    getHomePage(locale),
+    getFeatureFlags(),
+    getPublicStats(),
+  ])
 
   const sections  = cms?.sections  ?? HOME_SEED.sections
   const hero      = cms?.hero      ?? HOME_SEED.hero
@@ -28,6 +38,7 @@ export default async function Home() {
 
   const serviceCards = ((cms?.serviceCards ?? HOME_SEED.serviceCards) as typeof HOME_SEED.serviceCards)
     .filter((c) => c.visible !== false)
+    .filter((c) => isPathEnabled(c.href, flags))
     .sort((a, b) => a.order - b.order)
 
   const statsHeading = cms?.statsHeading || HOME_SEED.statsHeading
@@ -41,9 +52,26 @@ export default async function Home() {
     .sort((a, b) => a.order - b.order)
 
   const pricingHeading = cms?.pricingHeading || HOME_SEED.pricingHeading
-  const plans = ((cms?.plans ?? HOME_SEED.plans) as typeof HOME_SEED.plans)
-    .filter((p) => p.visible !== false)
-    .sort((a, b) => a.order - b.order)
+  // Pricing reads the single source of truth — the dynamic Plan collection —
+  // so price/feature edits in the admin Plans tab show here immediately.
+  const dbPlans = await getVisiblePlans()
+  const plans = dbPlans.map((p) => {
+    const paid = !p.isFree && p.priceMinor > 0 && p.active
+    const gel = p.priceMinor / 100
+    return {
+      _id: p.id,
+      name: pick(p.name, p.nameEn, locale),
+      price: Number.isInteger(gel) ? String(gel) : gel.toFixed(2),
+      badge: p.highlighted ? (locale === "en" ? "Popular" : "პოპულარული") : "",
+      ctaText: paid ? (locale === "en" ? "Subscribe" : "შეუერთდი") : (locale === "en" ? "Get started" : "დაიწყე"),
+      ctaHref: paid ? "/billing" : "/register",
+      plan: paid ? p.key : "",
+      highlighted: p.highlighted,
+      visible: true,
+      order: p.order,
+      items: pickArr(p.features, p.featuresEn, locale),
+    }
+  })
 
   return (
     <div>
@@ -106,6 +134,9 @@ export default async function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {stats.map((s) => {
               const StatIcon = resolveIcon(s.icon)
+              // Live count when the card is bound (or inferable) to a metric; else manual value.
+              const metric = resolveMetric(s.metric, s.label)
+              const display = metric ? publicStats[metric].toLocaleString("ka-GE") : s.value
               return (
                 <div
                   key={s._id}
@@ -115,7 +146,7 @@ export default async function Home() {
                     <StatIcon className="h-6 w-6 text-[#6366f1]" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-2xl font-bold text-[#3730a3] leading-none">{s.value}</p>
+                    <p className="text-2xl font-bold text-[#3730a3] leading-none">{display}</p>
                     <p className="text-xs text-gray-500 mt-1 leading-snug">{s.label}</p>
                   </div>
                 </div>
@@ -196,7 +227,7 @@ export default async function Home() {
 
                 {p.plan ? (
                   <UpgradeButton
-                    plan={p.plan as "standard" | "premium"}
+                    plan={p.plan}
                     label={p.ctaText}
                     className={[
                       "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60",

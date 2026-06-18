@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 type Props = {
-  plan: "standard" | "premium";
+  /** DB-backed plan key (e.g. "standard"). */
+  plan: string;
   label: string;
   /** When set, render a native button with these classes (matches host styling). */
   className?: string;

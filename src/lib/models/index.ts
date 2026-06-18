@@ -5,3 +5,4 @@ export { Subscription, type SubscriptionDoc } from "./subscription";
 export { Upload, type UploadDoc } from "./upload";
 export { GeneratedDocument, type GeneratedDocumentDoc } from "./generated-document";
 export { DocumentReview, type DocumentReviewDoc } from "./document-review";
+export { Plan, type PlanDoc } from "./Plan";

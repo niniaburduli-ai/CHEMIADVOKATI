@@ -21,8 +21,10 @@ export const ConsultationCreateSchema = z.object({
 });
 export type ConsultationCreateInput = z.infer<typeof ConsultationCreateSchema>;
 
+// Plan key validated against the DB in the checkout route (plans are dynamic).
+export const PLAN_KEY_RE = /^[a-z0-9-]+$/;
 export const CheckoutSchema = z.object({
-  plan: z.enum(["standard", "premium"]),
+  plan: z.string().trim().min(1).max(40).regex(PLAN_KEY_RE),
 });
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 
@@ -83,7 +85,8 @@ export const AdminUserUpdateSchema = z
   .object({
     name: z.string().trim().min(2).max(80).optional(),
     role: z.enum(["user", "admin"]).optional(),
-    plan: z.enum(["free", "standard", "premium"]).optional(),
+    // Plan keys are dynamic (DB-backed); validate shape only.
+    plan: z.string().trim().min(1).max(40).regex(PLAN_KEY_RE).optional(),
     consultationsRemaining: z.coerce.number().int().min(0).max(9999).optional(),
   })
   .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" });

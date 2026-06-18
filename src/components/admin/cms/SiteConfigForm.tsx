@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { ImageUpload } from "./ImageUpload"
 import { Loader2, Save } from "lucide-react"
 import type { SiteConfigData } from "@/types/cms"
+import type { Locale } from "@/lib/i18n/config"
 
 const EMPTY: SiteConfigData = {
   logoUrl: "", logoPubId: "", siteName: "", tagline: "", favicon: "",
@@ -13,14 +14,20 @@ const EMPTY: SiteConfigData = {
   socialLinks: { facebook: "", twitter: "", linkedin: "", youtube: "" },
 }
 
-export function SiteConfigForm() {
+export function SiteConfigForm({ locale = "ka" }: { locale?: Locale }) {
   const [data, setData] = useState<SiteConfigData>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState("")
 
   useEffect(() => {
-    fetch("/api/admin/cms/site-config").then((r) => r.json()).then(({ data: d }) => { if (d) setData({ ...EMPTY, ...d }) })
-  }, [])
+    let active = true
+    ;(async () => {
+      const r = await fetch(`/api/admin/cms/site-config?locale=${locale}`)
+      const { data: d } = await r.json()
+      if (active) setData(d ? { ...EMPTY, ...d } : EMPTY)
+    })()
+    return () => { active = false }
+  }, [locale])
 
   function set<K extends keyof SiteConfigData>(key: K, val: SiteConfigData[K]) {
     setData((p) => ({ ...p, [key]: val }))
@@ -28,7 +35,7 @@ export function SiteConfigForm() {
 
   async function save() {
     setSaving(true); setMsg("")
-    await fetch("/api/admin/cms/site-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    await fetch(`/api/admin/cms/site-config?locale=${locale}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
     setMsg("შენახულია"); setSaving(false)
   }
 

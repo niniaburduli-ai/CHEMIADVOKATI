@@ -7,11 +7,12 @@ const LegalNoticeSchema = new Schema(
     body: { type: Schema.Types.Mixed, default: {} },
     status: { type: String, enum: ["draft", "published", "hidden"], default: "draft" },
     publishedAt: { type: Date },
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
 
-export type LegalNoticeDoc = { type: string; title: string; body: object; status: string; publishedAt?: Date; _id: unknown; createdAt: Date }
+export type LegalNoticeDoc = { type: string; title: string; body: object; status: string; publishedAt?: Date; locale: string; _id: unknown; createdAt: Date }
 
 export const LegalNotice: Model<LegalNoticeDoc> =
   (models.LegalNotice as Model<LegalNoticeDoc>) || model<LegalNoticeDoc>("LegalNotice", LegalNoticeSchema)

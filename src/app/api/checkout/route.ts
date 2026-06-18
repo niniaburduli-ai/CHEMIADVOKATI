@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { CheckoutSchema } from "@/lib/validators";
 import { createSubscriptionCheckout } from "@/lib/flitt";
+import { getPlanByKey } from "@/lib/plans-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,18 +29,28 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  const { plan } = parsed.data;
+  const { plan: planKey } = parsed.data;
 
   await dbConnect();
+
+  // Plan must exist, be active, paid, and non-free.
+  const plan = await getPlanByKey(planKey);
+  if (!plan || !plan.active || plan.isFree || plan.priceMinor <= 0) {
+    return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+  }
+
   const user = await User.findById(session.user.id).lean();
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
-    const { checkoutUrl, orderId, paymentId } = await createSubscriptionCheckout(plan, {
-      id: String(user._id),
-      email: user.email,
-      name: user.name,
-    });
+    const { checkoutUrl, orderId, paymentId } = await createSubscriptionCheckout(
+      { key: plan.key, name: plan.name, priceMinor: plan.priceMinor, period: plan.period },
+      {
+        id: String(user._id),
+        email: user.email,
+        name: user.name,
+      }
+    );
     // Persist the pending order so the callback can be cross-checked.
     await User.findByIdAndUpdate(user._id, {
       flittOrderId: orderId,

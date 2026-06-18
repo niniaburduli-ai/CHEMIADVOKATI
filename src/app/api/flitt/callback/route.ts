@@ -7,9 +7,8 @@ import {
   parseOrderId,
   planActivationFields,
   planDeactivationFields,
-  PLAN_AMOUNTS,
-  type PaidPlan,
 } from "@/lib/flitt";
+import { getPlanLimits } from "@/lib/plans-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +21,7 @@ async function resolveUser(data: { order_id?: string; merchant_data?: string }) 
 
   if (!resolvedUserId && data.merchant_data) {
     try {
-      const md = JSON.parse(data.merchant_data) as { userId?: string; plan?: PaidPlan };
+      const md = JSON.parse(data.merchant_data) as { userId?: string; plan?: string };
       resolvedUserId = md.userId ?? null;
       resolvedPlan = resolvedPlan ?? md.plan ?? null;
     } catch {
@@ -62,13 +61,14 @@ export async function POST(req: Request) {
     data.order_status === "approved" && data.response_status !== "failure";
 
   if (approved && plan) {
+    const limits = await getPlanLimits(plan);
     user.set({
-      ...planActivationFields(plan),
+      ...planActivationFields(plan, limits),
       flittOrderId: data.order_id ?? user.flittOrderId,
       flittPaymentId: String(data.payment_id ?? user.flittPaymentId ?? ""),
     });
     // Record the charge as an invoice (idempotent on retries via paymentId).
-    const amount = Number(data.amount) || PLAN_AMOUNTS[plan];
+    const amount = Number(data.amount) || 0;
     const paymentId = String(data.payment_id ?? data.order_id ?? "");
     await Payment.updateOne(
       { paymentId },

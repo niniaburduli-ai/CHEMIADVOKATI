@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, Save, Trash2 } from "lucide-react"
 import type { FooterColumn, FooterData } from "@/types/cms"
+import type { Locale } from "@/lib/i18n/config"
 
 const EMPTY: FooterData = { columns: [], disclaimer: "", copyright: "", status: "draft" }
 
@@ -13,14 +14,20 @@ function newCol(order: number): FooterColumn {
   return { _id: crypto.randomUUID(), heading: "", links: [], order }
 }
 
-export function FooterForm() {
+export function FooterForm({ locale = "ka" }: { locale?: Locale }) {
   const [data, setData] = useState<FooterData>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState("")
 
   useEffect(() => {
-    fetch("/api/admin/cms/footer").then((r) => r.json()).then(({ data: d }) => { if (d) setData({ ...EMPTY, ...d }) })
-  }, [])
+    let active = true
+    ;(async () => {
+      const r = await fetch(`/api/admin/cms/footer?locale=${locale}`)
+      const { data: d } = await r.json()
+      if (active) setData(d ? { ...EMPTY, ...d } : EMPTY)
+    })()
+    return () => { active = false }
+  }, [locale])
 
   function updateCol(ci: number, patch: Partial<FooterColumn>) {
     setData((p) => { const cols = [...p.columns]; cols[ci] = { ...cols[ci], ...patch }; return { ...p, columns: cols } })
@@ -54,7 +61,7 @@ export function FooterForm() {
 
   async function save(status: FooterData["status"]) {
     setSaving(true); setMsg("")
-    await fetch("/api/admin/cms/footer", {
+    await fetch(`/api/admin/cms/footer?locale=${locale}`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, status }),
     })

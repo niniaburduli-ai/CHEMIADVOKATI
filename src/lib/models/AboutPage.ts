@@ -15,11 +15,12 @@ const AboutPageSchema = new Schema(
       },
     ],
     status: { type: String, enum: ["draft", "published", "hidden"], default: "draft" },
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
 
-export type AboutPageDoc = { title: string; body: object; mission: string; team: unknown[]; status: string; _id: unknown }
+export type AboutPageDoc = { title: string; body: object; mission: string; team: unknown[]; status: string; locale: string; _id: unknown }
 
 export const AboutPage: Model<AboutPageDoc> =
   (models.AboutPage as Model<AboutPageDoc>) || model<AboutPageDoc>("AboutPage", AboutPageSchema)

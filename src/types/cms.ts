@@ -38,8 +38,9 @@ export interface HomePageServiceCard {
 export interface HomePageStatCard {
   _id: string
   label: string
-  value: string       // display value set manually, e.g. "19+"
+  value: string       // manual display value (used when no metric bound), e.g. "19+"
   icon: string        // lucide icon name
+  metric?: string     // bind to a live count: users|consultations|documents|reviews|uploads
   visible: boolean
   order: number
 }

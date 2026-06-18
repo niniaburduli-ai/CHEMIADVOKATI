@@ -12,11 +12,12 @@ const FooterContentSchema = new Schema(
     disclaimer: { type: String, default: "" },
     copyright: { type: String, default: "" },
     status: { type: String, enum: ["draft", "published", "hidden"], default: "draft" },
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
 
-export type FooterContentDoc = { columns: unknown[]; disclaimer: string; copyright: string; status: string; _id: unknown }
+export type FooterContentDoc = { columns: unknown[]; disclaimer: string; copyright: string; status: string; locale: string; _id: unknown }
 
 export const FooterContent: Model<FooterContentDoc> =
   (models.FooterContent as Model<FooterContentDoc>) || model<FooterContentDoc>("FooterContent", FooterContentSchema)

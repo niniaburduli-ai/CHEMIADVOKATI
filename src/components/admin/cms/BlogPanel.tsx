@@ -22,7 +22,23 @@ export function BlogPanel() {
     setPosts(pd.items ?? []); setCategories(cd.items ?? [])
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      const [pRes, cRes] = await Promise.all([
+        fetch("/api/admin/cms/blog/posts"),
+        fetch("/api/admin/cms/blog/categories"),
+      ])
+      const [pd, cd] = await Promise.all([pRes.json(), cRes.json()])
+      if (active) {
+        setPosts(pd.items ?? [])
+        setCategories(cd.items ?? [])
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
 
   async function deletePost(id: string) {
     if (!confirm("წაშლა?")) return

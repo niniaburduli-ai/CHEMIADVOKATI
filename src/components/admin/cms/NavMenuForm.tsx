@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Save, Trash2, GripVertical } from "lucide-react"
 import type { NavItem, NavMenuData } from "@/types/cms"
+import type { Locale } from "@/lib/i18n/config"
 
 function newItem(order: number): NavItem {
   return { _id: crypto.randomUUID(), label: "", href: "", order, isExternal: false }
 }
 
-export function NavMenuForm() {
+export function NavMenuForm({ locale = "ka" }: { locale?: Locale }) {
   const [items, setItems] = useState<NavItem[]>([])
   const [status, setStatus] = useState<"draft" | "published">("draft")
   const [saving, setSaving] = useState(false)
@@ -18,11 +19,16 @@ export function NavMenuForm() {
   const [drag, setDrag] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch("/api/admin/cms/nav").then((r) => r.json()).then(({ data }: { data: NavMenuData }) => {
-      if (data?.items) setItems(data.items)
-      if (data?.status) setStatus(data.status as "draft" | "published")
-    })
-  }, [])
+    let active = true
+    ;(async () => {
+      const r = await fetch(`/api/admin/cms/nav?locale=${locale}`)
+      const { data }: { data: NavMenuData } = await r.json()
+      if (!active) return
+      setItems(data?.items ?? [])
+      setStatus((data?.status as "draft" | "published") ?? "draft")
+    })()
+    return () => { active = false }
+  }, [locale])
 
   function updateItem(idx: number, patch: Partial<NavItem>) {
     setItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
@@ -39,7 +45,7 @@ export function NavMenuForm() {
   async function save(newStatus?: "draft" | "published") {
     setSaving(true); setMsg("")
     const s = newStatus ?? status
-    await fetch("/api/admin/cms/nav", {
+    await fetch(`/api/admin/cms/nav?locale=${locale}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: items.map((it, i) => ({ ...it, order: i })), status: s }),

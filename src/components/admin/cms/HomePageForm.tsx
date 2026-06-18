@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import type {
   HomePageData, HomePageServiceCard, HomePageStatCard, HomePageFeature, HomePagePlan,
 } from "@/types/cms"
+import type { Locale } from "@/lib/i18n/config"
 
 // Generates a valid MongoDB ObjectId-compatible hex string (24 chars)
 function uid(): string {
@@ -103,24 +104,26 @@ function DeleteBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-export function HomePageForm() {
+export function HomePageForm({ locale = "ka" }: { locale?: Locale }) {
   const [data, setData] = useState<HomePageData>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState("")
 
   useEffect(() => {
-    fetch("/api/admin/cms/homepage")
-      .then((r) => r.json())
-      .then(({ data: d }) => {
-        if (d?._id) setData({ ...EMPTY, ...d })
-      })
-  }, [])
+    let active = true
+    ;(async () => {
+      const r = await fetch(`/api/admin/cms/homepage?locale=${locale}`)
+      const { data: d } = await r.json()
+      if (active && d) setData({ ...EMPTY, ...d })
+    })()
+    return () => { active = false }
+  }, [locale])
 
   async function save(status: HomePageData["status"]) {
     setSaving(true)
     setMsg("")
     try {
-      const res = await fetch("/api/admin/cms/homepage", {
+      const res = await fetch(`/api/admin/cms/homepage?locale=${locale}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, status }),
@@ -393,7 +396,7 @@ export function HomePageForm() {
                 isFirst={i === 0}
                 isLast={i === data.stats.length - 1}
               />
-              <div className="flex-1 grid gap-2 sm:grid-cols-3">
+              <div className="flex-1 grid gap-2 sm:grid-cols-2">
                 <div>
                   <Label className="text-xs">Icon (lucide name)</Label>
                   <Input value={s.icon} onChange={(e) => updStat(i, { icon: e.target.value })} />
@@ -403,8 +406,27 @@ export function HomePageForm() {
                   <Input value={s.label} onChange={(e) => updStat(i, { label: e.target.value })} />
                 </div>
                 <div>
-                  <Label className="text-xs">Value (e.g. "19+")</Label>
-                  <Input value={s.value} onChange={(e) => updStat(i, { value: e.target.value })} />
+                  <Label className="text-xs">ცოცხალი მაჩვენებელი (Live metric)</Label>
+                  <select
+                    value={s.metric ?? ""}
+                    onChange={(e) => updStat(i, { metric: e.target.value })}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  >
+                    <option value="">— ხელით (manual value) —</option>
+                    <option value="users">რეგისტრირებული მომხმარებლები</option>
+                    <option value="consultations">დასმული კითხვები</option>
+                    <option value="documents">გამოყენებული შაბლონები</option>
+                    <option value="reviews">დამუშავებული დოკუმენტები</option>
+                    <option value="uploads">ატვირთული ფაილები</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs">{'Value (e.g. "19+") — when manual'}</Label>
+                  <Input
+                    value={s.value}
+                    disabled={!!s.metric}
+                    onChange={(e) => updStat(i, { value: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="flex flex-col gap-1 shrink-0">
@@ -484,7 +506,11 @@ export function HomePageForm() {
           <Input value={data.pricingHeading} onChange={(e) => upd("pricingHeading", e.target.value)} />
         </div>
 
-        <div className="space-y-3">
+        <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          ფასები და პაკეტები იმართება „გეგმები&quot; ტაბიდან — ეს სექცია ავტომატურად ასახავს მათ. აქ მხოლოდ სათაურსა და ხილვადობას აკონტროლებ.
+        </p>
+
+        <div className="hidden space-y-3">
           {data.plans.map((plan, pi) => (
             <div key={plan._id} className="rounded border p-3 space-y-3">
               <div className="flex items-start gap-2">

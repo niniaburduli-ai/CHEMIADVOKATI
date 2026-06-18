@@ -11,6 +11,12 @@ import type {
   SiteConfigData, NavMenuData, HomePageData, AboutPageData,
   FAQData, FooterData, LegalNoticeData, LegalNoticeType, BlogPostData,
 } from "@/types/cms"
+import type { Locale } from "@/lib/i18n/config"
+
+/** Mongo filter selecting the requested locale's docs (ka = anything not "en"). */
+function localeMatch(locale: Locale) {
+  return locale === "en" ? { locale: "en" } : { locale: { $ne: "en" } }
+}
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -44,10 +50,12 @@ function toPlain<T>(doc: T): T {
 
 // ─── Public Getters ───────────────────────────────────────────────────────────
 
-export async function getSiteConfig(): Promise<SiteConfigData> {
+export async function getSiteConfig(locale: Locale = "ka"): Promise<SiteConfigData> {
   try {
     await dbConnect()
-    const doc = await SiteConfig.findOne().lean()
+    let doc = locale === "en" ? await SiteConfig.findOne({ locale: "en" }).lean() : null
+    if (!doc) doc = await SiteConfig.findOne({ locale: { $ne: "en" } }).lean()
+    if (!doc) doc = await SiteConfig.findOne().lean()
     if (!doc) return DEFAULT_SITE_CONFIG
     return toPlain({
       logoUrl: doc.logoUrl, logoPubId: doc.logoPubId, siteName: doc.siteName,
@@ -58,10 +66,11 @@ export async function getSiteConfig(): Promise<SiteConfigData> {
   } catch { return DEFAULT_SITE_CONFIG }
 }
 
-export async function getNavMenu(): Promise<NavMenuData> {
+export async function getNavMenu(locale: Locale = "ka"): Promise<NavMenuData> {
   try {
     await dbConnect()
-    const doc = await NavMenu.findOne({ status: "published" }).lean()
+    let doc = locale === "en" ? await NavMenu.findOne({ status: "published", locale: "en" }).lean() : null
+    if (!doc) doc = await NavMenu.findOne({ status: "published", locale: { $ne: "en" } }).lean()
     if (!doc) return DEFAULT_NAV
     return toPlain({
       items: doc.items.map((i) => ({
@@ -72,28 +81,32 @@ export async function getNavMenu(): Promise<NavMenuData> {
   } catch { return DEFAULT_NAV }
 }
 
-export async function getHomePage(): Promise<HomePageData | null> {
+export async function getHomePage(locale: Locale = "ka"): Promise<HomePageData | null> {
   try {
     await dbConnect()
-    const doc = await HomePage.findOne({ status: "published" }).lean()
+    let doc = locale === "en" ? await HomePage.findOne({ status: "published", locale: "en" }).lean() : null
+    if (!doc) doc = await HomePage.findOne({ status: "published", locale: { $ne: "en" } }).lean()
     if (!doc) return null
     return toPlain(doc as unknown as HomePageData)
   } catch { return null }
 }
 
-export async function getAboutPage(): Promise<AboutPageData | null> {
+export async function getAboutPage(locale: Locale = "ka"): Promise<AboutPageData | null> {
   try {
     await dbConnect()
-    const doc = await AboutPage.findOne({ status: "published" }).lean()
+    let doc = locale === "en" ? await AboutPage.findOne({ status: "published", locale: "en" }).lean() : null
+    if (!doc) doc = await AboutPage.findOne({ status: "published", locale: { $ne: "en" } }).lean()
     if (!doc) return null
     return toPlain(doc as unknown as AboutPageData)
   } catch { return null }
 }
 
-export async function getFAQ(): Promise<FAQData> {
+export async function getFAQ(locale: Locale = "ka"): Promise<FAQData> {
   try {
     await dbConnect()
-    const doc = await FAQ.findOne().lean()
+    let doc = locale === "en" ? await FAQ.findOne({ locale: "en" }).lean() : null
+    if (!doc) doc = await FAQ.findOne({ locale: { $ne: "en" } }).lean()
+    if (!doc) doc = await FAQ.findOne().lean()
     if (!doc) return { items: [] }
     return toPlain({
       items: doc.items
@@ -104,19 +117,21 @@ export async function getFAQ(): Promise<FAQData> {
   } catch { return { items: [] } }
 }
 
-export async function getFooter(): Promise<FooterData> {
+export async function getFooter(locale: Locale = "ka"): Promise<FooterData> {
   try {
     await dbConnect()
-    const doc = await FooterContent.findOne({ status: "published" }).lean()
+    let doc = locale === "en" ? await FooterContent.findOne({ status: "published", locale: "en" }).lean() : null
+    if (!doc) doc = await FooterContent.findOne({ status: "published", locale: { $ne: "en" } }).lean()
     if (!doc) return DEFAULT_FOOTER
     return toPlain(doc as unknown as FooterData)
   } catch { return DEFAULT_FOOTER }
 }
 
-export async function getLegalNotice(type: LegalNoticeType): Promise<LegalNoticeData | null> {
+export async function getLegalNotice(type: LegalNoticeType, locale: Locale = "ka"): Promise<LegalNoticeData | null> {
   try {
     await dbConnect()
-    const doc = await LegalNotice.findOne({ type, status: "published" }).lean()
+    let doc = locale === "en" ? await LegalNotice.findOne({ type, status: "published", locale: "en" }).lean() : null
+    if (!doc) doc = await LegalNotice.findOne({ type, status: "published", locale: { $ne: "en" } }).lean()
     if (!doc) return null
     return toPlain({
       _id: String(doc._id), type: doc.type as import("@/types/cms").LegalNoticeType, title: doc.title, body: doc.body,
@@ -125,11 +140,15 @@ export async function getLegalNotice(type: LegalNoticeType): Promise<LegalNotice
   } catch { return null }
 }
 
-export async function getPublishedBlogPosts(limit = 20): Promise<BlogPostData[]> {
+export async function getPublishedBlogPosts(locale: Locale = "ka", limit = 20): Promise<BlogPostData[]> {
   try {
     await dbConnect()
-    const docs = await BlogPost.find({ status: "published" })
+    let docs = await BlogPost.find({ status: "published", ...localeMatch(locale) })
       .sort({ publishedAt: -1 }).limit(limit).lean()
+    if (locale === "en" && docs.length === 0) {
+      docs = await BlogPost.find({ status: "published", locale: { $ne: "en" } })
+        .sort({ publishedAt: -1 }).limit(limit).lean()
+    }
     return toPlain(docs.map((d) => ({
       _id: String(d._id), title: d.title, slug: d.slug, body: d.body,
       excerpt: d.excerpt, coverImageUrl: d.coverImageUrl, coverImagePubId: d.coverImagePubId,

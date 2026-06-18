@@ -67,7 +67,7 @@ export default async function DashboardPage() {
     .lean();
 
   const plan = (user.plan ?? "free") as Plan;
-  const limits = PLAN_LIMITS[plan];
+  const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
   const consultUsed = Math.max(0, limits.consultations - (user.consultationsRemaining ?? 0));
   const docGenUsed = Math.max(0, limits.docGeneration - (user.docGenerationRemaining ?? 0));

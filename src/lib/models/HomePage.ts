@@ -21,6 +21,7 @@ const statCardSchema = new Schema(
     label: { type: String, default: "" },
     value: { type: String, default: "0" },
     icon: { type: String, default: "" },
+    metric: { type: String, default: "" },
     visible: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
   },
@@ -87,11 +88,12 @@ const HomePageSchema = new Schema(
       buttonHref: { type: String, default: "" },
     },
     status: { type: String, enum: ["draft", "published", "hidden"], default: "draft" },
+    locale: { type: String, default: "ka", index: true },
   },
   { timestamps: true }
 )
 
-export type HomePageDoc = HomePageData & { _id: unknown }
+export type HomePageDoc = HomePageData & { _id: unknown; locale?: string }
 
 export const HomePage: Model<HomePageDoc> =
   (models.HomePage as Model<HomePageDoc>) || model<HomePageDoc>("HomePage", HomePageSchema)

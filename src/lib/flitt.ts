@@ -8,17 +8,21 @@
  * Credentials come from env (FLITT_*) — never hardcoded.
  */
 import { createHash } from "crypto";
-import { PLAN_LIMITS, type Plan } from "./plans";
+import { PLAN_LIMITS } from "./plans";
+import type { PlanLimits } from "./plans-db";
 
 const CHECKOUT_URL = "https://pay.flitt.com/api/checkout/url/";
 const SUBSCRIPTION_URL = "https://pay.flitt.com/api/subscription";
 
-export type PaidPlan = Exclude<Plan, "free">;
+/** A plan key (e.g. "standard"). Plans are now DB-backed and dynamic. */
+export type PlanKey = string;
 
-/** Monthly price per paid plan, in GEL minor units (1900 = 19.00 GEL). */
-export const PLAN_AMOUNTS: Record<PaidPlan, number> = {
-  standard: 1900,
-  premium: 9900,
+/** Minimal plan shape needed to start a checkout. */
+export type CheckoutPlan = {
+  key: PlanKey;
+  name: string;
+  priceMinor: number;
+  period?: string;
 };
 
 function merchantId(): number {
@@ -58,12 +62,14 @@ export function signV1(params: Record<string, unknown>, secret: string): string 
 }
 
 /** order_id encodes plan + user so the callback can map back without lookups. */
-export function buildOrderId(plan: PaidPlan, userId: string): string {
+export function buildOrderId(plan: PlanKey, userId: string): string {
   return `sub_${plan}_${userId}_${Date.now()}`;
 }
-export function parseOrderId(orderId: string): { plan: PaidPlan | null; userId: string | null } {
-  const m = /^sub_(standard|premium)_([^_]+)_\d+$/.exec(orderId || "");
-  return m ? { plan: m[1] as PaidPlan, userId: m[2] } : { plan: null, userId: null };
+export function parseOrderId(orderId: string): { plan: PlanKey | null; userId: string | null } {
+  // plan keys are [a-z0-9-]+ (no underscore — that is the delimiter); userId is a
+  // Mongo ObjectId hex string. Anything else returns nulls.
+  const m = /^sub_([a-z0-9-]+)_([0-9a-fA-F]+)_\d+$/.exec(orderId || "");
+  return m ? { plan: m[1], userId: m[2] } : { plan: null, userId: null };
 }
 
 export type CheckoutResult = { checkoutUrl: string; orderId: string; paymentId?: string };
@@ -73,15 +79,15 @@ export type CheckoutResult = { checkoutUrl: string; orderId: string; paymentId?:
  * checkout URL. Throws on provider/transport error.
  */
 export async function createSubscriptionCheckout(
-  plan: PaidPlan,
+  plan: CheckoutPlan,
   user: { id: string; email: string; name?: string | null }
 ): Promise<CheckoutResult> {
-  const amount = PLAN_AMOUNTS[plan];
-  const orderId = buildOrderId(plan, user.id);
+  const amount = plan.priceMinor;
+  const orderId = buildOrderId(plan.key, user.id);
 
   const order = {
     order_id: orderId,
-    order_desc: plan === "standard" ? "სტანდარტული პაკეტი (თვიური)" : "პრემიუმ პაკეტი (თვიური)",
+    order_desc: `${plan.name} (თვიური)`,
     merchant_id: merchantId(),
     currency: "GEL",
     amount,
@@ -91,7 +97,7 @@ export async function createSubscriptionCheckout(
     recurring_data: { amount, period: "month", every: 1, quantity: 120, state: "hidden" },
     server_callback_url: `${appUrl()}/api/flitt/callback`,
     response_url: `${appUrl()}/billing?status=success`,
-    merchant_data: JSON.stringify({ userId: user.id, plan }),
+    merchant_data: JSON.stringify({ userId: user.id, plan: plan.key }),
     sender_email: user.email,
     lang: "ka",
   };
@@ -159,8 +165,7 @@ export function verifyCallback(raw: unknown): CallbackData | null {
 const PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Fields set when a subscription becomes active — reset quota for the period. */
-export function planActivationFields(plan: PaidPlan) {
-  const limits = PLAN_LIMITS[plan];
+export function planActivationFields(plan: PlanKey, limits: PlanLimits) {
   return {
     plan,
     subscriptionStatus: "active",

@@ -13,13 +13,32 @@ import {
   MessagesSquare,
   FileSearch,
   LayoutDashboard,
+  BarChart3,
+  Palette,
+  CreditCard,
+  Database,
+  ToggleRight,
+  Menu,
+  Scale,
+  type LucideIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { CMSPanel } from "@/components/admin/cms/CMSPanel";
+import { OverviewPanel } from "@/components/admin/OverviewPanel";
+import { ThemePanel } from "@/components/admin/ThemePanel";
+import { PlansPanel } from "@/components/admin/PlansPanel";
+import { DatabasePanel } from "@/components/admin/DatabasePanel";
+import { FeaturesPanel } from "@/components/admin/FeaturesPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -49,7 +68,7 @@ export type UserRow = {
   email: string;
   image: string | null;
   role: "user" | "admin";
-  plan: "free" | "standard" | "premium";
+  plan: string;
   consultationsRemaining: number;
   docGenerationRemaining: number;
   docReviewRemaining: number;
@@ -93,6 +112,10 @@ function formatDate(iso: string | null): string {
   return iso.slice(0, 10);
 }
 
+type AdminSection =
+  | "overview" | "users" | "consultations" | "documents" | "reviews"
+  | "files" | "cms" | "theme" | "plans" | "features" | "database";
+
 export function AdminDashboard({
   initialUploads,
   initialUsers,
@@ -108,48 +131,133 @@ export function AdminDashboard({
   initialReviews: ReviewRow[];
   currentUserId: string;
 }) {
-  return (
-    <Tabs defaultValue="users">
-      <TabsList className="flex-wrap h-auto">
-        <TabsTrigger value="users">
-          <Users className="h-4 w-4 mr-2" /> მომხმარებლები ({initialUsers.length})
-        </TabsTrigger>
-        <TabsTrigger value="consultations">
-          <MessagesSquare className="h-4 w-4 mr-2" /> კონსულტაციები ({initialConsultations.length})
-        </TabsTrigger>
-        <TabsTrigger value="documents">
-          <FileText className="h-4 w-4 mr-2" /> დოკუმენტები ({initialGeneratedDocs.length})
-        </TabsTrigger>
-        <TabsTrigger value="reviews">
-          <FileSearch className="h-4 w-4 mr-2" /> მიმოხილვები ({initialReviews.length})
-        </TabsTrigger>
-        <TabsTrigger value="files">
-          <ImageIcon className="h-4 w-4 mr-2" /> ფაილები ({initialUploads.length})
-        </TabsTrigger>
-        <TabsTrigger value="cms">
-          <LayoutDashboard className="h-4 w-4 mr-2" /> შინაარსი (CMS)
-        </TabsTrigger>
-      </TabsList>
+  const [section, setSection] = useState<AdminSection>("overview");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-      <TabsContent value="users" className="mt-6">
-        <UsersTable initial={initialUsers} currentUserId={currentUserId} />
-      </TabsContent>
-      <TabsContent value="consultations" className="mt-6">
-        <ConsultationsTable initial={initialConsultations} />
-      </TabsContent>
-      <TabsContent value="documents" className="mt-6">
-        <GeneratedDocsTable initial={initialGeneratedDocs} />
-      </TabsContent>
-      <TabsContent value="reviews" className="mt-6">
-        <ReviewsTable initial={initialReviews} />
-      </TabsContent>
-      <TabsContent value="files" className="mt-6">
-        <UploadsTable initial={initialUploads} />
-      </TabsContent>
-      <TabsContent value="cms" className="mt-6">
-        <CMSPanel />
-      </TabsContent>
-    </Tabs>
+  const NAV: { group: string; items: { id: AdminSection; label: string; icon: LucideIcon; count?: number }[] }[] = [
+    {
+      group: "მთავარი",
+      items: [
+        { id: "overview", label: "მიმოხილვა", icon: BarChart3 },
+        { id: "users", label: "მომხმარებლები", icon: Users, count: initialUsers.length },
+        { id: "consultations", label: "კონსულტაციები", icon: MessagesSquare, count: initialConsultations.length },
+        { id: "documents", label: "დოკუმენტები", icon: FileText, count: initialGeneratedDocs.length },
+        { id: "reviews", label: "მიმოხილვები", icon: FileSearch, count: initialReviews.length },
+        { id: "files", label: "ფაილები", icon: ImageIcon, count: initialUploads.length },
+      ],
+    },
+    {
+      group: "მართვა",
+      items: [
+        { id: "cms", label: "შინაარსი (CMS)", icon: LayoutDashboard },
+        { id: "theme", label: "თემა", icon: Palette },
+        { id: "plans", label: "გეგმები", icon: CreditCard },
+        { id: "features", label: "ფუნქციები", icon: ToggleRight },
+        { id: "database", label: "ბაზა", icon: Database },
+      ],
+    },
+  ];
+
+  const items = NAV.flatMap((g) => g.items);
+  const active = items.find((i) => i.id === section) ?? items[0];
+
+  function navList(onNavigate?: () => void) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex h-16 items-center gap-2.5 border-b px-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Scale className="h-4 w-4" />
+          </div>
+          <div className="leading-tight">
+            <div className="text-sm font-semibold">ადმინ პანელი</div>
+            <div className="text-xs text-muted-foreground">მართვა</div>
+          </div>
+        </div>
+        <nav className="flex-1 space-y-4 overflow-y-auto p-2">
+          {NAV.map((group) => (
+            <div key={group.group}>
+              <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {group.group}
+              </p>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = item.id === section;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSection(item.id);
+                          onNavigate?.();
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
+                          isActive
+                            ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {typeof item.count === "number" && (
+                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                            {item.count}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </div>
+    );
+  }
+
+  let content: React.ReactNode = null;
+  switch (section) {
+    case "overview": content = <OverviewPanel />; break;
+    case "users": content = <UsersTable initial={initialUsers} currentUserId={currentUserId} />; break;
+    case "consultations": content = <ConsultationsTable initial={initialConsultations} />; break;
+    case "documents": content = <GeneratedDocsTable initial={initialGeneratedDocs} />; break;
+    case "reviews": content = <ReviewsTable initial={initialReviews} />; break;
+    case "files": content = <UploadsTable initial={initialUploads} />; break;
+    case "cms": content = <CMSPanel />; break;
+    case "theme": content = <ThemePanel />; break;
+    case "plans": content = <PlansPanel />; break;
+    case "features": content = <FeaturesPanel />; break;
+    case "database": content = <DatabasePanel />; break;
+  }
+
+  return (
+    <div className="flex min-h-[70vh] overflow-hidden rounded-xl border bg-card">
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
+        {navList()}
+      </aside>
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-16 items-center gap-3 border-b px-4">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger
+              render={<Button variant="outline" size="icon" className="md:hidden" aria-label="მენიუ" />}
+            >
+              <Menu className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 gap-0 bg-sidebar p-0 text-sidebar-foreground">
+              <SheetTitle className="sr-only">ნავიგაცია</SheetTitle>
+              {navList(() => setMobileOpen(false))}
+            </SheetContent>
+          </Sheet>
+          <h1 className="text-lg font-semibold">{active.label}</h1>
+        </div>
+        <div className="flex-1 overflow-auto p-4 md:p-6">{content}</div>
+      </div>
+    </div>
   );
 }
 
@@ -254,10 +362,20 @@ function EditUserDialog({
 }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<"user" | "admin">("user");
-  const [plan, setPlan] = useState<"free" | "standard" | "premium">("free");
+  const [plan, setPlan] = useState<string>("free");
   const [remaining, setRemaining] = useState("0");
   const [saving, setSaving] = useState(false);
   const [syncedId, setSyncedId] = useState<string | null>(null);
+  const [planOptions, setPlanOptions] = useState<{ key: string; name: string }[]>([]);
+
+  React.useEffect(() => {
+    fetch("/api/admin/plans")
+      .then((r) => r.json())
+      .then(({ data }) => {
+        if (Array.isArray(data)) setPlanOptions(data.map((p: { key: string; name: string }) => ({ key: p.key, name: p.name })));
+      })
+      .catch(() => {});
+  }, []);
 
   if (user && user.id !== syncedId) {
     setSyncedId(user.id);
@@ -308,10 +426,13 @@ function EditUserDialog({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="edit-plan">გეგმა</Label>
-            <select id="edit-plan" value={plan} onChange={(e) => setPlan(e.target.value as "free" | "standard" | "premium")} className="h-9 rounded-md border bg-transparent px-3 text-sm">
-              <option value="free">free</option>
-              <option value="standard">standard</option>
-              <option value="premium">premium</option>
+            <select id="edit-plan" value={plan} onChange={(e) => setPlan(e.target.value)} className="h-9 rounded-md border bg-transparent px-3 text-sm">
+              {planOptions.length === 0 && <option value={plan}>{plan}</option>}
+              {planOptions.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.name} ({p.key})
+                </option>
+              ))}
             </select>
           </div>
           <div className="grid gap-2">
