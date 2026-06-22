@@ -24,6 +24,33 @@ function resolveIcon(name: string): LucideIcon {
   return ICON_MAP[name] ?? Circle
 }
 
+function serviceCardsGrid(n: number) {
+  if (n <= 1) return "grid-cols-1"
+  if (n === 2) return "grid-cols-2"
+  return "grid-cols-3"
+}
+
+function statsGrid(n: number) {
+  if (n <= 1) return "grid-cols-1"
+  if (n === 2) return "grid-cols-2"
+  if (n === 3) return "grid-cols-2 md:grid-cols-3"
+  return "grid-cols-2 md:grid-cols-4"
+}
+
+function featuresGrid(n: number) {
+  if (n <= 1) return "grid-cols-1"
+  if (n === 2) return "grid-cols-1 sm:grid-cols-2"
+  if (n === 3) return "grid-cols-1 sm:grid-cols-3"
+  if (n === 4) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+  return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"
+}
+
+function pricingGrid(n: number) {
+  if (n <= 1) return "grid-cols-1 max-w-sm mx-auto"
+  if (n === 2) return "md:grid-cols-2 max-w-2xl mx-auto"
+  return "md:grid-cols-3"
+}
+
 export default async function Home() {
   const locale = await getLocale()
   const [cms, flags, publicStats] = await Promise.all([
@@ -62,8 +89,8 @@ export default async function Home() {
       _id: p.id,
       name: pick(p.name, p.nameEn, locale),
       price: Number.isInteger(gel) ? String(gel) : gel.toFixed(2),
-      badge: p.highlighted ? (locale === "en" ? "Popular" : "პოპულარული") : "",
-      ctaText: paid ? (locale === "en" ? "Subscribe" : "შეუერთდი") : (locale === "en" ? "Get started" : "დაიწყე"),
+      badge: p.highlighted ? "პოპულარული" : "",
+      ctaText: paid ? "შეუერთდი" : "დაიწყე",
       ctaHref: paid ? "/billing" : "/register",
       plan: paid ? p.key : "",
       highlighted: p.highlighted,
@@ -84,14 +111,16 @@ export default async function Home() {
 
               {/* ── LEFT 50%: heading + cards, vertically centered ── */}
               <div className="w-full lg:w-1/2 flex flex-col justify-center py-10 md:py-14 lg:pr-8">
+                <div className="-mt-28">
                 <h1 className="text-5xl md:text-7xl font-bold text-[#1a1a2e] leading-none mb-3 tracking-tight">
                   {hero.title || HOME_SEED.hero.title}
                 </h1>
                 <p className="text-3xl md:text-4xl text-[#4338ca] mb-8 font-semibold">
                   {hero.subtitle || HOME_SEED.hero.subtitle}
                 </p>
+                </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className={`grid ${serviceCardsGrid(serviceCards.length)} gap-3`}>
                   {serviceCards.map((card) => {
                     const CardIcon = resolveIcon(card.icon)
                     if (card.comingSoon) {
@@ -105,7 +134,7 @@ export default async function Home() {
                               <CardIcon className="h-6 w-6 text-[#a5b4fc]" />
                             </div>
                             <span className="text-[10px] text-gray-400 font-semibold tracking-widest uppercase">
-                              Coming Soon
+                              მალე
                             </span>
                           </div>
                           <div>
@@ -116,7 +145,7 @@ export default async function Home() {
                             <p className="text-sm text-gray-400 leading-relaxed flex-1">{card.description}</p>
                           )}
                           <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-400">
-                            {card.ctaText ?? "Coming soon"} <ArrowRight className="h-4 w-4" />
+                            {card.ctaText ?? "მალე"} <ArrowRight className="h-4 w-4" />
                           </div>
                         </div>
                       )
@@ -138,7 +167,7 @@ export default async function Home() {
                           <p className="text-sm text-gray-500 leading-relaxed flex-1">{card.description}</p>
                         )}
                         <div className="flex items-center gap-1.5 text-sm font-semibold text-[#4338ca] group-hover:gap-2.5 transition-all">
-                          {card.ctaText ?? "Learn more"} <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                          {card.ctaText ?? "გაიგე მეტი"} <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </Link>
                     )
@@ -167,7 +196,7 @@ export default async function Home() {
           <h2 className="text-2xl md:text-3xl font-bold text-center text-[#1a1a2e] mb-10">
             {statsHeading}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className={`grid ${statsGrid(stats.length)} gap-4`}>
             {stats.map((s) => {
               const StatIcon = resolveIcon(s.icon)
               // Live count when the card is bound (or inferable) to a metric; else manual value.
@@ -198,7 +227,7 @@ export default async function Home() {
           <h2 className="text-2xl md:text-3xl font-bold text-center text-[#1a1a2e] mb-12">
             {featuresHeading}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className={`grid ${featuresGrid(features.length)} gap-4`}>
             {features.map((f, idx) => {
               const FIcon = resolveIcon(f.icon)
               return (
@@ -223,7 +252,7 @@ export default async function Home() {
           <h2 className="text-2xl md:text-3xl font-bold text-center text-[#1a1a2e] mb-12">
             {pricingHeading}
           </h2>
-          <div className="grid gap-6 md:grid-cols-3 items-start">
+          <div className={`grid gap-6 ${pricingGrid(plans.length)} items-start`}>
             {plans.map((p) => (
               <div
                 key={p._id}
