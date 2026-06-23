@@ -13,7 +13,8 @@ import { getFeatureFlags, isPathEnabled } from "@/lib/features"
 import { getPublicStats, resolveMetric } from "@/lib/stats"
 import { getLocale } from "@/lib/i18n/locale"
 import { pick, pickArr } from "@/lib/i18n/loc"
-import { HOME_SEED } from "@/lib/homepage-defaults"
+import { getHomeSeed } from "@/lib/homepage-defaults"
+import { getDict } from "@/lib/i18n/dictionaries"
 
 const ICON_MAP: Record<string, LucideIcon> = {
   MessageSquare, FileText, FolderOpen, ArrowRight,
@@ -53,32 +54,34 @@ function pricingGrid(n: number) {
 
 export default async function Home() {
   const locale = await getLocale()
+  const d = getDict(locale)
+  const seed = getHomeSeed(locale)
   const [cms, flags, publicStats] = await Promise.all([
     getHomePage(locale),
     getFeatureFlags(),
     getPublicStats(),
   ])
 
-  const sections  = cms?.sections  ?? HOME_SEED.sections
-  const hero      = cms?.hero      ?? HOME_SEED.hero
-  const ctaSection = cms?.ctaSection ?? HOME_SEED.ctaSection
+  const sections  = cms?.sections  ?? seed.sections
+  const hero      = cms?.hero      ?? seed.hero
+  const ctaSection = cms?.ctaSection ?? seed.ctaSection
 
-  const serviceCards = ((cms?.serviceCards ?? HOME_SEED.serviceCards) as typeof HOME_SEED.serviceCards)
+  const serviceCards = ((cms?.serviceCards ?? seed.serviceCards) as typeof seed.serviceCards)
     .filter((c) => c.visible !== false)
     .filter((c) => isPathEnabled(c.href, flags))
     .sort((a, b) => a.order - b.order)
 
-  const statsHeading = cms?.statsHeading || HOME_SEED.statsHeading
-  const stats = ((cms?.stats ?? HOME_SEED.stats) as typeof HOME_SEED.stats)
+  const statsHeading = cms?.statsHeading || seed.statsHeading
+  const stats = ((cms?.stats ?? seed.stats) as typeof seed.stats)
     .filter((s) => s.visible !== false)
     .sort((a, b) => a.order - b.order)
 
-  const featuresHeading = cms?.featuresHeading || HOME_SEED.featuresHeading
-  const features = ((cms?.features ?? HOME_SEED.features) as typeof HOME_SEED.features)
+  const featuresHeading = cms?.featuresHeading || seed.featuresHeading
+  const features = ((cms?.features ?? seed.features) as typeof seed.features)
     .filter((f) => f.visible !== false)
     .sort((a, b) => a.order - b.order)
 
-  const pricingHeading = cms?.pricingHeading || HOME_SEED.pricingHeading
+  const pricingHeading = cms?.pricingHeading || seed.pricingHeading
   // Pricing reads the single source of truth — the dynamic Plan collection —
   // so price/feature edits in the admin Plans tab show here immediately.
   const dbPlans = await getVisiblePlans()
@@ -89,8 +92,8 @@ export default async function Home() {
       _id: p.id,
       name: pick(p.name, p.nameEn, locale),
       price: Number.isInteger(gel) ? String(gel) : gel.toFixed(2),
-      badge: p.highlighted ? "პოპულარული" : "",
-      ctaText: paid ? "შეუერთდი" : "დაიწყე",
+      badge: p.highlighted ? d.pricing.popular : "",
+      ctaText: paid ? d.pricing.join : d.pricing.start,
       ctaHref: paid ? "/billing" : "/register",
       plan: paid ? p.key : "",
       highlighted: p.highlighted,
@@ -113,10 +116,10 @@ export default async function Home() {
               <div className="w-full lg:w-1/2 flex flex-col justify-center py-10 md:py-14 lg:pr-8">
                 <div className="-mt-28">
                 <h1 className="text-5xl md:text-7xl font-bold text-[#1a1a2e] leading-none mb-3 tracking-tight">
-                  {hero.title || HOME_SEED.hero.title}
+                  {hero.title || d.home.heroTitle}
                 </h1>
                 <p className="text-3xl md:text-4xl text-[#4338ca] mb-8 font-semibold">
-                  {hero.subtitle || HOME_SEED.hero.subtitle}
+                  {hero.subtitle || d.home.heroSubtitle}
                 </p>
                 </div>
 
@@ -134,7 +137,7 @@ export default async function Home() {
                               <CardIcon className="h-6 w-6 text-[#a5b4fc]" />
                             </div>
                             <span className="text-[10px] text-gray-400 font-semibold tracking-widest uppercase">
-                              მალე
+                              {d.home.comingSoon}
                             </span>
                           </div>
                           <div>
@@ -145,7 +148,7 @@ export default async function Home() {
                             <p className="text-sm text-gray-400 leading-relaxed flex-1">{card.description}</p>
                           )}
                           <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-400">
-                            {card.ctaText ?? "მალე"} <ArrowRight className="h-4 w-4" />
+                            {card.ctaText ?? d.home.comingSoon} <ArrowRight className="h-4 w-4" />
                           </div>
                         </div>
                       )
@@ -167,7 +170,7 @@ export default async function Home() {
                           <p className="text-sm text-gray-500 leading-relaxed flex-1">{card.description}</p>
                         )}
                         <div className="flex items-center gap-1.5 text-sm font-semibold text-[#4338ca] group-hover:gap-2.5 transition-all">
-                          {card.ctaText ?? "გაიგე მეტი"} <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                          {card.ctaText ?? d.home.learnMore} <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </Link>
                     )
@@ -180,7 +183,7 @@ export default async function Home() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/kartlis_deda_5.png"
-                  alt="ქართლის დედა სასწორით"
+                  alt={d.home.imageAlt}
                   className="max-h-[640px] w-auto mix-blend-multiply"
                 />
               </div>
@@ -278,7 +281,7 @@ export default async function Home() {
                 <div className="flex items-end gap-1 mb-6">
                   <span className="text-5xl font-bold text-[#1a1a2e] leading-none">{p.price}</span>
                   <span className="text-lg font-semibold text-[#1a1a2e] mb-0.5">₾</span>
-                  <span className="text-sm text-gray-400 mb-1">/ თვეში</span>
+                  <span className="text-sm text-gray-400 mb-1">{d.home.perMonth}</span>
                 </div>
 
                 <ul className="space-y-3 text-sm flex-1 mb-8">
@@ -323,13 +326,13 @@ export default async function Home() {
       {/* ── CTA ── */}
       {sections.cta !== false && (
         <section className="container mx-auto px-4 py-20 text-center max-w-2xl">
-          <h2 className="text-3xl font-bold">{ctaSection.title || HOME_SEED.ctaSection.title}</h2>
-          <p className="mt-3 text-muted-foreground">{ctaSection.subtitle}</p>
+          <h2 className="text-3xl font-bold">{ctaSection.title || d.home.ctaTitle}</h2>
+          <p className="mt-3 text-muted-foreground">{ctaSection.subtitle || d.home.ctaSubtitle}</p>
           <Link
-            href={ctaSection.buttonHref || HOME_SEED.ctaSection.buttonHref}
+            href={ctaSection.buttonHref || seed.ctaSection.buttonHref}
             className={buttonVariants({ size: "lg", className: "mt-6" })}
           >
-            {ctaSection.buttonText || HOME_SEED.ctaSection.buttonText}
+            {ctaSection.buttonText || d.home.ctaButton}
           </Link>
         </section>
       )}

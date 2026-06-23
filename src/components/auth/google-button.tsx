@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { googleSignInAction } from "@/actions/auth";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
 function GoogleIcon() {
   return (
@@ -15,16 +17,21 @@ function GoogleIcon() {
 }
 
 export function GoogleButton({
-  label = "გაგრძელე Google-ით",
+  label,
   requireConsent = false,
+  locale,
 }: {
   label?: string;
   requireConsent?: boolean;
+  locale: Locale;
 }) {
+  const d = getDict(locale);
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
   const [consented, setConsented] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const buttonLabel = label ?? d.auth.googleContinue;
 
   const handleSignIn = () => {
     if (requireConsent && !consented) return;
@@ -48,21 +55,21 @@ export function GoogleButton({
             htmlFor="googleConsent"
             className="text-xs text-muted-foreground leading-snug cursor-pointer select-none"
           >
-            Google-ით რეგისტრაციით ვეთანხმები{" "}
+            {d.auth.googleConsentPrefix}{" "}
             <Link
               href="/terms"
               target="_blank"
               className="text-foreground underline underline-offset-2 hover:text-[#4338ca]"
             >
-              მომსახურების პირობებს
+              {d.auth.termsLink}
             </Link>
-            {" "}და{" "}
+            {" "}{d.auth.and}{" "}
             <Link
               href="/privacy"
               target="_blank"
               className="text-foreground underline underline-offset-2 hover:text-[#4338ca]"
             >
-              კონფიდენციალურობის პოლიტიკას
+              {d.auth.privacyLink}
             </Link>
             .
           </label>
@@ -77,7 +84,7 @@ export function GoogleButton({
         onClick={handleSignIn}
       >
         <GoogleIcon />
-        {isPending ? "..." : label}
+        {isPending ? "..." : buttonLabel}
       </Button>
     </div>
   );

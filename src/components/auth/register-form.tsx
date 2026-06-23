@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerAction, type AuthFormState } from "@/actions/auth";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
-export function RegisterForm() {
+export function RegisterForm({ locale }: { locale: Locale }) {
+  const d = getDict(locale);
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     registerAction,
     undefined
@@ -15,13 +18,12 @@ export function RegisterForm() {
 
   return (
     <form action={formAction} className="space-y-4">
-      {/* Full Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">სრული სახელი</Label>
+        <Label htmlFor="name">{d.auth.fullName}</Label>
         <Input
           id="name"
           name="name"
-          placeholder="თქვენი სრული სახელი"
+          placeholder={d.auth.namePlaceholder}
           defaultValue={state?.values?.name ?? ""}
           required
           autoComplete="name"
@@ -31,9 +33,8 @@ export function RegisterForm() {
         )}
       </div>
 
-      {/* Email */}
       <div className="space-y-2">
-        <Label htmlFor="email">ელ. ფოსტა</Label>
+        <Label htmlFor="email">{d.auth.email}</Label>
         <Input
           id="email"
           name="email"
@@ -48,9 +49,8 @@ export function RegisterForm() {
         )}
       </div>
 
-      {/* Password */}
       <div className="space-y-2">
-        <Label htmlFor="password">პაროლი</Label>
+        <Label htmlFor="password">{d.auth.password}</Label>
         <Input
           id="password"
           name="password"
@@ -59,15 +59,14 @@ export function RegisterForm() {
           minLength={8}
           autoComplete="new-password"
         />
-        <p className="text-xs text-muted-foreground">მინიმუმ 8 სიმბოლო</p>
+        <p className="text-xs text-muted-foreground">{d.auth.minPassword}</p>
         {state?.fields?.password && (
           <p className="text-xs text-destructive">{state.fields.password[0]}</p>
         )}
       </div>
 
-      {/* Confirm Password */}
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">გაიმეორეთ პაროლი</Label>
+        <Label htmlFor="confirmPassword">{d.auth.confirmPassword}</Label>
         <Input
           id="confirmPassword"
           name="confirmPassword"
@@ -81,7 +80,6 @@ export function RegisterForm() {
         )}
       </div>
 
-      {/* Consent checkbox */}
       <div className="space-y-1.5 pt-1">
         <div className="flex items-start gap-2.5">
           <input
@@ -95,13 +93,13 @@ export function RegisterForm() {
             htmlFor="consentAccepted"
             className="text-xs text-muted-foreground leading-snug cursor-pointer select-none"
           >
-            ვეთანხმები{" "}
+            {d.auth.agreeTo}{" "}
             <Link
               href="/terms"
               target="_blank"
               className="text-foreground underline underline-offset-2 hover:text-[#4338ca]"
             >
-              მომსახურების პირობებს
+              {d.auth.termsLink}
             </Link>
             {", "}
             <Link
@@ -109,15 +107,15 @@ export function RegisterForm() {
               target="_blank"
               className="text-foreground underline underline-offset-2 hover:text-[#4338ca]"
             >
-              კონფიდენციალურობის პოლიტიკასა
+              {d.auth.privacyLink}
             </Link>
-            {" "}და{" "}
+            {" "}{d.auth.and}{" "}
             <Link
               href="/disclaimer"
               target="_blank"
               className="text-foreground underline underline-offset-2 hover:text-[#4338ca]"
             >
-              პასუხისმგებლობის შეზღუდვას
+              {d.auth.disclaimerLink}
             </Link>
             .
           </label>
@@ -132,7 +130,7 @@ export function RegisterForm() {
       )}
 
       <Button className="w-full" type="submit" disabled={pending}>
-        {pending ? "იქმნება..." : "ანგარიშის შექმნა"}
+        {pending ? d.auth.creating : d.auth.createAccount}
       </Button>
     </form>
   );

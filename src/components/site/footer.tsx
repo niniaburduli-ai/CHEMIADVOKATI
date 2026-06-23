@@ -34,7 +34,7 @@ export async function Footer() {
   const tagline = config.tagline?.trim() || "კანონი მარტივ ენაზე";
   const contactEmail = config.contactEmail?.trim() || "info@chemiuristi.ge";
   const contactPhone = config.contactPhone?.trim() || "+995 32 12 123 456";
-  const contactAddress = config.contactAddress?.trim() || "თბილისი, საქართველო";
+  const contactAddress = config.contactAddress?.trim() || d.footer.address;
 
   return (
     <footer className="bg-[#3730a3] text-white">

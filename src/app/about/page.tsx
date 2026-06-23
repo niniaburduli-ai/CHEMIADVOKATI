@@ -1,37 +1,20 @@
-import type { Metadata } from "next"
-import { getAboutPage } from "@/lib/cms"
-import { getLocale } from "@/lib/i18n/locale"
-import { Users } from "lucide-react"
-import Image from "next/image"
+import type { Metadata } from 'next'
+import { getAboutPage } from '@/lib/cms'
+import { getLocale } from '@/lib/i18n/locale'
+import { getDict } from '@/lib/i18n/dictionaries'
+import { Users } from 'lucide-react'
+import Image from 'next/image'
 
 export const metadata: Metadata = {
-  title: "ჩვენ შესახებ | ჩემი იურისტი",
-  description: "ჩემი იურისტი - თანამედროვე იურიდიული პლატფორმა, რომელიც სამართალს ხელმისაწვდომს ხდის ყველასთვის.",
+  title: 'ჩვენ შესახებ | ჩემი იურისტი',
+  description: 'ჩემი იურისტი - თანამედროვე იურიდიული პლატფორმა, რომელიც სამართალს ხელმისაწვდომს ხდის ყველასთვის.',
 }
 
-const INTRO_DEFAULT =
-  "„ჩემი იურისტი“ არის თანამედროვე იურიდიული პლატფორმა, რომელიც შეიქმნა ერთი მთავარი მიზნით — გახადოს სამართალი ხელმისაწვდომი, მარტივი და გასაგები ყველასთვის.\n\nჩვენ გვჯერა, რომ იურიდიული დახმარება არ უნდა ასოცირდებოდეს რთულ, გაუგებარ ტერმინებთან და უსასრულო ბიუროკრატიასთან. ჩვენ ვსაუბრობთ კანონის მარტივ ენაზე და გეხმარებით უფლებების დაცვაში, ბიზნესის უსაფრთხოდ მართვასა თუ ყოველდღიური სამართლებრივი საკითხების მოგვარებაში — სწრაფად, ონლაინ და ზედმეტი სტრესის გარეშე."
-
-const HISTORY_DEFAULT =
-  "„ჩემი იურისტის“ იდეა გაჩნდა ტრადიციული, ხშირად მოუხერხებელი და ბიუროკრატიული სამართლებრივი მომსახურების საპასუხოდ. ჩვენ დავინახეთ, რომ თანამედროვე სამყაროში ადამიანებსა და ბიზნესებს სჭირდებათ სწრაფი, მოქნილი და ციფრული იურიდიული საყრდენი.\n\nსწორედ ამიტომ, 2026 წელს, შევქმენით ეს ინოვაციური ონლაინ სივრცე. ჩვენი გზა ახლა იწყება, თუმცა ჩვენს ზურგს უკან დგას დიდი ენთუზიაზმი, შევცვალოთ იურიდიული მომსახურების სტანდარტი საქართველოში."
-
-const MISSION_DEFAULT =
-  "ჩვენი მისიაა, ვიყოთ თქვენი საიმედო მრჩეველი ყოველდღიურ ცხოვრებაში თუ ბიზნესში. ჩვენ ვამარტივებთ ყოველ კანონს, ხელშეკრულებასა თუ სამართლებრივ პროცედურას, რათა თქვენ ყოველთვის გრძნობდეთ თავს დაცულად და თავდაჯერებულად."
-
-const DEFAULTS = {
-  title: "ჩვენ შესახებ",
-  intro: INTRO_DEFAULT,
-  historyTitle: "ჩვენი ისტორია",
-  historyBody: HISTORY_DEFAULT,
-  missionTitle: "ჩვენი მისია",
-  mission: MISSION_DEFAULT,
-}
-
-function Paragraphs({ text, className = "" }: { text: string; className?: string }) {
+function Paragraphs({ text, className = '' }: { text: string; className?: string }) {
   return (
     <>
-      {text.split("\n\n").map((p, i) => (
-        <p key={i} className={"leading-relaxed mb-4 last:mb-0 " + className}>
+      {text.split('\n\n').map((p, i) => (
+        <p key={i} className={'leading-relaxed mb-4 last:mb-0 ' + className}>
           {p}
         </p>
       ))}
@@ -42,13 +25,14 @@ function Paragraphs({ text, className = "" }: { text: string; className?: string
 export default async function AboutPage() {
   const locale = await getLocale()
   const cms = await getAboutPage(locale)
+  const d = getDict(locale).about
 
-  const title = cms?.title || DEFAULTS.title
-  const intro = cms?.intro || DEFAULTS.intro
-  const historyTitle = cms?.historyTitle || DEFAULTS.historyTitle
-  const historyBody = cms?.historyBody || DEFAULTS.historyBody
-  const missionTitle = cms?.missionTitle || DEFAULTS.missionTitle
-  const mission = cms?.mission || DEFAULTS.mission
+  const title = cms?.title || d.title
+  const intro = cms?.intro || d.intro
+  const historyTitle = cms?.historyTitle || d.historyTitle
+  const historyBody = cms?.historyBody || d.historyBody
+  const missionTitle = cms?.missionTitle || d.missionTitle
+  const mission = cms?.mission || d.mission
   const team = [...(cms?.team ?? [])].sort((a, b) => a.order - b.order)
 
   return (
@@ -92,7 +76,7 @@ export default async function AboutPage() {
         <section className="container mx-auto px-4 py-16 md:py-20 max-w-4xl">
           <div className="flex items-center gap-3 mb-10 justify-center">
             <Users className="h-6 w-6 text-[#6366f1]" />
-            <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a2e]">ჩვენი გუნდი</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a2e]">{d.teamTitle}</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {team.map((member) => (
@@ -108,7 +92,7 @@ export default async function AboutPage() {
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-[#ededff] flex items-center justify-center shrink-0">
                     <span className="text-2xl font-bold text-[#6366f1]">
-                      {member.name[0] ?? "?"}
+                      {member.name[0] ?? '?'}
                     </span>
                   </div>
                 )}

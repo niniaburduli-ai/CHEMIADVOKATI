@@ -5,27 +5,29 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
-/** Cancels the active Flitt subscription via /api/subscription/cancel. */
-export function CancelSubscriptionButton() {
+export function CancelSubscriptionButton({ locale }: { locale: Locale }) {
+  const d = getDict(locale);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const cancel = async () => {
     if (loading) return;
-    if (!confirm("ნამდვილად გსურს სუბსკრიფციის გაუქმება?")) return;
+    if (!confirm(d.billing.confirmCancel)) return;
     setLoading(true);
     try {
       const res = await fetch("/api/subscription/cancel", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? "გაუქმება ვერ მოხერხდა.");
+        toast.error(data.error ?? d.billing.cancelFail);
         return;
       }
-      toast.success("სუბსკრიფცია გაუქმდა.");
+      toast.success(d.billing.cancelSuccess);
       router.refresh();
     } catch {
-      toast.error("სერვისთან კავშირი ვერ დამყარდა.");
+      toast.error(d.billing.networkError);
     } finally {
       setLoading(false);
     }
@@ -33,7 +35,7 @@ export function CancelSubscriptionButton() {
 
   return (
     <Button variant="outline" onClick={cancel} disabled={loading}>
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "სუბსკრიფციის გაუქმება"}
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : d.billing.cancelSub}
     </Button>
   );
 }

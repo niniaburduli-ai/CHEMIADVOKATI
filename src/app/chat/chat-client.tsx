@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/site/file-upload";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
 type LegalBasisItem = {
   article: string;
@@ -26,8 +28,7 @@ type Message = {
   legalBasis?: LegalBasisGroup[];
 };
 
-// Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts. When the model
-// can't answer from the approved text we must not show citations beside it.
+// Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts.
 const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
 
 /** Groups items by article and returns collapsed point strings per article. */
@@ -39,18 +40,19 @@ function groupByArticle(
     if (!map.has(it.article)) map.set(it.article, []);
     let point = '';
     if (it.paragraph && it.subparagraph) {
-      point = `${it.paragraph} „${it.subparagraph}”`;
+      point = `${it.paragraph} „${it.subparagraph}"`;
     } else if (it.paragraph) {
       point = it.paragraph;
     } else if (it.subparagraph) {
-      point = `„${it.subparagraph}”`;
+      point = `„${it.subparagraph}"`;
     }
     if (point) map.get(it.article)!.push(point);
   }
   return [...map.entries()].map(([article, points]) => ({ article, points }));
 }
 
-export function ChatClient() {
+export function ChatClient({ locale }: { locale: Locale }) {
+  const d = getDict(locale);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,19 +85,18 @@ export function ChatClient() {
 
       const ct = res.headers.get("content-type") ?? "";
 
-      // No-match / error path returns JSON { answer, sources }.
       if (ct.includes("application/json")) {
         const data = await res.json();
-        const content = data.answer ?? data.error ?? "შეცდომა.";
+        const rawContent = data.answer ?? data.error ?? d.chat.errorGeneric;
+        const content = rawContent.trim() === NOT_FOUND_MSG ? d.chat.notFound : rawContent;
         patch((msg) => ({
           ...msg,
           content,
-          legalBasis: content.trim() === NOT_FOUND_MSG ? [] : data.legalBasis ?? [],
+          legalBasis: rawContent.trim() === NOT_FOUND_MSG ? [] : data.legalBasis ?? [],
         }));
         return;
       }
 
-      // Streaming path: text/plain body + legal basis in header.
       let legalBasis: LegalBasisGroup[] = [];
       const raw = res.headers.get("X-Legal-Basis");
       if (raw) {
@@ -107,7 +108,7 @@ export function ChatClient() {
       }
 
       if (!res.body) {
-        patch((msg) => ({ ...msg, content: "შეცდომა — პასუხი ვერ მივიღე.", legalBasis }));
+        patch((msg) => ({ ...msg, content: d.chat.errorNoBody, legalBasis }));
         return;
       }
 
@@ -120,16 +121,16 @@ export function ChatClient() {
         acc += decoder.decode(value, { stream: true });
         patch((msg) => ({ ...msg, content: acc }));
       }
-      // A not-found answer has no real citations.
+      const isNotFound = acc.trim() === NOT_FOUND_MSG;
       patch((msg) => ({
         ...msg,
-        content: acc,
-        legalBasis: acc.trim() === NOT_FOUND_MSG ? [] : legalBasis,
+        content: isNotFound ? d.chat.notFound : acc,
+        legalBasis: isNotFound ? [] : legalBasis,
       }));
     } catch {
       patch((msg) => ({
         ...msg,
-        content: "შეცდომა — სერვისთან კავშირი ვერ დამყარდა.",
+        content: d.chat.errorNetwork,
       }));
     } finally {
       setLoading(false);
@@ -139,15 +140,9 @@ export function ChatClient() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="mb-6 flex flex-col gap-3">
-        <p className="font-semibold text-base">
-          გამარჯობა! მე ვარ „ჩემი იურისტი" — თქვენი პერსონალური ციფრული იურიდიული ასისტენტი.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          მე დაგეხმარებით სამართლებრივი საკითხების გარკვევაში მარტივი, გასაგები ენით, საქართველოს მოქმედი კანონმდებლობის საფუძველზე.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          უბრალოდ დამისვით კითხვა — და მე შევეცდები მოგცეთ მკაფიო და პრაქტიკული პასუხი.
-        </p>
+        <p className="font-semibold text-base">{d.chat.greeting}</p>
+        <p className="text-sm text-muted-foreground">{d.chat.intro1}</p>
+        <p className="text-sm text-muted-foreground">{d.chat.intro2}</p>
       </div>
 
       <div className="space-y-4 mb-6">
@@ -169,12 +164,12 @@ export function ChatClient() {
                 {m.content ? (
                   <p className="text-sm whitespace-pre-wrap">{m.content}</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">წერს...</p>
+                  <p className="text-sm text-muted-foreground">{d.chat.writing}</p>
                 )}
                 {m.legalBasis && m.legalBasis.length > 0 && (
                   <div className="mt-3 space-y-3 border-t pt-3">
                     <p className="text-xs font-semibold text-muted-foreground">
-                      იურიდიული საფუძველი:
+                      {d.chat.legalBasis}
                     </p>
                     {m.legalBasis.map((g) => {
                       const articleGroups = groupByArticle(g.items);
@@ -186,10 +181,10 @@ export function ChatClient() {
                               <li key={article} className="text-xs text-muted-foreground">
                                 {article}
                                 {points.length > 1 && (
-                                  <>, პუნქტები: {points.join("; ")}</>
+                                  <>, {d.chat.articlePoints} {points.join("; ")}</>
                                 )}
                                 {points.length === 1 && (
-                                  <>, პუნქტი {points[0]}</>
+                                  <>, {d.chat.articlePoint} {points[0]}</>
                                 )}
                               </li>
                             ))}
@@ -201,7 +196,7 @@ export function ChatClient() {
                             className="flex items-start gap-1.5 text-xs text-primary hover:underline"
                           >
                             <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                            <span>წყარო</span>
+                            <span>{d.chat.source}</span>
                           </a>
                         </div>
                       );
@@ -223,37 +218,37 @@ export function ChatClient() {
       >
         {messages.length === 0 && (
           <label className="text-sm font-semibold text-primary">
-            რით შემიძლია დაგეხმაროთ დღეს?
+            {d.chat.howCanIHelp}
           </label>
         )}
         <div className="flex gap-2">
-        <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="დასვით თქვენი კითხვა"
-          className="min-h-[60px] bg-background"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send(input);
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={d.chat.placeholder}
+            className="min-h-[60px] bg-background"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send(input);
+              }
+            }}
+          />
+          <FileUpload
+            disabled={loading}
+            onUploaded={(f) =>
+              setInput((prev) =>
+                prev ? `${prev}\n${f.url}` : f.url
+              )
             }
-          }}
-        />
-        <FileUpload
-          disabled={loading}
-          onUploaded={(f) =>
-            setInput((prev) =>
-              prev ? `${prev}\n${f.url}` : f.url
-            )
-          }
-        />
-        <Button type="submit" size="icon" disabled={loading}>
-          <Send className="h-4 w-4" />
-        </Button>
+          />
+          <Button type="submit" size="icon" disabled={loading}>
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </form>
       <p className="text-xs text-muted-foreground text-center mt-3">
-        გაფრთხილება: „პასუხი გენერირებულია ხელოვნური ინტელექტის მიერ და ეფუძნება მოქმედ კანონმდებლობას. ოფიციალური იურიდიული დასკვნისთვის მიმართეთ იურისტს."
+        {d.chat.disclaimer}
       </p>
     </div>
   );

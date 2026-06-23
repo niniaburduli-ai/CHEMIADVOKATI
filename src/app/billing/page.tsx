@@ -16,23 +16,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CancelSubscriptionButton } from "@/components/site/cancel-subscription-button";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDict } from "@/lib/i18n/dictionaries";
 
 export const dynamic = "force-dynamic";
-
-const PLAN_INFO: Record<string, { label: string; price: string }> = {
-  free: { label: "უფასო", price: "0 ₾" },
-  standard: { label: "სტანდარტული", price: "19 ₾ / თვე" },
-  premium: { label: "პრემიუმ", price: "99 ₾ / თვე" },
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  active: "აქტიური",
-  pending: "მუშავდება",
-  canceled: "გაუქმებული",
-  declined: "უარყოფილი",
-  expired: "ვადაგასული",
-  reversed: "დაბრუნებული",
-};
 
 const fmtDate = (d?: Date | null) =>
   d ? new Date(d).toISOString().slice(0, 10) : "—";
@@ -40,14 +27,32 @@ const fmtAmount = (minor: number, currency = "GEL") =>
   `${(minor / 100).toFixed(2)} ${currency === "GEL" ? "₾" : currency}`;
 
 export default async function BillingPage() {
-  const session = await auth();
+  const [session, locale] = await Promise.all([auth(), getLocale()]);
   if (!session?.user?.id) redirect("/login?callbackUrl=/billing");
+
+  const d = getDict(locale);
 
   await dbConnect();
   const user = await User.findById(session.user.id).lean();
   if (!user) redirect("/login");
 
-  const plan = (user.plan ?? "free") as keyof typeof PLAN_INFO;
+  const plan = (user.plan ?? "free") as string;
+
+  const PLAN_INFO: Record<string, { label: string; price: string }> = {
+    free: { label: d.billing.planFree, price: d.billing.priceFree },
+    standard: { label: d.billing.planStandard, price: d.billing.priceStandard },
+    premium: { label: d.billing.planPremium, price: d.billing.pricePremium },
+  };
+
+  const STATUS_LABEL: Record<string, string> = {
+    active: d.billing.statusActive,
+    pending: d.billing.statusPending,
+    canceled: d.billing.statusCanceled,
+    declined: d.billing.statusDeclined,
+    expired: d.billing.statusExpired,
+    reversed: d.billing.statusReversed,
+  };
+
   const info = PLAN_INFO[plan] ?? PLAN_INFO.free;
   const isPaid = plan !== "free";
   const status = user.subscriptionStatus || (isPaid ? "active" : "");
@@ -59,18 +64,16 @@ export default async function BillingPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
-      <h1 className="text-3xl font-bold mb-2">ბილინგი</h1>
-      <p className="text-muted-foreground mb-8">
-        გადახდის მართვა და გადახდების ისტორია
-      </p>
+      <h1 className="text-3xl font-bold mb-2">{d.billing.title}</h1>
+      <p className="text-muted-foreground mb-8">{d.billing.subtitle}</p>
 
       <Card className="mb-6">
         <CardHeader>
           <div className="flex justify-between items-start flex-wrap gap-2">
             <div>
-              <CardTitle>მიმდინარე გეგმა</CardTitle>
+              <CardTitle>{d.billing.currentPlan}</CardTitle>
               <CardDescription>
-                {isPaid ? "აქტიური სუბსკრიფცია" : "უფასო გეგმა"}
+                {isPaid ? d.billing.activeSub : d.billing.freePlanLabel}
               </CardDescription>
             </div>
             {status && (
@@ -88,27 +91,27 @@ export default async function BillingPage() {
           {isPaid && (
             <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              შემდეგი გადახდა: {fmtDate(user.resetAt)}
+              {d.billing.nextPayment} {fmtDate(user.resetAt)}
             </div>
           )}
           <div className="mt-6 flex gap-2 flex-wrap">
             <Link href="/pricing" className={buttonVariants()}>
-              {isPaid ? "გეგმის შეცვლა" : "გეგმის არჩევა"}
+              {isPaid ? d.billing.changePlan : d.billing.choosePlan}
             </Link>
-            {isPaid && status !== "canceled" && <CancelSubscriptionButton />}
+            {isPaid && status !== "canceled" && <CancelSubscriptionButton locale={locale} />}
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>გადახდების ისტორია</CardTitle>
+          <CardTitle>{d.billing.paymentHistory}</CardTitle>
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
               <Receipt className="h-4 w-4" />
-              გადახდები ჯერ არ არის.
+              {d.billing.noPayments}
             </div>
           ) : (
             <div className="space-y-3">
@@ -128,7 +131,7 @@ export default async function BillingPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-sm">{fmtAmount(p.amount, p.currency)}</span>
                         <Badge variant="secondary">
-                          {STATUS_LABEL[p.status ?? "approved"] ?? "გადახდილი"}
+                          {STATUS_LABEL[p.status ?? "approved"] ?? d.billing.statusPaid}
                         </Badge>
                       </div>
                     </div>

@@ -17,15 +17,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PLAN_LIMITS, type Plan } from "@/lib/plans";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDict } from "@/lib/i18n/dictionaries";
 
 export const dynamic = "force-dynamic";
 
 function UsageRow({
   label,
+  usedLabel,
+  leftLabel,
   used,
   total,
 }: {
   label: string;
+  usedLabel: string;
+  leftLabel: string;
   used: number;
   total: number;
 }) {
@@ -36,8 +42,9 @@ function UsageRow({
       <div className="flex justify-between text-sm mb-1">
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground">
-          გამოყენებული: <span className="font-semibold text-foreground">{used} / {total}</span>
-          {" · "}დარჩენილი: <span className="font-semibold text-foreground">{remaining}</span>
+          {usedLabel} <span className="font-semibold text-foreground">{used} / {total}</span>
+          {" · "}
+          {leftLabel} <span className="font-semibold text-foreground">{remaining}</span>
         </span>
       </div>
       <div className="h-2 w-full bg-muted rounded overflow-hidden">
@@ -51,8 +58,10 @@ function UsageRow({
 }
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const [session, locale] = await Promise.all([auth(), getLocale()]);
   if (!session?.user?.id) redirect("/login?callbackUrl=/dashboard");
+
+  const d = getDict(locale);
 
   await dbConnect();
   const [user, sub] = await Promise.all([
@@ -74,19 +83,22 @@ export default async function DashboardPage() {
   const reviewUsed = Math.max(0, limits.docReview - (user.docReviewRemaining ?? 0));
 
   const subStatus = sub?.status ?? null;
+  const dateLocale = locale === "en" ? "en-GB" : "ka-GE";
   const periodEnd = sub?.currentPeriodEnd
-    ? new Date(sub.currentPeriodEnd as unknown as Date).toLocaleDateString("ka-GE")
+    ? new Date(sub.currentPeriodEnd as unknown as Date).toLocaleDateString(dateLocale)
     : null;
+
+  const planLabel = plan === "standard" ? d.dashboard.standard : d.dashboard.free;
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-5xl">
       <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold">გამარჯობა, {user.name}</h1>
-          <p className="text-muted-foreground mt-1">შენი იურიდიული ცენტრი</p>
+          <h1 className="text-3xl font-bold">{d.dashboard.greeting} {user.name}</h1>
+          <p className="text-muted-foreground mt-1">{d.dashboard.subtitle}</p>
         </div>
         <Link href="/chat" className={buttonVariants()}>
-          <MessagesSquare className="mr-2 h-4 w-4" /> ახალი კონსულტაცია
+          <MessagesSquare className="mr-2 h-4 w-4" /> {d.dashboard.newConsultation}
         </Link>
       </div>
 
@@ -95,14 +107,14 @@ export default async function DashboardPage() {
         <Link href="/chat" className="block">
           <Card className="hover:border-primary/50 transition-colors h-full">
             <CardHeader className="pb-2">
-              <CardDescription>კონსულტაცია</CardDescription>
+              <CardDescription>{d.dashboard.consultation}</CardDescription>
               <CardTitle className="text-lg flex items-center gap-2">
-                <MessagesSquare className="h-4 w-4" /> AI იურისტი
+                <MessagesSquare className="h-4 w-4" /> {d.dashboard.aiLawyer}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                დარჩენილი: {user.consultationsRemaining ?? 0}
+                {d.dashboard.remaining} {user.consultationsRemaining ?? 0}
               </p>
             </CardContent>
           </Card>
@@ -110,14 +122,14 @@ export default async function DashboardPage() {
         <Link href="/generate" className="block">
           <Card className="hover:border-primary/50 transition-colors h-full">
             <CardHeader className="pb-2">
-              <CardDescription>დოკუმენტი</CardDescription>
+              <CardDescription>{d.dashboard.document}</CardDescription>
               <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-4 w-4" /> გენერაცია
+                <FileText className="h-4 w-4" /> {d.dashboard.generation}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                დარჩენილი: {user.docGenerationRemaining ?? 0}
+                {d.dashboard.remaining} {user.docGenerationRemaining ?? 0}
               </p>
             </CardContent>
           </Card>
@@ -125,14 +137,14 @@ export default async function DashboardPage() {
         <Link href="/review" className="block">
           <Card className="hover:border-primary/50 transition-colors h-full">
             <CardHeader className="pb-2">
-              <CardDescription>მიმოხილვა</CardDescription>
+              <CardDescription>{d.dashboard.review}</CardDescription>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Search className="h-4 w-4" /> ანალიზი
+                <Search className="h-4 w-4" /> {d.dashboard.analysisLabel}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                დარჩენილი: {user.docReviewRemaining ?? 0}
+                {d.dashboard.remaining} {user.docReviewRemaining ?? 0}
               </p>
             </CardContent>
           </Card>
@@ -144,35 +156,53 @@ export default async function DashboardPage() {
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <CardTitle>ჩემი გეგმა და გამოყენება</CardTitle>
+              <CardTitle>{d.dashboard.myPlanUsage}</CardTitle>
               <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
-                <span className="capitalize font-medium">
-                  {plan === "standard" ? "სტანდარტი — $5/თვე" : "უფასო"}
-                </span>
+                <span className="capitalize font-medium">{planLabel}</span>
                 {subStatus && (
                   <Badge variant={subStatus === "active" ? "default" : "secondary"}>
                     {subStatus}
                   </Badge>
                 )}
                 {periodEnd && (
-                  <span className="text-xs">მოქმედია {periodEnd}-მდე</span>
+                  <span className="text-xs">
+                    {d.dashboard.activeUntil} {periodEnd}{d.dashboard.activeUntilSuffix}
+                  </span>
                 )}
               </CardDescription>
             </div>
             <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              <CreditCard className="mr-2 h-4 w-4" /> მართვა
+              <CreditCard className="mr-2 h-4 w-4" /> {d.dashboard.manage}
             </Link>
           </div>
         </CardHeader>
         <CardContent>
-          <UsageRow label="კონსულტაციები" used={consultUsed} total={limits.consultations} />
-          <UsageRow label="დოკუმენტის გენერაცია" used={docGenUsed} total={limits.docGeneration} />
-          <UsageRow label="დოკუმენტის მიმოხილვა" used={reviewUsed} total={limits.docReview} />
+          <UsageRow
+            label={d.dashboard.consultations}
+            usedLabel={d.dashboard.usedLabel}
+            leftLabel={d.dashboard.leftLabel}
+            used={consultUsed}
+            total={limits.consultations}
+          />
+          <UsageRow
+            label={d.dashboard.docGeneration}
+            usedLabel={d.dashboard.usedLabel}
+            leftLabel={d.dashboard.leftLabel}
+            used={docGenUsed}
+            total={limits.docGeneration}
+          />
+          <UsageRow
+            label={d.dashboard.docReview}
+            usedLabel={d.dashboard.usedLabel}
+            leftLabel={d.dashboard.leftLabel}
+            used={reviewUsed}
+            total={limits.docReview}
+          />
           {plan === "free" && (
             <p className="text-xs text-muted-foreground mt-3">
-              მეტი ლიმიტისთვის{" "}
+              {d.dashboard.upgradePrompt}{" "}
               <Link href="/pricing" className="underline text-primary">
-                გადადი სტანდარტ გეგმაზე
+                {d.dashboard.upgradeCta}
               </Link>
               .
             </p>
@@ -186,9 +216,9 @@ export default async function DashboardPage() {
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <MessagesSquare className="h-4 w-4" /> კონსულტაციების ისტორია
+                <MessagesSquare className="h-4 w-4" /> {d.dashboard.consultHistory}
               </CardTitle>
-              <CardDescription>ყველა შეკითხვა და პასუხი</CardDescription>
+              <CardDescription>{d.dashboard.allQnA}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
@@ -196,9 +226,9 @@ export default async function DashboardPage() {
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" /> გენერირებული დოკუმენტები
+                <FileText className="h-4 w-4" /> {d.dashboard.generatedDocs}
               </CardTitle>
-              <CardDescription>ჩამოტვირთვა და ნახვა</CardDescription>
+              <CardDescription>{d.dashboard.downloadView}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
@@ -206,9 +236,9 @@ export default async function DashboardPage() {
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <FileCheck className="h-4 w-4" /> მიმოხილვის შედეგები
+                <FileCheck className="h-4 w-4" /> {d.dashboard.reviewResults}
               </CardTitle>
-              <CardDescription>ანალიზის ისტორია</CardDescription>
+              <CardDescription>{d.dashboard.analysisHistory}</CardDescription>
             </CardHeader>
           </Card>
         </Link>
@@ -218,22 +248,22 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>ბოლო კონსულტაციები</CardTitle>
-            <CardDescription>უახლესი 5 შეკითხვა</CardDescription>
+            <CardTitle>{d.dashboard.recentConsultations}</CardTitle>
+            <CardDescription>{d.dashboard.latest5}</CardDescription>
           </div>
           <Link
             href="/dashboard/consultations"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            ყველა →
+            {d.dashboard.viewAll}
           </Link>
         </CardHeader>
         <CardContent>
           {history.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
-              ჯერ კონსულტაცია არ გაქვს.{" "}
+              {d.dashboard.noHistory}{" "}
               <Link href="/chat" className="underline">
-                დაიწყე აქ
+                {d.dashboard.startHere}
               </Link>
               .
             </p>
@@ -253,7 +283,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
                         <Clock className="h-3 w-3" />
-                        {created ? new Date(created).toLocaleDateString("ka-GE") : ""}
+                        {created ? new Date(created).toLocaleDateString(dateLocale) : ""}
                       </div>
                     </Link>
                     {i < history.length - 1 && <Separator />}

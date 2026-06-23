@@ -34,36 +34,36 @@ export type PlanLimits = {
 /** Seed defaults the first time the collection is empty. DB is source of truth after. */
 const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
   {
-    key: "free", name: "უფასო", nameEn: "Free",
+    key: "free", name: "საბაზისო პაკეტი", nameEn: "Basic Plan",
     description: "სცადე როგორ მუშაობს", descriptionEn: "Try how it works",
     priceMinor: 0, currency: "GEL", period: "month",
     consultations: PLAN_LIMITS.free.consultations,
     docGeneration: PLAN_LIMITS.free.docGeneration,
     docReview: PLAN_LIMITS.free.docReview,
-    features: ["1 კონსულტაცია თვეში", "კანონმდებლობის დათვალიერება", "საბაზო AI პასუხები"],
-    featuresEn: ["1 consultation per month", "Browse legislation", "Basic AI answers"],
+    features: ["9 კონსულტაცია AI იურისტთან", "ოფიციალური წყაროების მითითება", "კითხვების ისტორიის ნახვა"],
+    featuresEn: ["9 AI lawyer consultations", "Official source citations", "View question history"],
     isFree: true, highlighted: false, visible: true, active: true, order: 0,
   },
   {
-    key: "standard", name: "სტანდარტი", nameEn: "Standard",
+    key: "standard", name: "სტანდარტული პაკეტი", nameEn: "Standard Plan",
     description: "ყველაზე პოპულარული", descriptionEn: "Most popular",
     priceMinor: 1900, currency: "GEL", period: "month",
     consultations: PLAN_LIMITS.standard.consultations,
     docGeneration: PLAN_LIMITS.standard.docGeneration,
     docReview: PLAN_LIMITS.standard.docReview,
-    features: ["9 კონსულტაცია თვეში", "მუხლების ციტირება", "კონსულტაციების ისტორია", "გაუქმება ნებისმიერ დროს"],
-    featuresEn: ["9 consultations per month", "Article citations", "Consultation history", "Cancel anytime"],
+    features: ["29 კონსულტაცია AI იურისტთან", "19 შაბლონის გენერირება", "9 დოკუმენტის შემოწმება", "ოფიციალური წყაროების მითითება", "კითხვების ისტორიის ნახვა"],
+    featuresEn: ["29 AI lawyer consultations", "19 template generations", "9 document reviews", "Official source citations", "View question history"],
     isFree: false, highlighted: true, visible: true, active: true, order: 1,
   },
   {
-    key: "premium", name: "პრემიუმი", nameEn: "Premium",
+    key: "premium", name: "პრემიუმ (ბიზნეს) პაკეტი", nameEn: "Premium (Business) Plan",
     description: "ხშირი მომხმარებლისთვის", descriptionEn: "For frequent users",
     priceMinor: 9900, currency: "GEL", period: "month",
     consultations: PLAN_LIMITS.premium.consultations,
     docGeneration: PLAN_LIMITS.premium.docGeneration,
     docReview: PLAN_LIMITS.premium.docReview,
-    features: ["ულიმიტო კონსულტაცია", "დოკუმენტის ანალიზი", "ყველაფერი სტანდარტიდან"],
-    featuresEn: ["Unlimited consultations", "Document analysis", "Everything in Standard"],
+    features: ["შეუზღუდავი კონსულტაცია AI იურისტთან", "შეუზღუდავი შაბლონის გენერირება", "99 დოკუმენტის/ხელშეკრულების შემოწმება", "ოფიციალური წყაროების მითითება", "კითხვების ისტორიის ნახვა", "გაფართოებული იურიდიული ანალიზი"],
+    featuresEn: ["Unlimited AI lawyer consultations", "Unlimited template generations", "99 document/contract reviews", "Official source citations", "View question history", "Advanced legal analysis"],
     isFree: false, highlighted: false, visible: true, active: true, order: 2,
   },
 ]
@@ -96,8 +96,30 @@ function toData(d: PlanDoc): PlanData {
 export async function ensurePlansSeeded(): Promise<void> {
   await dbConnect()
   const count = await Plan.estimatedDocumentCount()
-  if (count > 0) return
-  await Plan.insertMany(DEFAULT_PLANS)
+  if (count === 0) {
+    await Plan.insertMany(DEFAULT_PLANS)
+    return
+  }
+  // Sync all content fields from DEFAULT_PLANS so code changes take effect without manual DB edits
+  await Promise.all(
+    DEFAULT_PLANS.map((def) =>
+      Plan.updateOne(
+        { key: def.key },
+        {
+          $set: {
+            name: def.name, nameEn: def.nameEn,
+            description: def.description, descriptionEn: def.descriptionEn,
+            priceMinor: def.priceMinor,
+            consultations: def.consultations,
+            docGeneration: def.docGeneration,
+            docReview: def.docReview,
+            features: def.features,
+            featuresEn: def.featuresEn,
+          },
+        }
+      )
+    )
+  )
 }
 
 /** All plans, ordered. Seeds defaults on first call. */
