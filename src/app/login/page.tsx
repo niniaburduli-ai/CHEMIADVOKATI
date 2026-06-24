@@ -6,9 +6,14 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
 
-export default async function LoginPage() {
-  const locale = await getLocale();
+type Props = { searchParams: Promise<{ callbackUrl?: string }> };
+
+export default async function LoginPage({ searchParams }: Props) {
+  const [{ callbackUrl }, locale] = await Promise.all([searchParams, getLocale()]);
   const d = getDict(locale);
+  const registerHref = callbackUrl
+    ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : "/register";
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-md">
@@ -31,7 +36,7 @@ export default async function LoginPage() {
           </Suspense>
           <p className="mt-6 text-sm text-center text-muted-foreground">
             {d.auth.noAccount}{" "}
-            <Link href="/register" className="text-foreground font-medium">{d.auth.signUpCta}</Link>
+            <Link href={registerHref} className="text-foreground font-medium">{d.auth.signUpCta}</Link>
           </p>
         </CardContent>
       </Card>

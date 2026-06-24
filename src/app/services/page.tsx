@@ -26,7 +26,7 @@ function getServices(locale: "ka" | "en"): ServiceData[] {
       id: "ai-assistant",
       icon: MessageSquare,
       title: isEn ? "AI Lawyer" : "AI იურისტი",
-      subtitle: isEn ? "Ask a question" : "დასვი კითხვა",
+      subtitle: isEn ? "Ask a question" : "დასვით კითხვა",
       description: isEn
         ? "Get instant answers to your legal questions using artificial intelligence, available 24/7. Our AI is trained on Georgian legislation and provides accurate, source-backed answers in plain language."
         : "მიიღეთ მყისიერი პასუხები თქვენს იურიდიულ კითხვებზე ხელოვნური ინტელექტის დახმარებით, 24/7 რეჟიმში. ჩვენი AI გაწვრთნილია საქართველოს კანონმდებლობაზე და გაწვდით ზუსტ, წყაროებით გამყარებულ პასუხებს მარტივად გასაგებ ენაზე.",
@@ -45,7 +45,7 @@ function getServices(locale: "ka" | "en"): ServiceData[] {
             "საუბრის სრული ისტორიის შენახვა",
             "დამატებითი კითხვების დასმის მხარდაჭერა",
           ],
-      cta: isEn ? "Ask a question" : "დასვი კითხვა",
+      cta: isEn ? "Ask a question" : "დასვით კითხვა",
       href: "/chat",
       comingSoon: false,
     },
@@ -53,7 +53,7 @@ function getServices(locale: "ka" | "en"): ServiceData[] {
       id: "templates",
       icon: FileText,
       title: isEn ? "Templates" : "შაბლონები",
-      subtitle: isEn ? "Create a template" : "შექმენი შაბლონი",
+      subtitle: isEn ? "Create a template" : "შექმენით შაბლონი",
       description: isEn
         ? "Create legal documents quickly and easily by filling out a simple questionnaire. The system automatically prepares a ready-to-use document."
         : "შექმენით იურიდიული დოკუმენტები სწრაფად და მარტივად, მარტივი კითხვარის შევსებით. სისტემა ავტომატურად ამზადებს მზად გამოსაყენებელ დოკუმენტს.",
@@ -72,7 +72,7 @@ function getServices(locale: "ka" | "en"): ServiceData[] {
             "ნაბიჯ-ნაბიჯ კითხვარი",
             "PDF ფორმატში ჩამოტვირთვა",
           ],
-      cta: isEn ? "Create Document" : "შექმენი დოკუმენტი",
+      cta: isEn ? "Create Document" : "შექმენით დოკუმენტი",
       href: "/templates",
       comingSoon: true,
     },
@@ -80,7 +80,7 @@ function getServices(locale: "ka" | "en"): ServiceData[] {
       id: "smart-analysis",
       icon: FolderOpen,
       title: isEn ? "Documents" : "დოკუმენტები",
-      subtitle: isEn ? "Check a document" : "შეამოწმე დოკუმენტი",
+      subtitle: isEn ? "Check a document" : "შეამოწმეთ დოკუმენტი",
       description: isEn
         ? "Upload any document and the system will automatically detect risks and suspicious clauses. Get accurate information before signing a document."
         : "ატვირთეთ ნებისმიერი დოკუმენტი და სისტემა ავტომატურად აღმოაჩენს რისკებსა და საეჭვო პუნქტებს. მიიღეთ ზუსტი ინფორმაცია სანამ ხელს მოაწერთ დოკუმენტს.",

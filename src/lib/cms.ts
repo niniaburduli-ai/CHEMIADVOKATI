@@ -1,4 +1,5 @@
 import { dbConnect } from "@/lib/db"
+import { HOME_SEED } from "@/lib/homepage-defaults"
 import { SiteConfig } from "@/lib/models/SiteConfig"
 import { NavMenu } from "@/lib/models/NavMenu"
 import { HomePage } from "@/lib/models/HomePage"
@@ -104,12 +105,37 @@ export async function getNavMenu(locale: Locale = "ka"): Promise<NavMenuData> {
   } catch { return fallback }
 }
 
+const INFORMAL_PRICING = "აირჩიე თქვენზე მორგებული პაკეტი"
+const INFORMAL_CTA_TITLE = "მზად ხარ?"
+const INFORMAL_CARD_SUBTITLES: Record<string, string> = {
+  "დასვი კითხვა":        "დასვით კითხვა",
+  "შექმენი შაბლონი":    "შექმენით შაბლონი",
+  "შეამოწმე დოკუმენტი": "შეამოწმეთ დოკუმენტი",
+}
+const INFORMAL_CARD_CTA: Record<string, string> = {
+  "შექმენი დოკუმენტი": "შექმენით დოკუმენტი",
+}
+
 export async function getHomePage(): Promise<HomePageData | null> {
   try {
     await dbConnect()
     const doc = await HomePage.findOne({ status: "published", locale: { $ne: "en" } }).lean()
     if (!doc) return null
-    return toPlain(doc as unknown as HomePageData)
+    const data = toPlain(doc as unknown as HomePageData)
+    if (data.pricingHeading === INFORMAL_PRICING) {
+      data.pricingHeading = HOME_SEED.pricingHeading
+    }
+    if (data.ctaSection?.title === INFORMAL_CTA_TITLE) {
+      data.ctaSection = { ...data.ctaSection, ...HOME_SEED.ctaSection }
+    }
+    if (data.serviceCards?.length) {
+      data.serviceCards = data.serviceCards.map((card) => ({
+        ...card,
+        subtitle:  INFORMAL_CARD_SUBTITLES[card.subtitle]  ?? card.subtitle,
+        ctaText:   INFORMAL_CARD_CTA[card.ctaText ?? ""]   ?? card.ctaText,
+      }))
+    }
+    return data
   } catch { return null }
 }
 

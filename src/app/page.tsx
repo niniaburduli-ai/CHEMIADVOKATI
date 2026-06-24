@@ -5,7 +5,6 @@ import {
   MousePointerClick, Zap, Layers, Users, Circle,
   type LucideIcon,
 } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
 import { PricingSection } from "@/components/site/PricingSection"
 import { getHomePage } from "@/lib/cms"
 import { getVisiblePlans } from "@/lib/plans-db"
@@ -23,12 +22,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 function resolveIcon(name: string): LucideIcon {
   return ICON_MAP[name] ?? Circle
-}
-
-function serviceCardsGrid(n: number) {
-  if (n <= 1) return "grid-cols-1"
-  if (n === 2) return "grid-cols-2"
-  return "grid-cols-3"
 }
 
 function statsGrid(n: number) {
@@ -291,7 +284,7 @@ export default async function Home() {
           <p className="mt-3 text-muted-foreground">{ctaSubtitle}</p>
           <Link
             href={ctaButtonHref}
-            className={buttonVariants({ size: "lg", className: "mt-6" })}
+            className="mt-6 inline-flex items-center justify-center px-8 py-3.5 rounded-xl text-sm font-semibold bg-[#4338ca] hover:bg-[#3730a3] text-white transition-colors"
           >
             {ctaButtonText}
           </Link>

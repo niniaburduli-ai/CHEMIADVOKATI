@@ -26,7 +26,7 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
       _id: "sc-2",
       title: "შაბლონები", titleEn: "Templates",
       subtitle: "დოკუმენტის გენერატორი", subtitleEn: "Create a template",
-      ctaText: "შექმენი დოკუმენტი", ctaTextEn: "Create document",
+      ctaText: "შექმენით დოკუმენტი", ctaTextEn: "Create document",
       href: "/templates", icon: "FileText", comingSoon: true, visible: true, order: 1,
     },
     {
@@ -54,7 +54,7 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
     { _id: "fe-4", title: "უსაფრთხო გარემო", titleEn: "Secure environment", body: "თქვენი კითხვები და დოკუმენტები მუშავდება კონფიდენციალურად და უსაფრთხოდ.", bodyEn: "Your questions and documents are processed confidentially and securely.", icon: "ShieldCheck", order: 3, visible: true },
     { _id: "fe-5", title: "24/7 ხელმისაწვდომობა", titleEn: "Available 24/7", body: "მიიღეთ იურიდიული ინფორმაცია ნებისმიერ დროს, თქვენთვის მოსახერხებელ მომენტში.", bodyEn: "Get legal information at any time, at your convenience.", icon: "Clock", order: 4, visible: true },
   ],
-  pricingHeading: "აირჩიე თქვენზე მორგებული პაკეტი",
+  pricingHeading: "აირჩიეთ თქვენზე მორგებული პაკეტი",
   pricingHeadingEn: "Choose the plan that fits you",
   plans: [
     {
@@ -77,9 +77,9 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
     },
   ],
   ctaSection: {
-    title: "მზად ხარ?",
+    title: "მზად ხართ?",
     titleEn: "Ready?",
-    subtitle: "დაარეგისტრირდი წამში და მიიღე პირველი კონსულტაცია უფასოდ.",
+    subtitle: "დაარეგისტრირდით წამში და მიიღეთ პირველი კონსულტაცია უფასოდ.",
     subtitleEn: "Register in seconds and get your first consultation for free.",
     buttonText: "რეგისტრაცია",
     buttonTextEn: "Sign up",

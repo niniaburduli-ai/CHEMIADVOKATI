@@ -28,6 +28,9 @@ export async function registerAction(
   };
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const consentAccepted = formData.get("consentAccepted");
+  const rawCallbackUrl = String(formData.get("callbackUrl") ?? "");
+  // Only allow relative paths to prevent open redirect.
+  const callbackUrl = rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/dashboard";
 
   if (consentAccepted !== "on") {
     return {
@@ -88,7 +91,7 @@ export async function registerAction(
     throw err;
   }
 
-  redirect("/dashboard");
+  redirect(callbackUrl);
 }
 
 export async function loginAction(

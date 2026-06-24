@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { getDict } from "@/lib/i18n/dictionaries"
 import type { Locale } from "@/lib/i18n/config"
-import { LEGISLATION_DOCS, CATEGORY_IDS } from "./legislation-data"
+import { LEGISLATION_DOCS } from "./legislation-data"
 
 export function LegislationClient({ locale }: { locale: Locale }) {
   const d = getDict(locale)

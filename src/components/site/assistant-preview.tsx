@@ -20,7 +20,7 @@ export function AssistantPreview() {
         {/* Greeting */}
         <div className="flex flex-col gap-3 text-[#1a1a2e]">
           <p className="font-semibold text-base leading-relaxed">
-            გამარჯობა! მე ვარ „ჩემი იურისტი" — თქვენი პერსონალური ციფრული იურიდიული ასისტენტი.
+            გამარჯობა! მე ვარ „ჩემი იურისტი&rdquo; — თქვენი პერსონალური ციფრული იურიდიული ასისტენტი.
           </p>
           <p className="text-sm text-gray-600 leading-relaxed">
             მე დაგეხმარებით სამართლებრივი საკითხების გარკვევაში მარტივი, გასაგები ენით, საქართველოს მოქმედი კანონმდებლობის საფუძველზე.
@@ -55,7 +55,7 @@ export function AssistantPreview() {
         <div className="flex gap-3 bg-[#fffbeb] border border-[#fde68a] rounded-xl px-4 py-3">
           <AlertTriangle className="h-4 w-4 text-[#d97706] shrink-0 mt-0.5" />
           <p className="text-xs text-[#92400e] leading-relaxed">
-            გაფრთხილება: „პასუხი გენერირებულია ხელოვნური ინტელექტის მიერ და ეფუძნება მოქმედ კანონმდებლობას. ოფიციალური იურიდიული დასკვნისთვის მიმართეთ იურისტს."
+            გაფრთხილება: „პასუხი გენერირებულია ხელოვნური ინტელექტის მიერ და ეფუძნება მოქმედ კანონმდებლობას. ოფიციალური იურიდიული დასკვნისთვის მიმართეთ იურისტს.&rdquo;
           </p>
         </div>
       </div>

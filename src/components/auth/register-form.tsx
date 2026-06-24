@@ -9,7 +9,7 @@ import { registerAction, type AuthFormState } from "@/actions/auth";
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 
-export function RegisterForm({ locale }: { locale: Locale }) {
+export function RegisterForm({ locale, callbackUrl }: { locale: Locale; callbackUrl?: string }) {
   const d = getDict(locale);
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     registerAction,
@@ -18,6 +18,7 @@ export function RegisterForm({ locale }: { locale: Locale }) {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="callbackUrl" value={callbackUrl ?? ""} />
       <div className="space-y-2">
         <Label htmlFor="name">{d.auth.fullName}</Label>
         <Input

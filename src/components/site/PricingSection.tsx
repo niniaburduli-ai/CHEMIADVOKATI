@@ -97,7 +97,6 @@ export function PricingSection({
     }
     document.addEventListener("visibilitychange", onVisible)
     return () => document.removeEventListener("visibilitychange", onVisible)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (plans.length === 0) return null

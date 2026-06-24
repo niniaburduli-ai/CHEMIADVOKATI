@@ -7,7 +7,6 @@ import {
   CreditCard,
   Clock,
   ArrowRight,
-  User2,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";

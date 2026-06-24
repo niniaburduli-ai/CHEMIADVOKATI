@@ -9,12 +9,12 @@ export const runtime = "nodejs"
 
 const KA_FILTER = { locale: { $ne: "en" } }
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   await dbConnect()
 
-  let raw = await HomePage.findOne(KA_FILTER).lean() as Record<string, unknown> | null
+  const raw = await HomePage.findOne(KA_FILTER).lean() as Record<string, unknown> | null
 
   if (!raw) {
     const created = await HomePage.create({ ...HOME_SEED, status: "draft", locale: "ka" })
