@@ -122,19 +122,17 @@ export default async function Home() {
       {/* ── HERO ── */}
       {sections.hero !== false && (
         <section className="relative overflow-hidden bg-primary">
-          {/* Statue as background — invert turns white→black (screen removes it), warm filters push to gold */}
+          {/* Statue — high contrast kills background artifacts; sepia+hue push lines to gold matching text */}
           <div className="absolute inset-y-0 right-0 w-full lg:w-[62%] flex items-end justify-center pointer-events-none select-none animate-float-in">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/kartlis_deda_5.png"
               alt=""
               aria-hidden="true"
-              className="h-full w-auto object-contain opacity-[0.96] mix-blend-screen"
-              style={{ filter: "invert(1) sepia(1) saturate(4.2) hue-rotate(6deg) contrast(1.6) brightness(1.08) drop-shadow(0 0 40px oklch(0.65 0.13 78 / 0.4))" }}
+              className="h-full w-auto object-contain mix-blend-screen"
+              style={{ filter: "invert(1) sepia(1) saturate(4.8) hue-rotate(12deg) contrast(2.4) brightness(1.0)" }}
             />
           </div>
-          {/* Gradient: solid on text side, fades out by 55% so statue is fully visible on the right */}
-          <div className="absolute inset-0 bg-gradient-to-r from-primary from-[30%] via-primary/80 via-[50%] to-transparent pointer-events-none" />
 
           <div className="relative container mx-auto px-4">
             <div className="flex flex-col justify-center min-h-[560px] py-12 lg:py-16 max-w-[620px]">
@@ -144,34 +142,6 @@ export default async function Home() {
               <p className="text-xl md:text-2xl font-semibold text-gold leading-snug animate-fade-up delay-150">
                 {heroSubtitle}
               </p>
-              <div className="mt-auto pt-10 animate-fade-up delay-400" aria-hidden="true">
-                <svg
-                  viewBox="0 0 120 100"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-20 h-20 lg:w-28 lg:h-28 text-gold opacity-80"
-                >
-                  {/* Fixed: center post */}
-                  <line x1="60" y1="28" x2="60" y2="85" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  {/* Fixed: base */}
-                  <line x1="42" y1="85" x2="78" y2="85" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  {/* Fixed: fulcrum dot */}
-                  <circle cx="60" cy="28" r="3.5" fill="currentColor" />
-                  {/* Animated: beam + chains + pans — rotates around fulcrum (center top of bounding box) */}
-                  <g className="animate-scale-sway">
-                    {/* Beam */}
-                    <line x1="18" y1="28" x2="102" y2="28" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                    {/* Left chain */}
-                    <line x1="18" y1="28" x2="18" y2="57" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    {/* Left pan */}
-                    <path d="M 6 57 Q 18 68 30 57" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                    {/* Right chain */}
-                    <line x1="102" y1="28" x2="102" y2="57" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    {/* Right pan */}
-                    <path d="M 90 57 Q 102 68 114 57" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  </g>
-                </svg>
-              </div>
             </div>
           </div>
         </section>
