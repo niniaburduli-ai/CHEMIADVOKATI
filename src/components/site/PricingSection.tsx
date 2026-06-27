@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Check } from "lucide-react"
 import { UpgradeButton } from "@/components/site/upgrade-button"
+import { AnimateIn } from "@/components/site/AnimateIn"
 import type { PlanData } from "@/lib/plans-db"
 import type { Locale } from "@/lib/i18n/config"
 import { pick, pickArr } from "@/lib/i18n/loc"
@@ -103,77 +104,79 @@ export function PricingSection({
 
   return (
     <section className="container mx-auto px-4 py-16 md:py-20 max-w-5xl">
-      <h2 className="text-2xl md:text-3xl font-bold text-center text-[#1a1a2e] mb-12">
+      <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
         {heading}
       </h2>
       <div className={`grid gap-6 ${gridCols(plans.length)} items-start`}>
-        {plans.map((p) => (
-          <div
-            key={p.id}
-            className={[
-              "relative rounded-2xl border bg-white flex flex-col p-7",
-              p.highlighted
-                ? "border-[#6366f1] shadow-lg shadow-indigo-100"
-                : "border-[#e5e7eb]",
-            ].join(" ")}
-          >
-            {p.badge && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="bg-[#6366f1] text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap">
-                  {p.badge}
-                </span>
-              </div>
-            )}
-
-            <p
+        {plans.map((p, idx) => (
+          <AnimateIn key={p.id} delay={idx * 100}>
+            <div
               className={[
-                "font-bold text-base mb-4",
-                p.highlighted ? "text-[#4338ca]" : "text-[#3730a3]",
+                "relative rounded-2xl border bg-card flex flex-col p-7 card-hover h-full",
+                p.highlighted
+                  ? "border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20"
+                  : "border-border",
               ].join(" ")}
             >
-              {p.name}
-            </p>
+              {p.badge && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span
+                    className="text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, oklch(0.366 0.165 264) 0%, oklch(0.48 0.19 255) 50%, oklch(0.366 0.165 264) 100%)",
+                      backgroundSize: "200% auto",
+                      animation: "shimmer 3s linear infinite",
+                    }}
+                  >
+                    {p.badge}
+                  </span>
+                </div>
+              )}
 
-            <div className="flex items-end gap-1 mb-6">
-              <span className="text-5xl font-bold text-[#1a1a2e] leading-none">{p.price}</span>
-              <span className="text-lg font-semibold text-[#1a1a2e] mb-0.5">₾</span>
-              <span className="text-sm text-gray-400 mb-1">{strings.perMonth}</span>
+              <p className="font-bold text-base mb-4 text-primary">{p.name}</p>
+
+              <div className="flex items-end gap-1 mb-6">
+                <span className="text-5xl font-bold text-foreground leading-none">{p.price}</span>
+                <span className="text-lg font-semibold text-foreground mb-0.5">₾</span>
+                <span className="text-sm text-muted-foreground mb-1">{strings.perMonth}</span>
+              </div>
+
+              <ul className="space-y-3 text-sm flex-1 mb-8">
+                {p.items.map((item, ii) => (
+                  <li key={ii} className="flex gap-2.5 items-start">
+                    <Check className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                    <span className="text-foreground/80 leading-snug">{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {p.planKey ? (
+                <UpgradeButton
+                  plan={p.planKey}
+                  label={p.ctaText}
+                  className={[
+                    "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 btn-hover",
+                    p.highlighted
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                      : "border border-border text-primary hover:bg-primary/5",
+                  ].join(" ")}
+                />
+              ) : (
+                <Link
+                  href={p.ctaHref}
+                  className={[
+                    "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors btn-hover",
+                    p.highlighted
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                      : "border border-border text-primary hover:bg-primary/5",
+                  ].join(" ")}
+                >
+                  {p.ctaText}
+                </Link>
+              )}
             </div>
-
-            <ul className="space-y-3 text-sm flex-1 mb-8">
-              {p.items.map((item, ii) => (
-                <li key={ii} className="flex gap-2.5 items-start">
-                  <Check className="h-4 w-4 shrink-0 mt-0.5 text-[#6366f1]" />
-                  <span className="text-gray-700 leading-snug">{item}</span>
-                </li>
-              ))}
-            </ul>
-
-            {p.planKey ? (
-              <UpgradeButton
-                plan={p.planKey}
-                label={p.ctaText}
-                className={[
-                  "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60",
-                  p.highlighted
-                    ? "bg-[#4338ca] hover:bg-[#3730a3] text-white"
-                    : "border border-[#c7d2fe] text-[#4338ca] hover:bg-[#ededff]",
-                ].join(" ")}
-              />
-            ) : (
-              <Link
-                href={p.ctaHref}
-                className={[
-                  "w-full text-center py-3 rounded-xl text-sm font-semibold transition-colors",
-                  p.highlighted
-                    ? "bg-[#4338ca] hover:bg-[#3730a3] text-white"
-                    : "border border-[#c7d2fe] text-[#4338ca] hover:bg-[#ededff]",
-                ].join(" ")}
-              >
-                {p.ctaText}
-              </Link>
-            )}
-          </div>
+          </AnimateIn>
         ))}
       </div>
     </section>

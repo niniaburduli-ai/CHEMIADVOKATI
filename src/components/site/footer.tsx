@@ -37,32 +37,32 @@ export async function Footer() {
   const contactAddress = config.contactAddress?.trim() || d.footer.address;
 
   return (
-    <footer className="bg-[#3730a3] text-white">
+    <footer className="bg-slate-900 text-slate-100 border-t-2 border-primary/30">
       {/* Main footer grid */}
       <div className="container mx-auto px-4 py-8 grid gap-6 md:grid-cols-4 text-sm items-start">
 
         {/* Col 1 — brand */}
         <div className="space-y-2">
           <div>
-            <p className="font-bold text-lg leading-tight">{siteName}</p>
-            <p className="text-indigo-300 text-xs mt-0.5">{tagline}</p>
+            <p className="font-bold text-lg leading-tight text-white">{siteName}</p>
+            <p className="text-slate-400 text-xs mt-0.5">{tagline}</p>
           </div>
-          <p className="text-indigo-200 text-xs leading-relaxed">
+          <p className="text-slate-400 text-xs leading-relaxed">
             {d.footer.brandBlurb}
           </p>
         </div>
 
         {/* Col 2 — navigation */}
         <div>
-          <p className="font-semibold text-white mb-2">{d.footer.navigation}</p>
+          <p className="font-semibold text-slate-200 mb-2">{d.footer.navigation}</p>
           <ul className="space-y-1.5">
             {staticNav.map((n) => (
               <li key={n.href}>
                 <Link
                   href={n.href}
-                  className="text-indigo-200 hover:text-white transition-colors flex items-center gap-2"
+                  className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 footer-link"
                 >
-                  <span className="w-1 h-1 rounded-full bg-indigo-400 shrink-0" />
+                  <span className="w-1 h-1 rounded-full bg-slate-500 shrink-0" />
                   {n.label}
                 </Link>
               </li>
@@ -72,15 +72,15 @@ export async function Footer() {
 
         {/* Col 3 — legal info */}
         <div>
-          <p className="font-semibold text-white mb-2">{d.footer.usefulInfo}</p>
+          <p className="font-semibold text-slate-200 mb-2">{d.footer.usefulInfo}</p>
           <ul className="space-y-1.5">
             {staticLegal.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
-                  className="text-indigo-200 hover:text-white transition-colors flex items-center gap-2"
+                  className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 footer-link"
                 >
-                  <span className="w-1 h-1 rounded-full bg-indigo-400 shrink-0" />
+                  <span className="w-1 h-1 rounded-full bg-slate-500 shrink-0" />
                   {l.label}
                 </Link>
               </li>
@@ -90,33 +90,33 @@ export async function Footer() {
 
         {/* Col 4 — contact */}
         <div>
-          <p className="font-semibold text-white mb-2">{d.footer.contact}</p>
+          <p className="font-semibold text-slate-200 mb-2">{d.footer.contact}</p>
           <ul className="space-y-1.5">
             {contactEmail && (
-              <li className="flex items-center gap-2 text-indigo-200">
-                <Mail className="h-3.5 w-3.5 shrink-0 text-indigo-300" />
-                <a href={`mailto:${contactEmail}`} className="hover:text-white transition-colors truncate">
+              <li className="flex items-center gap-2 text-slate-400">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <a href={`mailto:${contactEmail}`} className="hover:text-white transition-colors truncate footer-link">
                   {contactEmail}
                 </a>
               </li>
             )}
-            <li className="flex items-center gap-2 text-indigo-200">
-              <Globe className="h-3.5 w-3.5 shrink-0 text-indigo-300" />
-              <a href="https://chemiuristi.ge" className="hover:text-white transition-colors">
+            <li className="flex items-center gap-2 text-slate-400">
+              <Globe className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              <a href="https://chemiuristi.ge" className="hover:text-white transition-colors footer-link">
                 chemiuristi.ge
               </a>
             </li>
             {contactPhone && (
-              <li className="flex items-center gap-2 text-indigo-200">
-                <Phone className="h-3.5 w-3.5 shrink-0 text-indigo-300" />
-                <a href={`tel:${contactPhone.replace(/\s/g, "")}`} className="hover:text-white transition-colors">
+              <li className="flex items-center gap-2 text-slate-400">
+                <Phone className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <a href={`tel:${contactPhone.replace(/\s/g, "")}`} className="hover:text-white transition-colors footer-link">
                   {contactPhone}
                 </a>
               </li>
             )}
             {contactAddress && (
-              <li className="flex items-center gap-2 text-indigo-200">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-indigo-300" />
+              <li className="flex items-center gap-2 text-slate-400">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                 <span>{contactAddress}</span>
               </li>
             )}
@@ -125,17 +125,17 @@ export async function Footer() {
       </div>
 
       {/* Warning banner — disclaimer from CMS */}
-      <div className="py-2.5 px-4 border-t border-indigo-700">
-        <p className="flex items-start justify-center gap-2 text-xs text-indigo-200 text-center leading-snug max-w-3xl mx-auto">
-          <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-indigo-300 mt-px" />
+      <div className="py-2.5 px-4 border-t border-slate-700/60">
+        <p className="flex items-start justify-center gap-2 text-xs text-slate-400 text-center leading-snug max-w-3xl mx-auto">
+          <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-slate-500 mt-px" />
           <span>{disclaimer}</span>
         </p>
       </div>
 
       {/* Bottom bar — copyright from CMS */}
-      <div className="border-t border-indigo-700">
+      <div className="border-t border-slate-700/60">
         <div className="container mx-auto px-4 py-3 text-center">
-          <p className="text-indigo-300 text-xs">{copyright}</p>
+          <p className="text-slate-500 text-xs">{copyright}</p>
         </div>
       </div>
     </footer>

@@ -7,6 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-gold: var(--gold);
   --font-sans: var(--font-georgian), system-ui, sans-serif;
   --font-mono: ui-monospace, monospace;
   --font-heading: var(--font-georgian), system-ui, sans-serif;
@@ -49,72 +50,75 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Trust & Authority palette — navy primary, slate background */
+  --gold: oklch(0.65 0.13 78);
+  --background: oklch(0.984 0.003 247.858);
+  --foreground: oklch(0.148 0.026 265);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.148 0.026 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.148 0.026 265);
+  --primary: oklch(0.366 0.165 264);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.966 0.022 216);
+  --secondary-foreground: oklch(0.366 0.165 264);
+  --muted: oklch(0.969 0.006 247.858);
+  --muted-foreground: oklch(0.513 0.030 256);
+  --accent: oklch(0.921 0.036 216);
+  --accent-foreground: oklch(0.366 0.165 264);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: oklch(0.845 0.014 252);
+  --input: oklch(0.845 0.014 252);
+  --ring: oklch(0.366 0.165 264);
+  --chart-1: oklch(0.366 0.165 264);
+  --chart-2: oklch(0.513 0.030 256);
+  --chart-3: oklch(0.695 0.100 214);
+  --chart-4: oklch(0.845 0.014 252);
+  --chart-5: oklch(0.148 0.026 265);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.984 0.003 247.858);
+  --sidebar-foreground: oklch(0.148 0.026 265);
+  --sidebar-primary: oklch(0.366 0.165 264);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.921 0.036 216);
+  --sidebar-accent-foreground: oklch(0.366 0.165 264);
+  --sidebar-border: oklch(0.845 0.014 252);
+  --sidebar-ring: oklch(0.366 0.165 264);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --gold: oklch(0.78 0.16 78);
+  --background: oklch(0.148 0.026 265);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.217 0.024 252);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.217 0.024 252);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.695 0.135 214);
+  --primary-foreground: oklch(0.148 0.026 265);
+  --secondary: oklch(0.217 0.024 252);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.217 0.024 252);
+  --muted-foreground: oklch(0.669 0.021 252);
+  --accent: oklch(0.217 0.024 252);
+  --accent-foreground: oklch(0.695 0.135 214);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(0.331 0.024 252);
+  --input: oklch(0.331 0.024 252);
+  --ring: oklch(0.695 0.135 214);
+  --chart-1: oklch(0.695 0.135 214);
+  --chart-2: oklch(0.669 0.021 252);
+  --chart-3: oklch(0.484 0.090 214);
+  --chart-4: oklch(0.331 0.024 252);
+  --chart-5: oklch(0.984 0.003 247.858);
+  --sidebar: oklch(0.217 0.024 252);
+  --sidebar-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-primary: oklch(0.695 0.135 214);
+  --sidebar-primary-foreground: oklch(0.148 0.026 265);
+  --sidebar-accent: oklch(0.217 0.024 252);
+  --sidebar-accent-foreground: oklch(0.695 0.135 214);
+  --sidebar-border: oklch(0.331 0.024 252);
+  --sidebar-ring: oklch(0.695 0.135 214);
 }
 
 @layer base {
@@ -127,4 +131,118 @@
   html {
     @apply font-sans;
   }
+  h1, h2, h3 {
+    font-family: var(--font-noto-serif), Georgia, serif;
+  }
+}
+
+/* ── Animation keyframes ─────────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes scale-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50%       { transform: rotate(2.5deg);  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* ── Animation utility classes ───────────────────────────────────────────── */
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+.animate-float {
+  animation: float 7s ease-in-out infinite;
+}
+/* Combined: fade-in once then float forever.
+   Two separate classes would cascade-override each other's animation property. */
+.animate-float-in {
+  animation: fade-in 0.5s ease-out both, float 7s ease-in-out infinite;
+}
+.animate-scale-sway {
+  animation: scale-sway 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center top;
+}
+
+/* ── Animation delays ────────────────────────────────────────────────────── */
+.delay-150 { animation-delay: 150ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+
+/* ── Reduced-motion: kill all custom animations ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-float,
+  .animate-float-in,
+  .animate-scale-sway {
+    animation: none;
+  }
+}
+
+/* ── Card hover micro-interaction ────────────────────────────────────────── */
+.card-hover {
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out, border-color 250ms ease-out;
+}
+.card-hover:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 32px oklch(0.366 0.165 264 / 0.12);
+  border-color: oklch(0.366 0.165 264 / 0.35);
+}
+
+/* ── Button hover micro-interaction ─────────────────────────────────────── */
+.btn-hover {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, opacity 200ms ease-out;
+}
+.btn-hover:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px oklch(0.366 0.165 264 / 0.22);
+}
+
+/* ── Footer link underline slide-in ─────────────────────────────────────── */
+.footer-link {
+  position: relative;
+}
+.footer-link::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: white;
+  transition: width 200ms ease-out;
+}
+.footer-link:hover::after {
+  width: 100%;
+}
+
+/* ── AnimateIn scroll-trigger states ─────────────────────────────────────── */
+[data-animate]:not([data-visible]) {
+  opacity: 0;
+  transform: translateY(16px);
+}
+[data-animate][data-visible] {
+  animation: fade-up 0.6s ease-out both;
 }
