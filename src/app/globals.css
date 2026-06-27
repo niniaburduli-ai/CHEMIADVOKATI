@@ -51,7 +51,7 @@
 
 :root {
   /* Trust & Authority palette — navy primary, slate background */
-  --gold: oklch(0.65 0.13 78);
+  --gold: oklch(0.83 0.19 87);
   --background: oklch(0.984 0.003 247.858);
   --foreground: oklch(0.148 0.026 265);
   --card: oklch(1 0 0);
@@ -87,7 +87,7 @@
 }
 
 .dark {
-  --gold: oklch(0.78 0.16 78);
+  --gold: oklch(0.87 0.19 87);
   --background: oklch(0.148 0.026 265);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.217 0.024 252);
