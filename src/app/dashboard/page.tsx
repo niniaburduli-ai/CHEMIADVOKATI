@@ -20,6 +20,7 @@ import { getPlanByKey } from "@/lib/plans-db";
 import { getFeatureFlags } from "@/lib/features";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
+import { AnimateIn } from "@/components/site/AnimateIn";
 
 export const dynamic = "force-dynamic";
 
@@ -100,18 +101,28 @@ export default async function DashboardPage() {
   const planLabel = plan === "standard" ? d.dashboard.standard : d.dashboard.free;
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-5xl animate-fade-up">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">{d.dashboard.greeting} {user.name}</h1>
-          <p className="text-muted-foreground mt-1">{d.dashboard.subtitle}</p>
+    <div>
+      <section className="bg-slate-900">
+        <div className="container mx-auto px-4 py-16 max-w-5xl">
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-5xl md:text-6xl font-bold text-white animate-fade-up leading-tight">
+                {d.dashboard.greeting} {user.name}
+              </h1>
+              <p className="text-2xl font-semibold text-gold mt-3 animate-fade-up delay-150 leading-snug">
+                {d.dashboard.subtitle}
+              </p>
+            </div>
+            <Link href="/chat" className={buttonVariants() + " btn-hover"}>
+              <MessagesSquare className="mr-2 h-4 w-4" /> {d.dashboard.newConsultation}
+            </Link>
+          </div>
         </div>
-        <Link href="/chat" className={buttonVariants() + " btn-hover"}>
-          <MessagesSquare className="mr-2 h-4 w-4" /> {d.dashboard.newConsultation}
-        </Link>
-      </div>
+      </section>
+      <div className="container mx-auto px-4 py-16 max-w-5xl">
 
       {/* Quick actions */}
+      <AnimateIn delay={0}>
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         <Link href="/chat" className="block">
           <div className="border-t-[3px] border-t-primary bg-card border border-border rounded-2xl p-5 card-hover h-full flex flex-col gap-3">
@@ -151,8 +162,10 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+      </AnimateIn>
 
       {/* My Plan & Usage */}
+      <AnimateIn delay={80}>
       <Card className="mb-8 border-t-[3px] border-t-primary rounded-2xl">
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -214,8 +227,10 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      </AnimateIn>
 
       {/* History links */}
+      <AnimateIn delay={160}>
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         <Link href="/dashboard/consultations">
           <div className="bg-card border border-border rounded-2xl p-5 card-hover cursor-pointer flex flex-col gap-2">
@@ -246,8 +261,10 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+      </AnimateIn>
 
       {/* Recent consultations */}
+      <AnimateIn delay={240}>
       <Card className="rounded-2xl border-t-[3px] border-t-primary">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -297,6 +314,8 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      </AnimateIn>
+    </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { CancelSubscriptionButton } from "@/components/site/cancel-subscription-button";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
+import { PageHero } from "@/components/site/PageHero";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +64,9 @@ export default async function BillingPage() {
     .lean();
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-3xl animate-fade-up">
-      <h1 className="text-3xl font-bold mb-2">{d.billing.title}</h1>
-      <p className="text-muted-foreground mb-8">{d.billing.subtitle}</p>
+    <div>
+      <PageHero title={d.billing.title} subtitle={d.billing.subtitle} />
+    <div className="container mx-auto px-4 py-16 max-w-3xl animate-fade-up">
 
       <Card className="mb-6 border-t-[3px] border-t-primary rounded-2xl">
         <CardHeader>
@@ -143,6 +144,7 @@ export default async function BillingPage() {
           )}
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 }

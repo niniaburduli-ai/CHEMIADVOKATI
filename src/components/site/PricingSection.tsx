@@ -103,7 +103,7 @@ export function PricingSection({
   if (plans.length === 0) return null
 
   return (
-    <section className="container mx-auto px-4 py-16 md:py-20 max-w-5xl">
+    <section className="container mx-auto px-4 py-16 max-w-5xl">
       <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
         {heading}
       </h2>
@@ -121,13 +121,7 @@ export function PricingSection({
               {p.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <span
-                    className="text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, oklch(0.366 0.165 264) 0%, oklch(0.48 0.19 255) 50%, oklch(0.366 0.165 264) 100%)",
-                      backgroundSize: "200% auto",
-                      animation: "shimmer 3s linear infinite",
-                    }}
+                    className="text-gold bg-slate-900 text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap"
                   >
                     {p.badge}
                   </span>

@@ -95,6 +95,8 @@ export interface HomePageData {
     imagePubId: string
   }
   serviceCards: HomePageServiceCard[]
+  cardsHeading: string
+  cardsHeadingEn?: string
   statsHeading: string
   statsHeadingEn?: string
   stats: HomePageStatCard[]

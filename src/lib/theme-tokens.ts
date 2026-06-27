@@ -32,25 +32,25 @@ export const FONT_CHOICES: { value: FontChoice; label: string }[] = [
 ]
 
 export const DEFAULT_LIGHT: Record<string, string> = {
-  background: "#ffffff", foreground: "#0a0a14",
-  primary: "#1a1a2e", "primary-foreground": "#ffffff",
-  secondary: "#f4f4f5", "secondary-foreground": "#1a1a2e",
-  accent: "#eef2ff", "accent-foreground": "#1a1a2e",
-  muted: "#f4f4f5", "muted-foreground": "#6b7280",
-  card: "#ffffff", "card-foreground": "#0a0a14",
-  border: "#e5e7eb", input: "#e5e7eb", ring: "#1a1a2e",
-  destructive: "#dc2626",
+  background: "#F8FAFC", foreground: "#0F172A",
+  primary: "#1E3A8A", "primary-foreground": "#FFFFFF",
+  secondary: "#EFF6FF", "secondary-foreground": "#1E3A8A",
+  accent: "#DBEAFE", "accent-foreground": "#1E3A8A",
+  muted: "#F1F5F9", "muted-foreground": "#64748B",
+  card: "#FFFFFF", "card-foreground": "#0F172A",
+  border: "#CBD5E1", input: "#CBD5E1", ring: "#1E3A8A",
+  destructive: "#DC2626",
 }
 
 export const DEFAULT_DARK: Record<string, string> = {
-  background: "#0a0a14", foreground: "#fafafa",
-  primary: "#e5e7ff", "primary-foreground": "#1a1a2e",
-  secondary: "#1f2937", "secondary-foreground": "#fafafa",
-  accent: "#1f2937", "accent-foreground": "#fafafa",
-  muted: "#1f2937", "muted-foreground": "#9ca3af",
-  card: "#11111c", "card-foreground": "#fafafa",
-  border: "#26262e", input: "#2a2a33", ring: "#6b7280",
-  destructive: "#ef4444",
+  background: "#0F172A", foreground: "#F8FAFC",
+  primary: "#60A5FA", "primary-foreground": "#0F172A",
+  secondary: "#1E293B", "secondary-foreground": "#F8FAFC",
+  accent: "#1E293B", "accent-foreground": "#93C5FD",
+  muted: "#1E293B", "muted-foreground": "#94A3B8",
+  card: "#1E293B", "card-foreground": "#F8FAFC",
+  border: "#334155", input: "#334155", ring: "#60A5FA",
+  destructive: "#EF4444",
 }
 
 export type ThemeConfigData = {

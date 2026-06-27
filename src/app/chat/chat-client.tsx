@@ -138,12 +138,18 @@ export function ChatClient({ locale }: { locale: Locale }) {
   };
 
   return (
+    <div>
+      <section className="bg-slate-900">
+        <div className="container mx-auto px-4 py-16 max-w-3xl">
+          <p className="animate-fade-up leading-tight">
+            <span className="block text-5xl md:text-6xl font-bold text-white leading-tight mb-3">{d.chat.greeting.split(" — ")[0]}</span>
+            <br />
+            <span className="text-2xl font-semibold text-gold whitespace-nowrap">{d.chat.greeting.split(" — ").slice(1).join(" — ")}</span>
+          </p>
+        </div>
+      </section>
     <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="mb-6 flex flex-col gap-3 animate-fade-up">
-        <p className="font-semibold text-base">{d.chat.greeting}</p>
-        <p className="text-sm text-muted-foreground">{d.chat.intro1}</p>
-        <p className="text-sm text-muted-foreground">{d.chat.intro2}</p>
-      </div>
+      <p className="text-sm text-muted-foreground mb-6 animate-fade-up">{d.chat.intro1}</p>
 
       <div className="space-y-4 mb-6">
         {messages.map((m) => (
@@ -250,6 +256,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
       <p className="text-xs text-muted-foreground text-center mt-3">
         {d.chat.disclaimer}
       </p>
+    </div>
     </div>
   );
 }

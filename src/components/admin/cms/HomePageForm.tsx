@@ -32,6 +32,7 @@ const EMPTY: HomePageData = {
   sections: { hero: true, stats: true, features: true, pricing: true, cta: true },
   hero: { title: "", titleEn: "", subtitle: "", subtitleEn: "", ctaText: "", ctaHref: "", imageUrl: "", imagePubId: "" },
   serviceCards: [],
+  cardsHeading: "", cardsHeadingEn: "",
   statsHeading: "", statsHeadingEn: "",
   stats: [],
   featuresHeading: "", featuresHeadingEn: "",
@@ -370,6 +371,14 @@ export function HomePageForm() {
         />
 
         {/* Service cards */}
+        <BiInput
+          label="სექციის სათაური (მომსახურებები)"
+          kaValue={data.cardsHeading}
+          enValue={data.cardsHeadingEn ?? ""}
+          onKa={(v) => upd("cardsHeading", v)}
+          onEn={(v) => upd("cardsHeadingEn", v)}
+        />
+
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">სერვისის ბარათები</h4>

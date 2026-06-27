@@ -15,7 +15,7 @@ const ka = {
     contact: "კონტაქტი",
     address: "თბილისი, საქართველო",
     brandBlurb:
-      "AI-ზე დაფუძნებული იურიდიული პლატფორმა, რომელიც გთავაზობს მარტივად ინტელექტურ პასუხებს სწრაფად და გასაგებ ენაზე.",
+      "AI-ზე დაფუძნებული პლატფორმა, რომელიც იურიდიულ დახმარებას ხელმისაწვდომს და მარტივს ხდის ყველასთვის.",
     nav: {
       home: "მთავარი",
       about: "ჩვენ შესახებ",
@@ -96,7 +96,7 @@ const ka = {
     imageAlt: "ქართლის დედა სასწორით",
   },
   chat: {
-    greeting: "გამარჯობა! მე ვარ „ჩემი იურისტი\" — თქვენი პერსონალური ციფრული იურიდიული ასისტენტი.",
+    greeting: "მოგესალემბით — თქვენი პერსონალური AI იურიდიული ასისტენტი.",
     intro1: "მე დაგეხმარებით სამართლებრივი საკითხების გარკვევაში მარტივი, გასაგები ენით, საქართველოს მოქმედი კანონმდებლობის საფუძველზე.",
     intro2: "უბრალოდ დამისვით კითხვა — და მე შევეცდები მოგცეთ მკაფიო და პრაქტიკული პასუხი.",
     placeholder: "დასვით თქვენი კითხვა",
@@ -181,7 +181,7 @@ const ka = {
   },
   legislation: {
     title: "კანონმდებლობა",
-    subtitle: "საქართველოს კოდექსები და მუხლები — მოძებნეთ, რომელიც გჭირდებათ.",
+    subtitle: "საქართველოს კოდექსები და მუხლები\n— მოძებნეთ, რომელიც გჭირდებათ.",
     searchPlaceholder: "ძებნა: მუხლის ნომერი, კოდექსი, საკითხი...",
     noResults: "ვერ მოიძებნა შედეგი.",
     catAll: "ყველა",
@@ -195,13 +195,14 @@ const ka = {
     catFinance: "ფინანსები",
   },
   services: {
-    title: "სერვისები",
+    title: "მომსახურებები",
     subtitle:
-      "სამი ინსტრუმენტი, რომელიც კანონს მარტივ ენაზე გიყვებათ — კონსულტაცია, შაბლონები და ანალიზი.",
+      "სამი ინსტრუმენტი, რომელიც იურიდიულ საკითხებს გიმარტივებს\n— კონსულტაცია, შაბლონები, დოკუმენტის ანალიზი.",
     comingSoon: "მალე",
   },
   about: {
     title: "ჩვენ შესახებ",
+    heroSubtitle: "პლატფორმა, რომელიც იურიდიულ დახმარებას\nხელმისაწვდომს და მარტივს ხდის ყველასთვის.",
     intro:
       "\"ჩემი იურისტი\" არის თანამედროვე იურიდიული პლატფორმა, რომელიც შეიქმნა ერთი მთავარი მიზნით — გახადოს სამართალი ხელმისაწვდომი, მარტივი და გასაგები ყველასთვის.\n\nჩვენ გვჯერა, რომ იურიდიული დახმარება არ უნდა ასოცირდებოდეს რთულ, გაუგებარ ტერმინებთან და უსასრულო ბიუროკრატიასთან. ჩვენ ვსაუბრობთ კანონის მარტივ ენაზე და გეხმარებით უფლებების დაცვაში, ბიზნესის უსაფრთხოდ მართვასა თუ ყოველდღიური სამართლებრივი საკითხების მოგვარებაში — სწრაფად, ონლაინ და ზედმეტი სტრესის გარეშე.",
     historyTitle: "ჩვენი ისტორია",
@@ -211,6 +212,37 @@ const ka = {
     mission:
       "ჩვენი მისიაა, ვიყოთ თქვენი საიმედო მრჩეველი ყოველდღიურ ცხოვრებაში თუ ბიზნესში. ჩვენ ვამარტივებთ ყოველ კანონს, ხელშეკრულებასა თუ სამართლებრივ პროცედურას, რათა თქვენ ყოველთვის გრძნობდეთ თავს დაცულად და თავდაჯერებულად.",
     teamTitle: "ჩვენი გუნდი",
+  },
+  profile: {
+    planFree: "უფასო",
+    planStandard: "სტანდარტი",
+    planPremium: "პრემიუმი",
+    statusActive: "აქტიური",
+    statusOnHold: "შეჩერებული",
+    statusCancelled: "გაუქმებული",
+    statusExpired: "ვადაგასული",
+    statusFailed: "შეცდომა",
+    unlimited: "შეუზღუდავი",
+    used: "გამოყენებული",
+    untilSuffix: "-მდე",
+    subscription: "გამოწერა",
+    limits: "ლიმიტები",
+    consultations: "კონსულტაციები",
+    docGeneration: "დოკ. გენერაცია",
+    docAnalysis: "დოკ. ანალიზი",
+    upgradeTitle: "განაახლე სტანდარტ გეგმაზე",
+    upgradeBody: "მეტი ლიმიტი, AI კონსულტაციები, დოკუმენტების გენერაცია",
+    upgradeCta: "გეგმები",
+    aiConsultations: "AI კონსულტაციები",
+    generatedDocs: "გენერირებული დოკუმენტები",
+    analysisResults: "ანალიზის შედეგები",
+    viewAll: "ყველა",
+    noConsultations: "ჯერ კონსულტაცია არ გაქვს.",
+    startChat: "დაიწყე",
+    noDocs: "ჯერ დოკუმენტი არ შექმნილა.",
+    createDoc: "შექმენი",
+    noReviews: "ჯერ ანალიზი არ გაქვს.",
+    uploadDoc: "ატვირთე",
   },
 }
 
@@ -311,7 +343,7 @@ const en: Dict = {
     imageAlt: "Lady Justice with scales",
   },
   chat: {
-    greeting: "Hello! I am \"My Lawyer\" — your personal digital legal assistant.",
+    greeting: "Hello! I am \"My Lawyer\" — your personal AI legal assistant.",
     intro1:
       "I will help you understand legal matters in simple, plain language, based on the current legislation of Georgia.",
     intro2: "Just ask me a question — and I will try to give you a clear and practical answer.",
@@ -418,6 +450,7 @@ const en: Dict = {
   },
   about: {
     title: "About us",
+    heroSubtitle: "A platform that makes legal help accessible and simple for everyone.",
     intro:
       "\"My Lawyer\" is a modern legal platform built with one core purpose — to make the law accessible, simple, and understandable for everyone.\n\nWe believe that legal help should not be associated with complex jargon and endless bureaucracy. We speak the law in plain language and help you protect your rights, run your business safely, and resolve everyday legal matters — quickly, online, and without unnecessary stress.",
     historyTitle: "Our history",
@@ -427,6 +460,37 @@ const en: Dict = {
     mission:
       "Our mission is to be your trusted advisor in everyday life and business. We simplify every law, contract, and legal procedure so that you always feel protected and confident.",
     teamTitle: "Our team",
+  },
+  profile: {
+    planFree: "Free",
+    planStandard: "Standard",
+    planPremium: "Premium",
+    statusActive: "Active",
+    statusOnHold: "On hold",
+    statusCancelled: "Cancelled",
+    statusExpired: "Expired",
+    statusFailed: "Error",
+    unlimited: "Unlimited",
+    used: "used",
+    untilSuffix: " until",
+    subscription: "Subscription",
+    limits: "Limits",
+    consultations: "Consultations",
+    docGeneration: "Doc. generation",
+    docAnalysis: "Doc. analysis",
+    upgradeTitle: "Upgrade to Standard",
+    upgradeBody: "More credits, AI consultations, document generation",
+    upgradeCta: "View plans",
+    aiConsultations: "AI Consultations",
+    generatedDocs: "Generated documents",
+    analysisResults: "Analysis results",
+    viewAll: "View all",
+    noConsultations: "No consultations yet.",
+    startChat: "Start here",
+    noDocs: "No documents yet.",
+    createDoc: "Create one",
+    noReviews: "No analyses yet.",
+    uploadDoc: "Upload",
   },
 }
 

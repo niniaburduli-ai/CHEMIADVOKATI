@@ -28,6 +28,8 @@ export async function GET() {
     serviceCards: (raw.serviceCards as unknown[] | undefined)?.length
       ? raw.serviceCards
       : HOME_SEED.serviceCards,
+    cardsHeading: (raw.cardsHeading as string | undefined) || HOME_SEED.cardsHeading,
+    cardsHeadingEn: (raw.cardsHeadingEn as string | undefined) || HOME_SEED.cardsHeadingEn,
     statsHeading: (raw.statsHeading as string | undefined) || HOME_SEED.statsHeading,
     statsHeadingEn: (raw.statsHeadingEn as string | undefined) || HOME_SEED.statsHeadingEn,
     stats: (raw.stats as unknown[] | undefined)?.length
@@ -57,5 +59,6 @@ export async function PUT(req: NextRequest) {
     { upsert: true, new: true }
   ).lean()
   revalidatePath("/")
+  revalidatePath("/services")
   return NextResponse.json({ data: doc })
 }

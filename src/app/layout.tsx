@@ -38,7 +38,7 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${notoSans.variable} ${notoSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-background text-foreground">
+      <body className="min-h-full flex flex-col font-sans bg-background text-foreground" suppressHydrationWarning>
         {/* Admin-editable theme: overrides globals.css tokens (see lib/theme.ts). */}
         <style id="cms-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>

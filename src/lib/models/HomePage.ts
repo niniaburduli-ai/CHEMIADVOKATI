@@ -84,6 +84,8 @@ const HomePageSchema = new Schema(
       imagePubId: { type: String, default: "" },
     },
     serviceCards: [serviceCardSchema],
+    cardsHeading: { type: String, default: "" },
+    cardsHeadingEn: { type: String, default: "" },
     statsHeading: { type: String, default: "" },
     statsHeadingEn: { type: String, default: "" },
     stats: [statCardSchema],

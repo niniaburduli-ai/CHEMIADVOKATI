@@ -16,6 +16,9 @@ import { GeneratedDocument } from "@/lib/models/generated-document";
 import { DocumentReview } from "@/lib/models/document-review";
 import { Subscription } from "@/lib/models/subscription";
 import { buttonVariants } from "@/components/ui/button";
+import { AnimateIn } from "@/components/site/AnimateIn";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDict } from "@/lib/i18n/dictionaries";
 import {
   Card,
   CardContent,
@@ -29,37 +32,28 @@ import { DOC_TYPES } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
 
-const PLAN_LABELS: Record<string, string> = {
-  free: "უფასო",
-  standard: "სტანდარტი",
-  premium: "პრემიუმი",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  active: "აქტიური",
-  on_hold: "შეჩერებული",
-  cancelled: "გაუქმებული",
-  expired: "ვადაგასული",
-  failed: "შეცდომა",
-};
 
 function CreditStat({
   label,
   remaining,
   total,
   icon,
+  unlimitedLabel,
+  usedLabel,
 }: {
   label: string;
   remaining: number;
   total: number;
   icon: React.ReactNode;
+  unlimitedLabel: string;
+  usedLabel: string;
 }) {
   const used = Math.max(0, total - remaining);
   const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
   const isUnlimited = total >= 9999;
 
   return (
-    <Card>
+    <Card className="card-hover border-t-[3px] border-t-primary">
       <CardHeader className="pb-2">
         <CardDescription className="flex items-center gap-1.5 text-xs">
           {icon}
@@ -80,7 +74,7 @@ function CreditStat({
       </CardHeader>
       <CardContent>
         {isUnlimited ? (
-          <p className="text-xs text-muted-foreground">შეუზღუდავი</p>
+          <p className="text-xs text-muted-foreground">{unlimitedLabel}</p>
         ) : (
           <>
             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-1.5">
@@ -89,7 +83,7 @@ function CreditStat({
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <p className="text-xs text-muted-foreground">{used} გამოყენებული</p>
+            <p className="text-xs text-muted-foreground">{used} {usedLabel}</p>
           </>
         )}
       </CardContent>
@@ -98,8 +92,11 @@ function CreditStat({
 }
 
 export default async function ProfilePage() {
-  const session = await auth();
+  const [session, locale] = await Promise.all([auth(), getLocale()]);
   if (!session?.user?.id) redirect("/login?callbackUrl=/profile");
+
+  const d = getDict(locale).profile;
+  const dateLocale = locale === "en" ? "en-GB" : "ka-GE";
 
   await dbConnect();
 
@@ -131,87 +128,106 @@ export default async function ProfilePage() {
     .slice(0, 2)
     .toUpperCase();
 
+  const PLAN_LABELS: Record<string, string> = {
+    free: d.planFree, standard: d.planStandard, premium: d.planPremium,
+  };
+  const STATUS_LABELS: Record<string, string> = {
+    active: d.statusActive, on_hold: d.statusOnHold,
+    cancelled: d.statusCancelled, expired: d.statusExpired, failed: d.statusFailed,
+  };
+
   const subStatus = user.subscriptionStatus || (sub as { status?: string } | null)?.status || null;
   const periodEnd = (sub as { currentPeriodEnd?: Date } | null)?.currentPeriodEnd
-    ? new Date((sub as { currentPeriodEnd: Date }).currentPeriodEnd).toLocaleDateString("ka-GE")
+    ? new Date((sub as { currentPeriodEnd: Date }).currentPeriodEnd).toLocaleDateString(dateLocale)
     : null;
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-4xl">
+    <div>
       {/* ── Profile header ─────────────────────────────── */}
-      <div className="flex items-center gap-5 mb-10 flex-wrap">
-        <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold shrink-0 select-none">
-          {initials}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold truncate">{user.name}</h1>
-          <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <Badge variant={plan === "free" ? "secondary" : "default"}>
-              {PLAN_LABELS[plan] ?? plan}
-            </Badge>
-            {subStatus && (
-              <Badge
-                variant={subStatus === "active" ? "default" : "destructive"}
-                className="text-xs"
-              >
-                {STATUS_LABELS[subStatus] ?? subStatus}
-              </Badge>
-            )}
-            {periodEnd && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {periodEnd}-მდე
-              </span>
-            )}
+      <section className="bg-slate-900">
+        <div className="container mx-auto px-4 py-16 max-w-4xl">
+          <div className="flex items-center gap-5 flex-wrap">
+            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold shrink-0 select-none">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight truncate animate-fade-up">{user.name}</h1>
+              <p className="text-xl font-semibold text-gold mt-2 truncate animate-fade-up delay-150">{user.email}</p>
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <Badge variant={plan === "free" ? "secondary" : "default"}>
+                  {PLAN_LABELS[plan] ?? plan}
+                </Badge>
+                {subStatus && (
+                  <Badge
+                    variant={subStatus === "active" ? "default" : "destructive"}
+                    className="text-xs"
+                  >
+                    {STATUS_LABELS[subStatus] ?? subStatus}
+                  </Badge>
+                )}
+                {periodEnd && (
+                  <span className="text-xs text-white/60 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {periodEnd}{d.untilSuffix}
+                  </span>
+                )}
+              </div>
+            </div>
+            <Link
+              href="/billing"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              {d.subscription}
+            </Link>
           </div>
         </div>
-        <Link
-          href="/billing"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          <CreditCard className="mr-2 h-4 w-4" />
-          გამოწერა
-        </Link>
-      </div>
+      </section>
+      <div className="container mx-auto px-4 py-16 max-w-4xl">
 
       {/* ── Credit stats ───────────────────────────────── */}
+      <AnimateIn delay={0}>
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-        ლიმიტები
+        {d.limits}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <CreditStat
-          label="კონსულტაციები"
+          label={d.consultations}
           remaining={user.consultationsRemaining ?? 0}
           total={limits.consultations}
           icon={<MessagesSquare className="h-3.5 w-3.5" />}
+          unlimitedLabel={d.unlimited}
+          usedLabel={d.used}
         />
         <CreditStat
-          label="დოკ. გენერაცია"
+          label={d.docGeneration}
           remaining={user.docGenerationRemaining ?? 0}
           total={limits.docGeneration}
           icon={<FileText className="h-3.5 w-3.5" />}
+          unlimitedLabel={d.unlimited}
+          usedLabel={d.used}
         />
         <CreditStat
-          label="დოკ. ანალიზი"
+          label={d.docAnalysis}
           remaining={user.docReviewRemaining ?? 0}
           total={limits.docReview}
           icon={<FileSearch className="h-3.5 w-3.5" />}
+          unlimitedLabel={d.unlimited}
+          usedLabel={d.used}
         />
       </div>
+      </AnimateIn>
 
       {/* ── Upgrade banner (free users only) ──────────── */}
       {plan === "free" && (
-        <Card className="mb-8 border-primary/30 bg-primary/5">
+        <Card className="mb-8 border-primary/30 bg-primary/5 card-hover">
           <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="font-semibold text-sm">განაახლე სტანდარტ გეგმაზე</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                მეტი ლიმიტი, AI კონსულტაციები, დოკუმენტების გენერაცია
-              </p>
+              <p className="font-semibold text-sm">{d.upgradeTitle}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{d.upgradeBody}</p>
             </div>
             <Link href="/pricing" className={buttonVariants({ size: "sm" })}>
-              გეგმები
+              {d.upgradeCta}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </CardContent>
@@ -219,27 +235,28 @@ export default async function ProfilePage() {
       )}
 
       {/* ── Consultation history preview ───────────────── */}
+      <AnimateIn delay={80}>
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold flex items-center gap-2 text-sm">
             <MessagesSquare className="h-4 w-4" />
-            AI კონსულტაციები
+            {d.aiConsultations}
           </h2>
           <Link
             href="/dashboard/consultations"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            ყველა
+            {d.viewAll}
             <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </div>
-        <Card>
+        <Card className="card-hover border-t-[3px] border-t-primary">
           <CardContent className="py-0">
             {consultations.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                ჯერ კონსულტაცია არ გაქვს.{" "}
+                {d.noConsultations}{" "}
                 <Link href="/chat" className="underline text-primary">
-                  დაიწყე
+                  {d.startChat}
                 </Link>
               </p>
             ) : (
@@ -257,7 +274,7 @@ export default async function ProfilePage() {
                       </p>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {created
-                          ? new Date(created).toLocaleDateString("ka-GE")
+                          ? new Date(created).toLocaleDateString(dateLocale)
                           : ""}
                       </span>
                     </div>
@@ -268,29 +285,31 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       </section>
+      </AnimateIn>
 
       {/* ── Generated documents preview ────────────────── */}
+      <AnimateIn delay={160}>
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold flex items-center gap-2 text-sm">
             <FileText className="h-4 w-4" />
-            გენერირებული დოკუმენტები
+            {d.generatedDocs}
           </h2>
           <Link
             href="/dashboard/documents"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            ყველა
+            {d.viewAll}
             <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </div>
-        <Card>
+        <Card className="card-hover border-t-[3px] border-t-primary">
           <CardContent className="py-0">
             {documents.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                ჯერ დოკუმენტი არ შექმნილა.{" "}
+                {d.noDocs}{" "}
                 <Link href="/generate" className="underline text-primary">
-                  შექმენი
+                  {d.createDoc}
                 </Link>
               </p>
             ) : (
@@ -315,7 +334,7 @@ export default async function ProfilePage() {
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {created
-                          ? new Date(created).toLocaleDateString("ka-GE")
+                          ? new Date(created).toLocaleDateString(dateLocale)
                           : ""}
                       </span>
                     </div>
@@ -326,29 +345,31 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       </section>
+      </AnimateIn>
 
       {/* ── Document review history preview ────────────── */}
+      <AnimateIn delay={240}>
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold flex items-center gap-2 text-sm">
             <FileSearch className="h-4 w-4" />
-            ანალიზის შედეგები
+            {d.analysisResults}
           </h2>
           <Link
             href="/dashboard/reviews"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            ყველა
+            {d.viewAll}
             <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </div>
-        <Card>
+        <Card className="card-hover border-t-[3px] border-t-primary">
           <CardContent className="py-0">
             {reviews.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                ჯერ ანალიზი არ გაქვს.{" "}
+                {d.noReviews}{" "}
                 <Link href="/review" className="underline text-primary">
-                  ატვირთე
+                  {d.uploadDoc}
                 </Link>
               </p>
             ) : (
@@ -364,7 +385,7 @@ export default async function ProfilePage() {
                         </p>
                         <span className="text-xs text-muted-foreground shrink-0">
                           {created
-                            ? new Date(created).toLocaleDateString("ka-GE")
+                            ? new Date(created).toLocaleDateString(dateLocale)
                             : ""}
                         </span>
                       </div>
@@ -379,6 +400,8 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       </section>
+      </AnimateIn>
+    </div>
     </div>
   );
 }

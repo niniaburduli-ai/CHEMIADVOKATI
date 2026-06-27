@@ -37,6 +37,8 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
       href: "/docs", icon: "FolderOpen", comingSoon: true, visible: true, order: 2,
     },
   ],
+  cardsHeading: "მომსახურებები",
+  cardsHeadingEn: "Services",
   statsHeading: "ჩვენი შედეგები ციფრებში",
   statsHeadingEn: "Our results in numbers",
   stats: [
@@ -79,8 +81,8 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
   ctaSection: {
     title: "მზად ხართ?",
     titleEn: "Ready?",
-    subtitle: "დაარეგისტრირდით წამში და მიიღეთ პირველი კონსულტაცია უფასოდ.",
-    subtitleEn: "Register in seconds and get your first consultation for free.",
+    subtitle: "დარეგისტრირდით წამებში",
+    subtitleEn: "Register in seconds.",
     buttonText: "რეგისტრაცია",
     buttonTextEn: "Sign up",
     buttonHref: "/register",

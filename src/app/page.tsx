@@ -121,7 +121,7 @@ export default async function Home() {
     <div>
       {/* ── HERO ── */}
       {sections.hero !== false && (
-        <section className="relative overflow-hidden bg-primary">
+        <section className="relative overflow-hidden bg-slate-900">
           {/* Statue — high contrast kills background artifacts; sepia+hue push lines to gold matching text */}
           <div className="absolute inset-y-0 right-0 w-full lg:w-[62%] flex items-end justify-center pointer-events-none select-none animate-float-in">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -136,10 +136,10 @@ export default async function Home() {
 
           <div className="relative container mx-auto px-4">
             <div className="flex flex-col justify-center min-h-[560px] py-12 lg:py-16 max-w-[620px]">
-              <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-5 animate-fade-up">
+              <h1 className="text-6xl md:text-7xl font-bold text-white leading-tight mb-5 animate-fade-up">
                 {heroTitle}
               </h1>
-              <p className="text-xl font-semibold text-gold leading-snug animate-fade-up delay-150">
+              <p className="text-2xl font-semibold text-gold leading-snug animate-fade-up delay-150">
                 {heroSubtitle}
               </p>
             </div>
@@ -149,7 +149,7 @@ export default async function Home() {
 
       {/* ── SERVICE CARDS ── */}
       {sections.hero !== false && (
-        <section className="container mx-auto px-4 py-14">
+        <section className="container mx-auto px-4 py-16">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-10">
             {cardsHeading}
           </h2>
@@ -206,10 +206,40 @@ export default async function Home() {
         </section>
       )}
 
+      {/* ── FEATURES / WHY ── */}
+      {sections.features !== false && features.length > 0 && (
+        <section className="container mx-auto px-4 py-16">
+          <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
+            {featuresHeading}
+          </h2>
+          <div className={`grid ${featuresGrid(features.length)} gap-6`}>
+            {features.map((f, idx) => {
+              const FIcon = resolveIcon(f.icon)
+              const seedFeature = seedFeatureById.get(f._id)
+              const featureTitle = pick(f.title, f.titleEn || seedFeature?.titleEn, locale)
+              const featureBody  = pick(f.body,  f.bodyEn  || seedFeature?.bodyEn,  locale)
+              return (
+                <AnimateIn key={f._id} delay={idx * 60}>
+                  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 card-hover h-full">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <FIcon className="h-4 w-4 text-primary" />
+                      </div>
+                      <p className="font-bold text-foreground text-sm leading-snug">{featureTitle}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{featureBody}</p>
+                  </div>
+                </AnimateIn>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── STATS ── */}
       {sections.stats !== false && stats.length > 0 && (
         <section>
-          <div className="container mx-auto px-4 py-12">
+          <div className="container mx-auto px-4 py-16">
             <h2 className="text-xl md:text-2xl font-bold text-center text-foreground mb-8">
               {statsHeading}
             </h2>
@@ -234,36 +264,6 @@ export default async function Home() {
         </section>
       )}
 
-      {/* ── FEATURES / WHY ── */}
-      {sections.features !== false && features.length > 0 && (
-        <section className="container mx-auto px-4 py-16 md:py-20">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
-            {featuresHeading}
-          </h2>
-          <div className={`grid ${featuresGrid(features.length)} gap-6`}>
-            {features.map((f, idx) => {
-              const FIcon = resolveIcon(f.icon)
-              const seedFeature = seedFeatureById.get(f._id)
-              const featureTitle = pick(f.title, f.titleEn || seedFeature?.titleEn, locale)
-              const featureBody  = pick(f.body,  f.bodyEn  || seedFeature?.bodyEn,  locale)
-              return (
-                <AnimateIn key={f._id} delay={idx * 60}>
-                  <div className="bg-muted/40 rounded-2xl p-5 flex flex-col gap-3 card-hover h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <FIcon className="h-4 w-4 text-primary" />
-                      </div>
-                      <p className="font-bold text-foreground text-sm leading-snug">{featureTitle}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{featureBody}</p>
-                  </div>
-                </AnimateIn>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
       {/* ── PRICING ── */}
       {sections.pricing !== false && (
         <PricingSection
@@ -281,9 +281,9 @@ export default async function Home() {
 
       {/* ── CTA ── */}
       {sections.cta !== false && (
-        <section className="border-t border-border">
+        <section>
           <div className="container mx-auto px-4 py-16">
-            <div className="max-w-2xl mx-auto bg-card border border-border rounded-2xl p-10 text-center shadow-sm">
+            <div className="max-w-2xl mx-auto border-t-[3px] border-t-primary bg-card border border-border rounded-2xl p-10 text-center shadow-sm card-hover">
               <h2 className="text-3xl font-bold text-foreground">{ctaTitle}</h2>
               <p className="mt-3 text-muted-foreground">{ctaSubtitle}</p>
               <Link

@@ -117,13 +117,20 @@ export default async function ServicesPage() {
   const visibleHrefs = new Set(
     cmsCards.filter((c) => c.visible !== false).map((c) => c.href),
   )
-  const SERVICES = getServices(locale).filter((s) => visibleHrefs.has(s.href))
+  const cmsComingSoonMap = new Map(cmsCards.map((c) => [c.href, c.comingSoon]))
+
+  const SERVICES = getServices(locale)
+    .filter((s) => visibleHrefs.has(s.href))
+    .map((s) => ({
+      ...s,
+      comingSoon: cmsComingSoonMap.has(s.href) ? cmsComingSoonMap.get(s.href)! : s.comingSoon,
+    }))
 
   return (
     <div>
       <PageHero title={d.services.title} subtitle={d.services.subtitle} />
 
-      <div className="container mx-auto px-4 py-14 max-w-5xl">
+      <div className="container mx-auto px-4 py-16 max-w-5xl">
         <div className="flex flex-col gap-6">
           {SERVICES.map((s, idx) => {
             const Icon = s.icon

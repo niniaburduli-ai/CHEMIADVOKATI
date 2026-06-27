@@ -40,7 +40,7 @@ export function LegislationClient({ locale }: { locale: Locale }) {
   })
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-5xl">
+    <div className="container mx-auto px-4 py-16 max-w-5xl">
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
