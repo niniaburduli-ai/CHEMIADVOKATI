@@ -8,7 +8,7 @@ export function PageHero({
   return (
     <section className="bg-primary">
       <div className="container mx-auto px-4 py-12 md:py-16 max-w-5xl">
-        <h1 className="text-4xl md:text-5xl font-bold text-white animate-fade-up leading-tight">
+        <h1 className="text-5xl md:text-6xl font-bold text-white animate-fade-up leading-tight">
           {title}
         </h1>
         {subtitle && (
