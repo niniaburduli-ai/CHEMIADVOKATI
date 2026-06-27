@@ -4,6 +4,8 @@ import { getLocale } from '@/lib/i18n/locale'
 import { getDict } from '@/lib/i18n/dictionaries'
 import { Users } from 'lucide-react'
 import Image from 'next/image'
+import { PageHero } from '@/components/site/PageHero'
+import { AnimateIn } from '@/components/site/AnimateIn'
 
 export const metadata: Metadata = {
   title: 'ჩვენ შესახებ | ჩემი იურისტი',
@@ -37,37 +39,34 @@ export default async function AboutPage() {
 
   return (
     <div>
-      {/* HERO / INTRO */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#ededff] via-[#eef0ff] to-[#e8eaff]">
-        <div className="container mx-auto px-4 py-16 md:py-24 max-w-3xl">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#1a1a2e] mb-8 tracking-tight leading-tight">
-            {title}
-          </h1>
-          <div className="text-lg text-gray-700">
-            <Paragraphs text={intro} />
-          </div>
+      <PageHero title={title} />
+
+      {/* INTRO */}
+      <section className="container mx-auto px-4 py-12 md:py-16 max-w-3xl animate-fade-up delay-150">
+        <div className="text-muted-foreground text-lg">
+          <Paragraphs text={intro} />
         </div>
       </section>
 
       {/* HISTORY */}
-      <section className="container mx-auto px-4 py-16 md:py-20 max-w-3xl">
+      <section className="container mx-auto px-4 pb-16 md:pb-20 max-w-3xl">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-1 h-8 rounded-full bg-[#6366f1]" />
-          <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a2e]">{historyTitle}</h2>
+          <div className="w-1 h-8 rounded-full bg-primary" />
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">{historyTitle}</h2>
         </div>
-        <div className="text-gray-600">
+        <div className="text-muted-foreground">
           <Paragraphs text={historyBody} />
         </div>
       </section>
 
       {/* MISSION */}
-      <section className="bg-[#f7f7ff] border-y border-[#e0e0ff]">
+      <section className="bg-muted/40 border-y border-border">
         <div className="container mx-auto px-4 py-16 md:py-20 max-w-3xl">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-8 rounded-full bg-[#4338ca]" />
-            <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a2e]">{missionTitle}</h2>
+            <div className="w-1 h-8 rounded-full bg-primary" />
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">{missionTitle}</h2>
           </div>
-          <p className="text-lg text-gray-700 leading-relaxed">{mission}</p>
+          <p className="text-lg text-muted-foreground leading-relaxed">{mission}</p>
         </div>
       </section>
 
@@ -75,32 +74,34 @@ export default async function AboutPage() {
       {team.length > 0 && (
         <section className="container mx-auto px-4 py-16 md:py-20 max-w-4xl">
           <div className="flex items-center gap-3 mb-10 justify-center">
-            <Users className="h-6 w-6 text-[#6366f1]" />
-            <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a2e]">{d.teamTitle}</h2>
+            <Users className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">{d.teamTitle}</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {team.map((member) => (
-              <div key={String(member._id)} className="flex flex-col items-center text-center gap-3">
-                {member.imageUrl ? (
-                  <Image
-                    src={member.imageUrl}
-                    alt={member.name}
-                    width={80}
-                    height={80}
-                    className="w-20 h-20 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-[#ededff] flex items-center justify-center shrink-0">
-                    <span className="text-2xl font-bold text-[#6366f1]">
-                      {member.name[0] ?? '?'}
-                    </span>
+            {team.map((member, idx) => (
+              <AnimateIn key={String(member._id)} delay={idx * 80}>
+                <div className="flex flex-col items-center text-center gap-3">
+                  {member.imageUrl ? (
+                    <Image
+                      src={member.imageUrl}
+                      alt={member.name}
+                      width={80}
+                      height={80}
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-primary">
+                        {member.name[0] ?? '?'}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-semibold text-foreground">{member.name}</p>
+                    <p className="text-sm text-muted-foreground">{member.role}</p>
                   </div>
-                )}
-                <div>
-                  <p className="font-semibold text-[#1a1a2e]">{member.name}</p>
-                  <p className="text-sm text-gray-500">{member.role}</p>
                 </div>
-              </div>
+              </AnimateIn>
             ))}
           </div>
         </section>
