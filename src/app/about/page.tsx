@@ -4,7 +4,6 @@ import { getLocale } from '@/lib/i18n/locale'
 import { getDict } from '@/lib/i18n/dictionaries'
 import { Users } from 'lucide-react'
 import Image from 'next/image'
-import { PageHero } from '@/components/site/PageHero'
 import { AnimateIn } from '@/components/site/AnimateIn'
 
 export const metadata: Metadata = {
@@ -39,10 +38,19 @@ export default async function AboutPage() {
 
   return (
     <div>
-      <PageHero title={title} />
+      <section className="bg-primary">
+        <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
+          <p className="text-5xl md:text-6xl font-bold animate-fade-up leading-tight">
+            <span className="text-white">ჩემი იურისტი</span>
+            <br />
+            <span className="text-gold">პლატფორმა, რომელიც იურიდიულ დახმარებას ხელმისაწვდომს და მარტივს ხდის ყველასთვის.</span>
+          </p>
+        </div>
+      </section>
 
       {/* INTRO */}
       <section className="container mx-auto px-4 py-12 md:py-16 max-w-3xl animate-fade-up delay-150">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">{title}</h2>
         <div className="text-muted-foreground text-lg">
           <Paragraphs text={intro} />
         </div>
