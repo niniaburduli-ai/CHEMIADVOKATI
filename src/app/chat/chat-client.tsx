@@ -21,11 +21,14 @@ type LegalBasisGroup = {
   items: LegalBasisItem[];
 };
 
+type WebSource = { url: string; title: string };
+
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
   legalBasis?: LegalBasisGroup[];
+  webSources?: WebSource[];
 };
 
 // Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts.
@@ -107,6 +110,16 @@ export function ChatClient({ locale }: { locale: Locale }) {
         }
       }
 
+      let webSources: WebSource[] = [];
+      const rawWeb = res.headers.get("X-Web-Sources");
+      if (rawWeb) {
+        try {
+          webSources = JSON.parse(decodeURIComponent(rawWeb));
+        } catch {
+          webSources = [];
+        }
+      }
+
       if (!res.body) {
         patch((msg) => ({ ...msg, content: d.chat.errorNoBody, legalBasis }));
         return;
@@ -126,6 +139,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
         ...msg,
         content: isNotFound ? d.chat.notFound : acc,
         legalBasis: isNotFound ? [] : legalBasis,
+        webSources: isNotFound ? [] : webSources,
       }));
     } catch {
       patch((msg) => ({
@@ -207,6 +221,27 @@ export function ChatClient({ locale }: { locale: Locale }) {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+                {m.webSources && m.webSources.length > 0 && (
+                  <div className="mt-3 space-y-1 border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {d.chat.webSources}
+                    </p>
+                    <ul className="space-y-0.5">
+                      {m.webSources.map((s) => (
+                        <li key={s.url}>
+                          <a
+                            href={s.url}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="text-xs text-primary hover:underline break-all"
+                          >
+                            {s.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </CardContent>

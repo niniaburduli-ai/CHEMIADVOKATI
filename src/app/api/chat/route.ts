@@ -16,6 +16,7 @@ import {
   buildGroundedPrompt,
   generateLegalAnswer,
   parseAnswer,
+  searchWebContext,
   streamText,
 } from "@/lib/legal/openrouter";
 
@@ -57,6 +58,10 @@ export async function POST(req: Request) {
     );
   }
 
+  // Kick off web-search enrichment in parallel — it overlaps the whole
+  // retrieval pipeline and degrades to null on any failure (never blocks).
+  const webPromise = searchWebContext(question);
+
   const expanded = await expandQuery(question);
   const selected =
     expanded.sourceIds.length > 0
@@ -90,9 +95,11 @@ export async function POST(req: Request) {
     );
   }
 
+  const web = await webPromise;
   const userPrompt = buildGroundedPrompt(
     question,
-    matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) }))
+    matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) })),
+    web?.summary
   );
 
   let full: string;
@@ -150,6 +157,9 @@ export async function POST(req: Request) {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Legal-Basis": encodeURIComponent(JSON.stringify(legalBasis)),
+      ...(web && web.sources.length > 0
+        ? { "X-Web-Sources": encodeURIComponent(JSON.stringify(web.sources)) }
+        : {}),
     },
   });
 }

@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# secret env docs (contain real keys — never commit)
+VERCEL_ENV.md
+
 # vercel
 .vercel
 

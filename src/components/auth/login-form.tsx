@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,15 @@ export function LoginForm({ locale }: { locale: Locale }) {
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">{d.auth.password}</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">{d.auth.password}</Label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            {d.auth.forgotLink}
+          </Link>
+        </div>
         <Input id="password" name="password" type="password" required autoComplete="current-password" />
         {state?.fields?.password && (
           <p className="text-xs text-destructive">{state.fields.password[0]}</p>

@@ -16,6 +16,20 @@ export const LoginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof LoginSchema>;
 
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email({ message: "არასწორი ელ. ფოსტა" }).toLowerCase().trim(),
+});
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1).max(200),
+  password: z
+    .string()
+    .min(8, { message: "პაროლი მინიმუმ 8 სიმბოლო" })
+    .max(128),
+});
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+
 export const ConsultationCreateSchema = z.object({
   question: z.string().min(5).max(2000),
 });

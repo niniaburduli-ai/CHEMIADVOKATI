@@ -3,6 +3,7 @@ import { User2 } from "lucide-react";
 import { auth } from "@/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { GuestAuthButtons } from "@/components/site/guest-auth-buttons";
 import { ThemeToggle } from "@/components/site/theme-toggle";
 import { LanguageSwitcher } from "@/components/site/language-switcher";
 import { getNavMenu, getSiteConfig } from "@/lib/cms";
@@ -77,20 +78,7 @@ export async function Header() {
               <LogoutButton />
             </>
           ) : (
-            <>
-              <Link
-                href="/login"
-                className={buttonVariants({ variant: "outline", size: "sm" }) + " btn-hover"}
-              >
-                {d.header.signIn}
-              </Link>
-              <Link
-                href="/register"
-                className={buttonVariants({ size: "sm" }) + " btn-hover"}
-              >
-                {d.header.signUp}
-              </Link>
-            </>
+            <GuestAuthButtons signInLabel={d.header.signIn} signUpLabel={d.header.signUp} />
           )}
         </div>
       </div>

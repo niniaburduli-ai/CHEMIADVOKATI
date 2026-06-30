@@ -29,8 +29,11 @@ export async function registerAction(
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const consentAccepted = formData.get("consentAccepted");
   const rawCallbackUrl = String(formData.get("callbackUrl") ?? "");
-  // Only allow relative paths to prevent open redirect.
-  const callbackUrl = rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/dashboard";
+  // Only allow same-site relative paths to prevent open redirect.
+  const callbackUrl =
+    rawCallbackUrl.startsWith("/") && !rawCallbackUrl.startsWith("//")
+      ? rawCallbackUrl
+      : "/dashboard";
 
   if (consentAccepted !== "on") {
     return {
@@ -112,7 +115,12 @@ export async function loginAction(
     };
   }
 
-  const callbackUrl = String(formData.get("callbackUrl") ?? "/dashboard");
+  // Only allow same-site relative paths to prevent open redirect.
+  const rawCallbackUrl = String(formData.get("callbackUrl") ?? "");
+  const callbackUrl =
+    rawCallbackUrl.startsWith("/") && !rawCallbackUrl.startsWith("//")
+      ? rawCallbackUrl
+      : "/dashboard";
 
   try {
     await signIn("credentials", {
