@@ -34,6 +34,17 @@ type Message = {
 // Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts.
 const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
 
+/** Renders the model's `**bold**` markdown as <strong> instead of literal asterisks. */
+function renderMarkdownBold(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    )
+  );
+}
+
 /** Groups items by article and returns collapsed point strings per article. */
 function groupByArticle(
   items: LegalBasisItem[]
@@ -182,7 +193,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
             <Card className={["flex-1", m.role === "assistant" ? "border-t-[3px] border-t-primary" : ""].filter(Boolean).join(" ")}>
               <CardContent className="py-3">
                 {m.content ? (
-                  <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">{renderMarkdownBold(m.content)}</p>
                 ) : (
                   <p className="text-sm text-muted-foreground">{d.chat.writing}</p>
                 )}
