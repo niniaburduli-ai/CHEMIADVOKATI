@@ -17,7 +17,7 @@ export function LoginForm({ locale }: { locale: Locale }) {
     undefined
   );
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = params.get("callbackUrl") ?? "/";
 
   return (
     <form action={formAction} className="space-y-4">

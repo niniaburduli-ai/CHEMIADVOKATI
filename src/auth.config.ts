@@ -25,7 +25,7 @@ export const authConfig = {
       if (isProtected && !isLoggedIn) return false;
       if (isAdminArea && isLoggedIn && !isAdmin) return false;
       if (isAuthPage && isLoggedIn) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        return Response.redirect(new URL("/", nextUrl));
       }
       return true;
     },

@@ -33,7 +33,7 @@ export async function registerAction(
   const callbackUrl =
     rawCallbackUrl.startsWith("/") && !rawCallbackUrl.startsWith("//")
       ? rawCallbackUrl
-      : "/dashboard";
+      : "/";
 
   if (consentAccepted !== "on") {
     return {
@@ -120,7 +120,7 @@ export async function loginAction(
   const callbackUrl =
     rawCallbackUrl.startsWith("/") && !rawCallbackUrl.startsWith("//")
       ? rawCallbackUrl
-      : "/dashboard";
+      : "/";
 
   try {
     await signIn("credentials", {
@@ -147,6 +147,6 @@ export async function logoutAction() {
 }
 
 export async function googleSignInAction(formData: FormData) {
-  const callbackUrl = String(formData.get("callbackUrl") ?? "/dashboard");
+  const callbackUrl = String(formData.get("callbackUrl") ?? "/");
   await signIn("google", { redirectTo: callbackUrl });
 }

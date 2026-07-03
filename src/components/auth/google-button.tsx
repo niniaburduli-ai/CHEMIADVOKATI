@@ -27,7 +27,7 @@ export function GoogleButton({
 }) {
   const d = getDict(locale);
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = params.get("callbackUrl") ?? "/";
   const [consented, setConsented] = useState(false);
   const [isPending, startTransition] = useTransition();
 
