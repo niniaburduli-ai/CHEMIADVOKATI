@@ -8,9 +8,13 @@ import {
   ANALYSIS_SYSTEM_PROMPT,
   MAX_ANALYSIS_TEXT,
   MAX_FILE_BYTES,
+  MAX_IMAGES,
+  MAX_IMAGE_BYTES,
   extensionOf,
   isSupportedExtension,
+  isImageExtension,
   extractDocumentText,
+  extractTextFromImages,
   parseAnalysisResponse,
 } from "@/lib/legal/document-analysis";
 
@@ -39,12 +43,59 @@ export async function POST(req: Request) {
   const ct = req.headers.get("content-type") ?? "";
   let text = "";
   let fileName = "document";
+  let skippedImages = 0;
 
   if (ct.includes("multipart/form-data")) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const images = formData.getAll("images") as File[];
     const pastedText = formData.get("text") as string | null;
-    if (file && file.size > 0) {
+
+    if (images.length > 0) {
+      if (images.length > MAX_IMAGES) {
+        return NextResponse.json(
+          { error: `Select at most ${MAX_IMAGES} images.` },
+          { status: 400 }
+        );
+      }
+      for (const image of images) {
+        const ext = extensionOf(image.name);
+        if (!isImageExtension(ext)) {
+          return NextResponse.json(
+            { error: "Unsupported image type. Use JPG." },
+            { status: 400 }
+          );
+        }
+        if (image.size > MAX_IMAGE_BYTES) {
+          return NextResponse.json(
+            { error: "One or more images are too large (max 8MB each)." },
+            { status: 400 }
+          );
+        }
+      }
+      fileName = `${images.length} ფოტოს დოკუმენტი`;
+      let ocr: { combinedText: string; succeededCount: number; failedCount: number };
+      try {
+        ocr = await extractTextFromImages(
+          await Promise.all(
+            images.map(async (image) => ({
+              name: image.name,
+              buffer: Buffer.from(await image.arrayBuffer()),
+            }))
+          )
+        );
+      } catch (err) {
+        return NextResponse.json(
+          {
+            error: "Could not read any of the uploaded images",
+            detail: String(err instanceof Error ? err.message : err),
+          },
+          { status: 400 }
+        );
+      }
+      text = ocr.combinedText;
+      skippedImages = ocr.failedCount;
+    } else if (file && file.size > 0) {
       fileName = file.name;
       const ext = extensionOf(fileName);
       if (!isSupportedExtension(ext)) {
@@ -133,6 +184,7 @@ export async function POST(req: Request) {
       summary: analysis.summary,
       findings: analysis.findings,
       recommendations: analysis.recommendations,
+      ...(skippedImages > 0 ? { skippedImages } : {}),
     },
     { status: 201 }
   );
