@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileUp, Image as ImageIcon, Loader2, Plus, Sparkles, AlertCircle, X as XIcon } from "lucide-react";
+import { FileUp, Image as ImageIcon, Loader2, Plus, Sparkles, AlertCircle, X as XIcon, Wand2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { RiskFindingCard } from "@/components/site/risk-finding-card";
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -32,6 +34,19 @@ type AnalysisResult = {
   recommendations: string[];
   skippedImages?: number;
 };
+
+type RevisionResult = {
+  text: string;
+  summary: string;
+  findings: RiskFinding[];
+  recommendations: string[];
+  questions: string[];
+  instruction: string;
+  answers: Record<string, string>;
+  createdAt: string;
+};
+
+type ImproveStatus = "idle" | "loading" | "error";
 
 type Status = "idle" | "ready" | "analyzing" | "results" | "error";
 type Mode = "document" | "photos";
@@ -60,6 +75,13 @@ export function DocumentAnalysisModal({
     "unsupported" | "tooLarge" | "unauthorized" | "quota" | "generic" | "unsupportedImage" | "noImages" | null
   >(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [revision, setRevision] = useState<RevisionResult | null>(null);
+  const [instructionText, setInstructionText] = useState("");
+  const [answersDraft, setAnswersDraft] = useState<Record<string, string>>({});
+  const [improveStatus, setImproveStatus] = useState<ImproveStatus>("idle");
+  const [improveErrorKind, setImproveErrorKind] = useState<
+    "unauthorized" | "quota" | "generic" | null
+  >(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +99,11 @@ export function DocumentAnalysisModal({
     clearImages();
     setErrorKind(null);
     setResult(null);
+    setRevision(null);
+    setInstructionText("");
+    setAnswersDraft({});
+    setImproveStatus("idle");
+    setImproveErrorKind(null);
     if (fileRef.current) fileRef.current.value = "";
     if (imagesRef.current) imagesRef.current.value = "";
   }
@@ -186,6 +213,55 @@ export function DocumentAnalysisModal({
       setErrorKind("generic");
       setStatus("error");
     }
+  }
+
+  async function improve(instructionOverride?: string, answersOverride?: Record<string, string>) {
+    if (!result) return;
+    setImproveStatus("loading");
+    setImproveErrorKind(null);
+    try {
+      const res = await fetch("/api/review/improve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewId: result.id,
+          instruction: instructionOverride ?? instructionText,
+          answers: answersOverride ?? {},
+        }),
+      });
+      if (res.status === 401) {
+        setImproveErrorKind("unauthorized");
+        setImproveStatus("error");
+        return;
+      }
+      if (res.status === 403) {
+        setImproveErrorKind("quota");
+        setImproveStatus("error");
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        setImproveErrorKind("generic");
+        setImproveStatus("error");
+        return;
+      }
+      setRevision(data.revision as RevisionResult);
+      setAnswersDraft({});
+      setImproveStatus("idle");
+    } catch {
+      setImproveErrorKind("generic");
+      setImproveStatus("error");
+    }
+  }
+
+  function applyAnswers() {
+    improve("", answersDraft);
+  }
+
+  function copyRevisedText() {
+    if (!revision) return;
+    navigator.clipboard.writeText(revision.text);
+    toast.success(t.improveCopied);
   }
 
   const analyzeDisabled = mode === "document" ? !file : images.length === 0;
@@ -406,6 +482,119 @@ export function DocumentAnalysisModal({
             )}
 
             <p className="text-xs text-muted-foreground pt-2 border-t">{t.resultsSavedNote}</p>
+
+            <div className="space-y-3 border-t pt-4">
+              <p className="text-xs font-semibold text-muted-foreground">{t.improveTitle}</p>
+              <Textarea
+                value={instructionText}
+                onChange={(e) => setInstructionText(e.target.value)}
+                placeholder={t.improveInstructionPlaceholder}
+                rows={3}
+              />
+              <Button
+                onClick={() => improve()}
+                disabled={improveStatus === "loading"}
+                variant="outline"
+                className="w-full"
+              >
+                {improveStatus === "loading" ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="mr-2 h-4 w-4" />
+                )}
+                {improveStatus === "loading" ? t.improving : t.improveCta}
+              </Button>
+
+              {improveStatus === "error" && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    {improveErrorKind === "unauthorized" && t.loginRequired}
+                    {improveErrorKind === "quota" && t.quotaExceeded}
+                    {improveErrorKind === "generic" && t.genericError}
+                  </span>
+                </div>
+              )}
+
+              {revision && (
+                <div className="space-y-4 rounded-lg border border-border p-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {t.improveRevisedTitle}
+                      </p>
+                      <Button variant="ghost" size="sm" onClick={copyRevisedText}>
+                        {t.improveCopyButton}
+                      </Button>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                      {revision.text}
+                    </pre>
+                  </div>
+
+                  {revision.findings.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">
+                        {t.improveFindingsLabel} ({revision.findings.length})
+                      </p>
+                      <div className="space-y-3">
+                        {revision.findings.map((f, i) => (
+                          <RiskFindingCard key={i} finding={f} locale={locale} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {revision.recommendations.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">
+                        {t.improveRecommendationsLabel}
+                      </p>
+                      <ul className="space-y-1.5">
+                        {revision.recommendations.map((r, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {revision.questions.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {t.improveQuestionsTitle}
+                      </p>
+                      {revision.questions.map((q, i) => (
+                        <div key={i} className="space-y-1">
+                          <p className="text-sm">{q}</p>
+                          <Textarea
+                            value={answersDraft[q] ?? ""}
+                            onChange={(e) =>
+                              setAnswersDraft((prev) => ({ ...prev, [q]: e.target.value }))
+                            }
+                            placeholder={t.improveAnswerPlaceholder}
+                            rows={2}
+                          />
+                        </div>
+                      ))}
+                      <Button
+                        onClick={applyAnswers}
+                        disabled={
+                          improveStatus === "loading" ||
+                          revision.questions.every((q) => !answersDraft[q]?.trim())
+                        }
+                        className="w-full"
+                      >
+                        {t.improveApplyAnswersCta}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Button variant="outline" className="w-full" onClick={reset}>
               {t.chooseFile}
             </Button>
