@@ -6,7 +6,8 @@ const MODEL = () =>
 
 export async function callOpenRouterChat(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  model?: string
+  model?: string,
+  maxTokens = 2500
 ): Promise<string> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY not set");
@@ -17,7 +18,7 @@ export async function callOpenRouterChat(
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: model ?? MODEL(), messages, max_tokens: 2500 }),
+    body: JSON.stringify({ model: model ?? MODEL(), messages, max_tokens: maxTokens }),
   });
 
   if (!res.ok) {
