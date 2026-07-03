@@ -12,6 +12,20 @@ const RiskFindingSchema = new Schema(
   { _id: false }
 );
 
+const DocumentRevisionSchema = new Schema(
+  {
+    text: { type: String, default: "" },
+    summary: { type: String, default: "" },
+    findings: { type: [RiskFindingSchema], default: [] },
+    recommendations: { type: [String], default: [] },
+    questions: { type: [String], default: [] },
+    instruction: { type: String, default: "" },
+    answers: { type: Schema.Types.Mixed, default: {} },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const DocumentReviewSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -19,6 +33,8 @@ const DocumentReviewSchema = new Schema(
     summary: { type: String, required: true },
     findings: { type: [RiskFindingSchema], default: [] },
     recommendations: { type: [String], default: [] },
+    sourceText: { type: String, default: "" },
+    revisions: { type: [DocumentRevisionSchema], default: [] },
   },
   { timestamps: true }
 );
