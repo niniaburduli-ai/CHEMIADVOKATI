@@ -42,3 +42,7 @@ VERCEL_ENV.md
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tesseract.js OCR language data (fetched at runtime, cached wherever the
+# process CWD happens to be when no cachePath is configured)
+*.traineddata
