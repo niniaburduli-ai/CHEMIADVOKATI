@@ -4,45 +4,18 @@ import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { DocumentReview } from "@/lib/models/document-review";
 import { callOpenRouterChat } from "@/lib/ai-call";
+import {
+  ANALYSIS_SYSTEM_PROMPT,
+  MAX_ANALYSIS_TEXT,
+  MAX_FILE_BYTES,
+  extensionOf,
+  isSupportedExtension,
+  extractDocumentText,
+  parseAnalysisResponse,
+} from "@/lib/legal/document-analysis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const MAX_TEXT = 10_000;
-
-const SYSTEM = `შენ ხარ ქართული იურიდიული დოკუმენტების ანალიტიკოსი.
-გაანალიზე მოწოდებული დოკუმენტი და მიეცი:
-1. მოკლე შეჯამება (2-3 წინადადება)
-2. ძირითადი იურიდიული პრობლემები ან შეშფოთებები
-3. რეკომენდაციები გასაუმჯობესებლად ან სამოქმედოდ
-
-უპასუხე ქართულ ენაზე. გამოიყენე ზუსტად შემდეგი ფორმატი:
-
-SUMMARY: [შეჯამება]
-FINDINGS: [პრობლემა 1] | [პრობლემა 2] | [პრობლემა 3]
-RECOMMENDATIONS: [რეკ. 1] | [რეკ. 2] | [რეკ. 3]`;
-
-function parseReviewResponse(raw: string): {
-  summary: string;
-  findings: string[];
-  recommendations: string[];
-} {
-  const summaryMatch = raw.match(/SUMMARY:\s*([\s\S]+?)(?=\nFINDINGS:|$)/);
-  const findingsMatch = raw.match(/FINDINGS:\s*([\s\S]+?)(?=\nRECOMMENDATIONS:|$)/);
-  const recsMatch = raw.match(/RECOMMENDATIONS:\s*([\s\S]+?)$/);
-
-  const summary = summaryMatch?.[1]?.trim() ?? raw.slice(0, 400);
-  const findings = (findingsMatch?.[1] ?? "")
-    .split("|")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const recommendations = (recsMatch?.[1] ?? "")
-    .split("|")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  return { summary, findings, recommendations };
-}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -73,9 +46,28 @@ export async function POST(req: Request) {
     const pastedText = formData.get("text") as string | null;
     if (file && file.size > 0) {
       fileName = file.name;
+      const ext = extensionOf(fileName);
+      if (!isSupportedExtension(ext)) {
+        return NextResponse.json(
+          { error: "Unsupported file type. Use PDF, DOCX, TXT, or MD." },
+          { status: 400 }
+        );
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        return NextResponse.json({ error: "File too large (max 10MB)." }, { status: 400 });
+      }
       const buf = Buffer.from(await file.arrayBuffer());
-      // Strip null bytes that appear in binary PDFs; keep readable text
-      text = buf.toString("utf-8").replace(/\0/g, " ");
+      try {
+        text = await extractDocumentText(fileName, buf);
+      } catch (err) {
+        return NextResponse.json(
+          {
+            error: "Could not read document contents",
+            detail: String(err instanceof Error ? err.message : err),
+          },
+          { status: 400 }
+        );
+      }
     } else if (pastedText) {
       text = pastedText;
     }
@@ -89,7 +81,7 @@ export async function POST(req: Request) {
     }
   }
 
-  text = text.replace(/\s+/g, " ").trim().slice(0, MAX_TEXT);
+  text = text.replace(/\s+/g, " ").trim().slice(0, MAX_ANALYSIS_TEXT);
   if (!text) {
     return NextResponse.json({ error: "No document text provided" }, { status: 400 });
   }
@@ -97,7 +89,7 @@ export async function POST(req: Request) {
   let raw: string;
   try {
     raw = await callOpenRouterChat([
-      { role: "system", content: SYSTEM },
+      { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
       { role: "user", content: `გაანალიზე ეს დოკუმენტი:\n\n${text}` },
     ]);
   } catch (err) {
@@ -110,14 +102,25 @@ export async function POST(req: Request) {
     );
   }
 
-  const { summary, findings, recommendations } = parseReviewResponse(raw);
+  let analysis;
+  try {
+    analysis = parseAnalysisResponse(raw);
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: "AI returned an unreadable response",
+        detail: String(err instanceof Error ? err.message : err),
+      },
+      { status: 502 }
+    );
+  }
 
   const reviewCreate = DocumentReview.create({
     userId: session.user.id,
     fileName,
-    summary,
-    findings,
-    recommendations,
+    summary: analysis.summary,
+    findings: analysis.findings,
+    recommendations: analysis.recommendations,
   });
   const saveOps: Promise<unknown>[] = [reviewCreate];
   if (!isAdmin) {
@@ -129,9 +132,9 @@ export async function POST(req: Request) {
     {
       id: String((review as { _id: unknown })._id),
       fileName,
-      summary,
-      findings,
-      recommendations,
+      summary: analysis.summary,
+      findings: analysis.findings,
+      recommendations: analysis.recommendations,
     },
     { status: 201 }
   );
