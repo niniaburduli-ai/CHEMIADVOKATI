@@ -20,6 +20,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -139,10 +140,14 @@ export async function POST(req: Request) {
 
   let raw: string;
   try {
-    raw = await callOpenRouterChat([
-      { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
-      { role: "user", content: `გაანალიზე ეს დოკუმენტი:\n\n${text}` },
-    ]);
+    raw = await callOpenRouterChat(
+      [
+        { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
+        { role: "user", content: `გაანალიზე ეს დოკუმენტი:\n\n${text}` },
+      ],
+      undefined,
+      6000
+    );
   } catch (err) {
     return NextResponse.json(
       {
