@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileUp, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { FileUp, Image as ImageIcon, Loader2, Plus, Sparkles, AlertCircle, X as XIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,15 +19,23 @@ const ACCEPT = ".pdf,.docx,.txt,.md";
 const MAX_BYTES = 10 * 1024 * 1024;
 const SUPPORTED = ["pdf", "docx", "txt", "md"];
 
+const IMAGE_ACCEPT = ".jpg,.jpeg";
+const MAX_IMAGES = 10;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const IMAGE_SUPPORTED = ["jpg", "jpeg"];
+
 type AnalysisResult = {
   id: string;
   fileName: string;
   summary: string;
   findings: RiskFinding[];
   recommendations: string[];
+  skippedImages?: number;
 };
 
 type Status = "idle" | "ready" | "analyzing" | "results" | "error";
+type Mode = "document" | "photos";
+type ImageItem = { file: File; url: string };
 
 function extOf(name: string): string {
   const idx = name.lastIndexOf(".");
@@ -44,20 +52,44 @@ export function DocumentAnalysisModal({
   locale: Locale;
 }) {
   const t = getDict(locale).documentAnalysis;
+  const [mode, setMode] = useState<Mode>("document");
   const [status, setStatus] = useState<Status>("idle");
   const [file, setFile] = useState<File | null>(null);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [errorKind, setErrorKind] = useState<
-    "unsupported" | "tooLarge" | "unauthorized" | "quota" | "generic" | null
+    "unsupported" | "tooLarge" | "unauthorized" | "quota" | "generic" | "unsupportedImage" | "noImages" | null
   >(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const imagesRef = useRef<HTMLInputElement>(null);
+
+  function clearImages() {
+    setImages((prev) => {
+      prev.forEach((img) => URL.revokeObjectURL(img.url));
+      return [];
+    });
+  }
 
   function reset() {
+    setMode("document");
     setStatus("idle");
     setFile(null);
+    clearImages();
     setErrorKind(null);
     setResult(null);
     if (fileRef.current) fileRef.current.value = "";
+    if (imagesRef.current) imagesRef.current.value = "";
+  }
+
+  function switchMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    setFile(null);
+    clearImages();
+    setStatus("idle");
+    setErrorKind(null);
+    if (fileRef.current) fileRef.current.value = "";
+    if (imagesRef.current) imagesRef.current.value = "";
   }
 
   function handlePick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -78,9 +110,47 @@ export function DocumentAnalysisModal({
     setStatus("ready");
   }
 
+  function handleImagesPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    if (picked.length === 0) return;
+    if (picked.some((f) => !IMAGE_SUPPORTED.includes(extOf(f.name)))) {
+      setErrorKind("unsupportedImage");
+      setStatus("error");
+      return;
+    }
+    if (picked.some((f) => f.size > MAX_IMAGE_BYTES)) {
+      setErrorKind("tooLarge");
+      setStatus("error");
+      return;
+    }
+    setImages((prev) => {
+      const room = Math.max(MAX_IMAGES - prev.length, 0);
+      const accepted = picked.slice(0, room).map((f) => ({ file: f, url: URL.createObjectURL(f) }));
+      return [...prev, ...accepted];
+    });
+    setErrorKind(null);
+    setStatus("ready");
+    if (imagesRef.current) imagesRef.current.value = "";
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => {
+      const target = prev[index];
+      if (target) URL.revokeObjectURL(target.url);
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) setStatus("idle");
+      return next;
+    });
+  }
+
   async function analyze() {
-    if (!file) {
+    if (mode === "document" && !file) {
       setErrorKind("unsupported");
+      setStatus("error");
+      return;
+    }
+    if (mode === "photos" && images.length === 0) {
+      setErrorKind("noImages");
       setStatus("error");
       return;
     }
@@ -88,7 +158,11 @@ export function DocumentAnalysisModal({
     setErrorKind(null);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      if (mode === "document" && file) {
+        formData.append("file", file);
+      } else {
+        images.forEach((img) => formData.append("images", img.file));
+      }
       const res = await fetch("/api/review", { method: "POST", body: formData });
       if (res.status === 401) {
         setErrorKind("unauthorized");
@@ -114,6 +188,8 @@ export function DocumentAnalysisModal({
     }
   }
 
+  const analyzeDisabled = mode === "document" ? !file : images.length === 0;
+
   return (
     <Dialog
       open={open}
@@ -130,27 +206,114 @@ export function DocumentAnalysisModal({
 
         {(status === "idle" || status === "ready") && (
           <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-8 flex flex-col items-center gap-2 text-center"
-            >
-              <FileUp className="h-8 w-8 text-primary" />
-              <p className="text-sm font-medium text-foreground">
-                {file ? file.name : t.dropzoneHint}
-              </p>
-              <span className="text-xs text-muted-foreground">
-                {file ? t.changeFile : t.chooseFile}
-              </span>
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept={ACCEPT}
-              className="hidden"
-              onChange={handlePick}
-            />
-            <Button onClick={analyze} disabled={!file} className="w-full">
+            <div className="flex rounded-lg border border-border p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => switchMode("document")}
+                className={`flex-1 rounded px-2 py-1.5 text-sm font-medium transition-colors ${
+                  mode === "document"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.modeDocumentLabel}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("photos")}
+                className={`flex-1 rounded px-2 py-1.5 text-sm font-medium transition-colors ${
+                  mode === "photos"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.modePhotosLabel}
+              </button>
+            </div>
+
+            {mode === "document" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-8 flex flex-col items-center gap-2 text-center"
+                >
+                  <FileUp className="h-8 w-8 text-primary" />
+                  <p className="text-sm font-medium text-foreground">
+                    {file ? file.name : t.dropzoneHint}
+                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {file ? t.changeFile : t.chooseFile}
+                  </span>
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept={ACCEPT}
+                  className="hidden"
+                  onChange={handlePick}
+                />
+              </>
+            ) : (
+              <>
+                {images.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-2">
+                    {images.map((img, i) => (
+                      <div
+                        key={img.url}
+                        className="relative aspect-square rounded-lg overflow-hidden border border-border group"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        <span className="absolute top-1 left-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center">
+                          {i + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(i)}
+                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {images.length < MAX_IMAGES && (
+                      <button
+                        type="button"
+                        onClick={() => imagesRef.current?.click()}
+                        className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/60 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                        aria-label={t.addMoreLabel}
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => imagesRef.current?.click()}
+                    className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-8 flex flex-col items-center gap-2 text-center"
+                  >
+                    <ImageIcon className="h-8 w-8 text-primary" />
+                    <p className="text-sm font-medium text-foreground">{t.dropzoneHintPhotos}</p>
+                    <span className="text-xs text-muted-foreground">{t.chooseFile}</span>
+                  </button>
+                )}
+                <input
+                  ref={imagesRef}
+                  type="file"
+                  accept={IMAGE_ACCEPT}
+                  multiple
+                  className="hidden"
+                  onChange={handleImagesPick}
+                />
+                {images.length >= MAX_IMAGES && (
+                  <p className="text-xs text-muted-foreground text-center">{t.maxImagesNotice}</p>
+                )}
+              </>
+            )}
+
+            <Button onClick={analyze} disabled={analyzeDisabled} className="w-full">
               <Sparkles className="mr-2 h-4 w-4" />
               {t.analyzeCta}
             </Button>
@@ -174,6 +337,8 @@ export function DocumentAnalysisModal({
                 {errorKind === "unauthorized" && t.loginRequired}
                 {errorKind === "quota" && t.quotaExceeded}
                 {errorKind === "generic" && t.genericError}
+                {errorKind === "unsupportedImage" && t.unsupportedImageTypeError}
+                {errorKind === "noImages" && t.noImagesError}
               </span>
             </div>
             {errorKind === "unauthorized" && (
@@ -186,7 +351,11 @@ export function DocumentAnalysisModal({
                 <Button className="w-full">{t.upgradeCta}</Button>
               </a>
             )}
-            {(errorKind === "generic" || errorKind === "unsupported" || errorKind === "tooLarge") && (
+            {(errorKind === "generic" ||
+              errorKind === "unsupported" ||
+              errorKind === "tooLarge" ||
+              errorKind === "unsupportedImage" ||
+              errorKind === "noImages") && (
               <Button variant="outline" className="w-full" onClick={reset}>
                 {t.retryCta}
               </Button>
@@ -196,6 +365,12 @@ export function DocumentAnalysisModal({
 
         {status === "results" && result && (
           <div className="space-y-4">
+            {typeof result.skippedImages === "number" && result.skippedImages > 0 && (
+              <p className="text-xs rounded-lg border border-border bg-muted/50 p-2 text-muted-foreground">
+                {t.skippedImagesNote} ({result.skippedImages})
+              </p>
+            )}
+
             <div>
               <p className="text-xs font-semibold text-muted-foreground mb-1">{t.summaryLabel}</p>
               <p className="text-sm leading-relaxed">{result.summary}</p>
