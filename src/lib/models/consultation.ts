@@ -4,7 +4,14 @@ const SourceSchema = new Schema(
   {
     title: { type: String, required: true },
     code: { type: String },
+    // Legacy field: a pre-flattened "მუხლი X პ.Y" string. Kept for consultations
+    // saved before article/paragraph/subparagraph were split out below — new
+    // rows populate the structured fields instead so grouping never has to
+    // regex-reparse a concatenated string.
     articleNumber: { type: String },
+    article: { type: String },
+    paragraph: { type: String },
+    subparagraph: { type: String },
     url: { type: String },
   },
   { _id: false }

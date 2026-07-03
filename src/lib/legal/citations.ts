@@ -74,3 +74,28 @@ export function buildLegalBasis(
   }
   return [...groups.values()];
 }
+
+export type ArticleGroup = { article: string; points: string[] };
+
+/**
+ * Collapse items of one law into one entry per article, with a "1"/"2"-style
+ * point per paragraph+subparagraph. Shared by the live chat view and the
+ * consultation history view so both render the exact same "Legal Basis" text
+ * for the same data.
+ */
+export function groupItemsByArticle(items: LegalBasisItem[]): ArticleGroup[] {
+  const map = new Map<string, string[]>();
+  for (const it of items) {
+    if (!map.has(it.article)) map.set(it.article, []);
+    let point = "";
+    if (it.paragraph && it.subparagraph) {
+      point = `${it.paragraph} „${it.subparagraph}"`;
+    } else if (it.paragraph) {
+      point = it.paragraph;
+    } else if (it.subparagraph) {
+      point = `„${it.subparagraph}"`;
+    }
+    if (point) map.get(it.article)!.push(point);
+  }
+  return [...map.entries()].map(([article, points]) => ({ article, points }));
+}

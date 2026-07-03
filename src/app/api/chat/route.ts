@@ -136,11 +136,10 @@ export async function POST(req: Request) {
     g.items.map((i) => ({
       title: g.lawName,
       code: g.lawName,
-      articleNumber:
-        i.article +
-        (i.paragraph ? ` პ.${i.paragraph}` : "") +
-        (i.subparagraph ? ` ქ.${i.subparagraph}` : ""),
       url: g.url,
+      article: i.article,
+      paragraph: i.paragraph ?? undefined,
+      subparagraph: i.subparagraph ?? undefined,
     }))
   );
 

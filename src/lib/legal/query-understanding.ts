@@ -111,7 +111,11 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
   try {
     const raw = await callOpenRouter(messages, {
       model: FAST_MODEL,
-      temperature: 0.2,
+      // 0, not a small positive value: this call picks which laws/keywords get
+      // searched, so any sampling variance here changes which articles get
+      // retrieved — and therefore the legal basis shown — for the identical
+      // question across two runs.
+      temperature: 0,
       maxTokens: 260,
       json: true,
       timeoutMs: 12_000,

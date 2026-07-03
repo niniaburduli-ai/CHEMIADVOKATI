@@ -11,38 +11,55 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { groupItemsByArticle, type LegalBasisItem } from "@/lib/legal/citations";
+import { renderMarkdownBold } from "@/lib/markdown-bold";
 
-type RawSource = { title?: string; articleNumber?: string; url?: string };
+type RawSource = {
+  title?: string;
+  url?: string;
+  article?: string;
+  paragraph?: string;
+  subparagraph?: string;
+  /** Legacy: consultations saved before article/paragraph/subparagraph existed. */
+  articleNumber?: string;
+};
 
-/** Groups flat per-paragraph sources into (law, article, points[]) for display. */
-function groupSources(
-  sources: RawSource[]
-): Array<{ label: string; url?: string }> {
-  const map = new Map<string, { label: string; url?: string; points: string[] }>();
+type SourceGroup = {
+  lawName: string;
+  url?: string;
+  articleGroups: Array<{ article: string; points: string[] }>;
+};
+
+/**
+ * Same grouping the live chat view uses (groupItemsByArticle), so the history
+ * view renders identical "Legal Basis" text for the same underlying data
+ * instead of its own re-derivation.
+ */
+function groupSources(sources: RawSource[]): SourceGroup[] {
+  const groups = new Map<string, { lawName: string; url?: string; items: LegalBasisItem[] }>();
   for (const s of sources) {
-    const title = s.title ?? "";
-    const raw = s.articleNumber ?? "";
-    // Strip paragraph/subparagraph suffix to get base article: "მუხლი X პ.Y" → "მუხლი X"
-    const baseArticle = raw.replace(/\s+[პქ]\.[^\s]+/g, "").trim();
-    // Extract point notation (e.g. "3.1" from "პ.3.1")
-    const pointMatch = raw.match(/[პქ]\.(\S+)/g);
-    const point = pointMatch ? pointMatch.map((p) => p.replace(/^[პქ]\./, "")).join(" ") : "";
-    const key = `${title}|${baseArticle}|${s.url ?? ""}`;
-    const existing = map.get(key);
-    if (!existing) {
-      map.set(key, {
-        label: baseArticle ? `${title} — ${baseArticle}` : title,
-        url: s.url,
-        points: point ? [point] : [],
+    const key = `${s.title ?? ""}|${s.url ?? ""}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { lawName: s.title ?? "", url: s.url, items: [] };
+      groups.set(key, g);
+    }
+    // Legacy rows only have the pre-flattened articleNumber string — show it as
+    // its own line rather than trying to reparse it back into paragraph/subparagraph.
+    if (s.article) {
+      g.items.push({
+        article: s.article,
+        paragraph: s.paragraph ?? null,
+        subparagraph: s.subparagraph ?? null,
       });
-    } else if (point && !existing.points.includes(point)) {
-      existing.points.push(point);
+    } else {
+      g.items.push({ article: s.articleNumber ?? s.title ?? "", paragraph: null, subparagraph: null });
     }
   }
-  return [...map.values()].map(({ label, url, points }) => ({
-    label: points.length > 0 ? `${label}, პუნქტი${points.length > 1 ? "ები" : ""}: ${points.join("; ")}` : label,
-    url,
+  return [...groups.values()].map((g) => ({
+    lawName: g.lawName,
+    url: g.url,
+    articleGroups: groupItemsByArticle(g.items),
   }));
 }
 
@@ -100,30 +117,38 @@ export default async function ConsultationsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {item.answer}
+                    {renderMarkdownBold(item.answer)}
                   </p>
                   {sources.length > 0 && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">
+                    <div className="mt-3 space-y-3 border-t pt-3">
+                      <p className="text-xs font-semibold text-muted-foreground">
                         იურიდიული საფუძველი:
                       </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {groupSources(sources as RawSource[]).map((g, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {g.label}
-                          </Badge>
-                        ))}
-                      </div>
-                      {sources[0]?.url && (
-                        <a
-                          href={sources[0].url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          <BookOpen className="h-3 w-3" /> წყარო
-                        </a>
-                      )}
+                      {groupSources(sources as RawSource[]).map((g, i) => (
+                        <div key={`${g.url ?? ""}|${i}`} className="space-y-1">
+                          <p className="text-xs font-medium">{g.lawName}:</p>
+                          <ul className="ml-1 space-y-0.5">
+                            {g.articleGroups.map(({ article, points }) => (
+                              <li key={article} className="text-xs text-muted-foreground">
+                                {article}
+                                {points.length > 1 && <>, პუნქტები: {points.join("; ")}</>}
+                                {points.length === 1 && <>, პუნქტი: {points[0]}</>}
+                              </li>
+                            ))}
+                          </ul>
+                          {g.url && (
+                            <a
+                              href={g.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="flex items-start gap-1.5 text-xs text-primary hover:underline"
+                            >
+                              <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                              <span>წყარო</span>
+                            </a>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>

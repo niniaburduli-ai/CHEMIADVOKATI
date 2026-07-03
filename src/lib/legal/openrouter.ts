@@ -277,7 +277,10 @@ export async function generateLegalAnswer(
 ): Promise<string> {
   return callOpenRouter(messages, {
     model: ANSWER_MODEL,
-    temperature: 0.1,
+    // 0, not 0.1: identical question + identical retrieved text should always
+    // cite the same articles and figures — any sampling temperature reopens
+    // that drift even with rule 6e in SYSTEM_PROMPT.
+    temperature: 0,
     maxTokens: 1200,
     frequencyPenalty: 0.2,
   });

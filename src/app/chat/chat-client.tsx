@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/site/file-upload";
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import { groupItemsByArticle } from "@/lib/legal/citations";
+import { renderMarkdownBold } from "@/lib/markdown-bold";
 
 type LegalBasisItem = {
   article: string;
@@ -33,37 +35,6 @@ type Message = {
 
 // Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts.
 const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
-
-/** Renders the model's `**bold**` markdown as <strong> instead of literal asterisks. */
-function renderMarkdownBold(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={i}>{part.slice(2, -2)}</strong>
-    ) : (
-      part
-    )
-  );
-}
-
-/** Groups items by article and returns collapsed point strings per article. */
-function groupByArticle(
-  items: LegalBasisItem[]
-): Array<{ article: string; points: string[] }> {
-  const map = new Map<string, string[]>();
-  for (const it of items) {
-    if (!map.has(it.article)) map.set(it.article, []);
-    let point = '';
-    if (it.paragraph && it.subparagraph) {
-      point = `${it.paragraph} „${it.subparagraph}"`;
-    } else if (it.paragraph) {
-      point = it.paragraph;
-    } else if (it.subparagraph) {
-      point = `„${it.subparagraph}"`;
-    }
-    if (point) map.get(it.article)!.push(point);
-  }
-  return [...map.entries()].map(([article, points]) => ({ article, points }));
-}
 
 export function ChatClient({ locale }: { locale: Locale }) {
   const d = getDict(locale);
@@ -203,7 +174,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
                       {d.chat.legalBasis}
                     </p>
                     {m.legalBasis.map((g) => {
-                      const articleGroups = groupByArticle(g.items);
+                      const articleGroups = groupItemsByArticle(g.items);
                       return (
                         <div key={g.url} className="space-y-1">
                           <p className="text-xs font-medium">{g.lawName}:</p>
