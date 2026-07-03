@@ -207,3 +207,125 @@ export function parseAnalysisResponse(raw: string): DocumentAnalysisResult {
 
   return { summary, findings, recommendations };
 }
+
+export interface DocumentImprovementResult {
+  text: string;
+  summary: string;
+  findings: RiskFinding[];
+  recommendations: string[];
+  questions: string[];
+}
+
+export interface DocumentRevision extends DocumentImprovementResult {
+  instruction: string;
+  answers: Record<string, string>;
+  createdAt: Date;
+}
+
+export const IMPROVEMENT_SYSTEM_PROMPT = `შენ ხარ ქართული იურიდიული დოკუმენტების რედაქტორი.
+მოგეწოდება ხელშეკრულების ტექსტი და მასში გამოვლენილი რისკები. შენი ამოცანაა შეასწორო დოკუმენტი ამ რისკების გათვალისწინებით და დააბრუნო მხოლოდ JSON, ზუსტად ამ ფორმატით, დამატებითი ტექსტის ან ახსნის გარეშე:
+
+{
+  "revisedText": "შესწორებული დოკუმენტის სრული ტექსტი",
+  "summary": "მოკლე შეჯამება 2-3 წინადადებით შესწორებული ვერსიის შესახებ",
+  "findings": [
+    {
+      "category": "liability | financial | termination | compliance | confidentiality | obligations",
+      "severity": "low | medium | high | critical",
+      "title": "მოკლე სათაური",
+      "explanation": "რატომ არის ეს რისკი",
+      "recommendation": "კონკრეტული რჩევა ამ რისკთან დაკავშირებით"
+    }
+  ],
+  "recommendations": ["ზოგადი რეკომენდაცია 1", "ზოგადი რეკომენდაცია 2"],
+  "questions": ["დაზუსტების საჭიროების მქონე კითხვა 1"]
+}
+
+წესები:
+- თუ დოკუმენტში აკლია კონკრეტული მონაცემი (მაგ. სახელი, თარიღი, მისამართი), ნუ გამოიგონებ მას — ჩასვი placeholder კვადრატულ ფრჩხილებში, ინგლისურად, UPPER_SNAKE_CASE ფორმატით, მაგალითად [LESSOR_NAME], [DATE], [ADDRESS].
+- თუ ინფორმაცია ბუნდოვანია ან ეწინააღმდეგება ერთმანეთს (და არა უბრალოდ აკლია), ნუ გამოიგონებ პასუხს — დაამატე კონკრეტული შეკითხვა "questions" მასივში.
+- findings ასახავდეს შესწორებული ტექსტის რისკებს, არა თავდაპირველისას.
+- category და severity მნიშვნელობები ზუსტად ზემოთ ჩამოთვლილთაგან უნდა იყოს, სხვა მნიშვნელობა დაუშვებელია.
+- თუ დამატებითი შეკითხვა არ გჭირდება, დააბრუნე ცარიელი "questions": [].
+- უპასუხე ქართულ ენაზე, მხოლოდ JSON ობიექტით — არც ერთი დამატებითი სიტყვა ჯსონის გარეთ.`;
+
+export function buildImprovementUserMessage(input: {
+  baseText: string;
+  findings: RiskFinding[];
+  priorQuestions: string[];
+  instruction: string;
+  answers: Record<string, string>;
+}): string {
+  const parts: string[] = [`მიმდინარე დოკუმენტი:\n${input.baseText}`];
+
+  if (input.findings.length > 0) {
+    const findingsList = input.findings
+      .map((f, i) => `${i + 1}. [${f.severity}/${f.category}] ${f.title} — ${f.explanation}`)
+      .join("\n");
+    parts.push(`გამოვლენილი რისკები:\n${findingsList}`);
+  }
+
+  if (input.priorQuestions.length > 0) {
+    const questionsList = input.priorQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n");
+    parts.push(`წინა შეკითხვები:\n${questionsList}`);
+  }
+
+  const answerEntries = Object.entries(input.answers);
+  if (answerEntries.length > 0) {
+    const answersList = answerEntries
+      .map(([q, a]) => `კითხვა: ${q}\nპასუხი: ${a}`)
+      .join("\n\n");
+    parts.push(`მომხმარებლის პასუხები:\n${answersList}`);
+  }
+
+  parts.push(
+    input.instruction.trim()
+      ? `მომხმარებლის მოთხოვნა: ${input.instruction.trim()}`
+      : "შეასწორე ყველა გამოვლენილი რისკი."
+  );
+
+  return parts.join("\n\n");
+}
+
+export function parseImprovementResponse(raw: string): DocumentImprovementResult {
+  const jsonText = extractJsonBlock(raw);
+  let parsed: {
+    revisedText?: unknown;
+    summary?: unknown;
+    findings?: unknown;
+    recommendations?: unknown;
+    questions?: unknown;
+  };
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new Error("AI response was not valid JSON");
+  }
+
+  const text = typeof parsed.revisedText === "string" ? parsed.revisedText.trim() : "";
+  if (!text) throw new Error("AI response missing revisedText");
+
+  const summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
+
+  const findingsRaw = Array.isArray(parsed.findings) ? parsed.findings : [];
+  const findings: RiskFinding[] = findingsRaw
+    .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
+    .map((f) => ({
+      category: coerceCategory(f.category),
+      severity: coerceSeverity(f.severity),
+      title: typeof f.title === "string" ? f.title : "",
+      explanation: typeof f.explanation === "string" ? f.explanation : "",
+      recommendation: typeof f.recommendation === "string" ? f.recommendation : "",
+    }))
+    .filter((f) => f.title || f.explanation);
+
+  const recommendations = Array.isArray(parsed.recommendations)
+    ? parsed.recommendations.filter((r): r is string => typeof r === "string")
+    : [];
+
+  const questions = Array.isArray(parsed.questions)
+    ? parsed.questions.filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+    : [];
+
+  return { text, summary, findings, recommendations, questions };
+}
