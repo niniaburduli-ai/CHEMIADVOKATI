@@ -32,12 +32,12 @@ export const FONT_CHOICES: { value: FontChoice; label: string }[] = [
 ]
 
 export const DEFAULT_LIGHT: Record<string, string> = {
-  background: "#F8FAFC", foreground: "#0F172A",
+  background: "#CFFAFE", foreground: "#0F172A",
   primary: "#1E3A8A", "primary-foreground": "#FFFFFF",
-  secondary: "#EFF6FF", "secondary-foreground": "#1E3A8A",
-  accent: "#DBEAFE", "accent-foreground": "#1E3A8A",
-  muted: "#F1F5F9", "muted-foreground": "#64748B",
-  card: "#FFFFFF", "card-foreground": "#0F172A",
+  secondary: "#ECFEFF", "secondary-foreground": "#1E3A8A",
+  accent: "#A5F3FC", "accent-foreground": "#1E3A8A",
+  muted: "#CFFAFE", "muted-foreground": "#64748B",
+  card: "#ECFEFF", "card-foreground": "#0F172A",
   border: "#CBD5E1", input: "#CBD5E1", ring: "#1E3A8A",
   destructive: "#DC2626",
 }

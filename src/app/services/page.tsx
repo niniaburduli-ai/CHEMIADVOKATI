@@ -146,7 +146,7 @@ export default async function ServicesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
-                          <h2 className="text-2xl font-bold leading-snug text-foreground">{s.title}</h2>
+                          <h2 className="text-2xl md:text-3xl font-bold leading-snug text-foreground">{s.title}</h2>
                           <p className="text-sm font-semibold mt-0.5 text-primary/50">{s.subtitle}</p>
                         </div>
                         <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground border border-border rounded-full px-3 py-1 shrink-0">
@@ -176,7 +176,7 @@ export default async function ServicesPage() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-2xl font-bold leading-snug text-foreground">{s.title}</h2>
+                    <h2 className="text-2xl md:text-3xl font-bold leading-snug text-foreground">{s.title}</h2>
                     <p className="text-sm font-semibold mt-0.5 text-primary">{s.subtitle}</p>
                     <p className="text-muted-foreground mt-3 leading-relaxed">{s.description}</p>
                     <ul className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">

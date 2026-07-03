@@ -61,7 +61,7 @@ export default async function AboutPage() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-2xl font-bold leading-snug text-foreground">{s.title}</h2>
+                    <h2 className="text-2xl md:text-3xl font-bold leading-snug text-foreground">{s.title}</h2>
                     <div className="text-muted-foreground mt-3">
                       {s.multi ? <Paragraphs text={s.body} /> : <p className="leading-relaxed">{s.body}</p>}
                     </div>
@@ -78,7 +78,7 @@ export default async function AboutPage() {
                   <div className="shrink-0 w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <Users className="h-8 w-8 text-primary" />
                   </div>
-                  <h2 className="text-2xl font-bold leading-snug text-foreground">{d.teamTitle}</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold leading-snug text-foreground">{d.teamTitle}</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                   {team.map((member, idx) => (

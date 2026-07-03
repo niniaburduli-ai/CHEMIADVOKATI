@@ -112,7 +112,7 @@ export default async function PricingPage() {
       </div>
 
       <div className="max-w-2xl mx-auto mt-20">
-        <h2 className="text-2xl font-bold text-center mb-8">{d.pricing.faqTitle}</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">{d.pricing.faqTitle}</h2>
         <div className="space-y-4">
           {d.pricing.faqs.map((f) => (
             <div key={f.q} className="bg-card border border-border rounded-2xl p-5 card-hover">

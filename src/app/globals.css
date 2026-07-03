@@ -52,22 +52,22 @@
 :root {
   /* Trust & Authority palette — navy primary, slate background */
   --gold: oklch(0.83 0.19 87);
-  --background: oklch(0.984 0.003 247.858);
+  --background: oklch(0.956 0.045 203.388);
   --foreground: oklch(0.148 0.026 265);
-  --card: oklch(0.936 0.068 252);
-  --color-card: oklch(0.936 0.068 252);
+  --card: oklch(0.984 0.019 200.099);
+  --color-card: oklch(0.984 0.019 200.099);
   --card-foreground: oklch(0.148 0.026 265);
-  --popover: oklch(0.936 0.068 252);
-  --color-popover: oklch(0.936 0.068 252);
+  --popover: oklch(0.984 0.019 200.099);
+  --color-popover: oklch(0.984 0.019 200.099);
   --popover-foreground: oklch(0.148 0.026 265);
   --primary: oklch(0.366 0.165 264);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.966 0.022 216);
+  --secondary: oklch(0.984 0.019 200.099);
   --secondary-foreground: oklch(0.366 0.165 264);
-  --muted: oklch(0.922 0.078 252);
-  --color-muted: oklch(0.922 0.078 252);
+  --muted: oklch(0.956 0.045 203.388);
+  --color-muted: oklch(0.956 0.045 203.388);
   --muted-foreground: oklch(0.513 0.030 256);
-  --accent: oklch(0.921 0.036 216);
+  --accent: oklch(0.917 0.080 205.041);
   --accent-foreground: oklch(0.366 0.165 264);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.845 0.014 252);
@@ -79,11 +79,11 @@
   --chart-4: oklch(0.845 0.014 252);
   --chart-5: oklch(0.148 0.026 265);
   --radius: 0.625rem;
-  --sidebar: oklch(0.984 0.003 247.858);
+  --sidebar: oklch(0.956 0.045 203.388);
   --sidebar-foreground: oklch(0.148 0.026 265);
   --sidebar-primary: oklch(0.366 0.165 264);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.921 0.036 216);
+  --sidebar-accent: oklch(0.917 0.080 205.041);
   --sidebar-accent-foreground: oklch(0.366 0.165 264);
   --sidebar-border: oklch(0.845 0.014 252);
   --sidebar-ring: oklch(0.366 0.165 264);
