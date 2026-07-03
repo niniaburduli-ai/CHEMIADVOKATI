@@ -115,18 +115,16 @@ export async function POST(req: Request) {
     );
   }
 
-  const reviewCreate = DocumentReview.create({
+  const review = await DocumentReview.create({
     userId: session.user.id,
     fileName,
     summary: analysis.summary,
     findings: analysis.findings,
     recommendations: analysis.recommendations,
   });
-  const saveOps: Promise<unknown>[] = [reviewCreate];
   if (!isAdmin) {
-    saveOps.push(User.findByIdAndUpdate(session.user.id, { $inc: { docReviewRemaining: -1 } }));
+    await User.findByIdAndUpdate(session.user.id, { $inc: { docReviewRemaining: -1 } });
   }
-  const [review] = await Promise.all(saveOps);
 
   return NextResponse.json(
     {
