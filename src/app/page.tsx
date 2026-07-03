@@ -1,12 +1,7 @@
 import Link from "next/link"
-import {
-  ShieldCheck, Clock, ArrowRight,
-  MessageSquare, FileText, FolderOpen,
-  MousePointerClick, Zap, Layers, Users, Circle,
-  type LucideIcon,
-} from "lucide-react"
 import { AnimateIn } from "@/components/site/AnimateIn"
 import { PricingSection } from "@/components/site/PricingSection"
+import { ServiceCards } from "@/components/site/service-cards"
 import { getHomePage } from "@/lib/cms"
 import { getVisiblePlans } from "@/lib/plans-db"
 import { getFeatureFlags, isPathEnabled } from "@/lib/features"
@@ -15,15 +10,7 @@ import { getLocale } from "@/lib/i18n/locale"
 import { pick } from "@/lib/i18n/loc"
 import { getHomeSeed } from "@/lib/homepage-defaults"
 import { getDict } from "@/lib/i18n/dictionaries"
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  MessageSquare, FileText, FolderOpen, ArrowRight,
-  Layers, Users, MousePointerClick, Zap, ShieldCheck, Clock, Circle,
-}
-
-function resolveIcon(name: string): LucideIcon {
-  return ICON_MAP[name] ?? Circle
-}
+import { resolveIcon } from "@/lib/icon-map"
 
 function statsGrid(n: number) {
   if (n <= 1) return "grid-cols-1"
@@ -158,61 +145,14 @@ export default async function Home() {
 
       {/* ── SERVICE CARDS ── */}
       {sections.hero !== false && (
-        <section className="container mx-auto px-4 py-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-10">
-            {cardsHeading}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {allServiceCards.map((card, idx) => {
-              if (!visibleHrefs.has(card.href)) {
-                return <div key={card._id} className="invisible" aria-hidden="true" />
-              }
-              const CardIcon = resolveIcon(card.icon)
-              const seedCard = seedCardById.get(card._id)
-              const cardTitle    = pick(card.title,    card.titleEn    || seedCard?.titleEn,    locale)
-              const cardSubtitle = pick(card.subtitle, card.subtitleEn || seedCard?.subtitleEn, locale)
-              const cardCta      = pick(card.ctaText || seedCard?.ctaText || "", card.ctaTextEn || seedCard?.ctaTextEn, locale) || d.home.learnMore
-
-              if (card.comingSoon) {
-                return (
-                  <AnimateIn key={card._id} delay={idx * 80}>
-                    <div className="border-t-[3px] border-t-border bg-card border border-border rounded-2xl p-6 flex flex-col gap-4 opacity-55 cursor-default h-full">
-                      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                        <CardIcon className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-foreground text-base leading-snug">{cardTitle}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{cardSubtitle}</p>
-                      </div>
-                      <div className="mt-auto text-xs tracking-widest uppercase text-muted-foreground font-semibold">
-                        {d.home.comingSoon}
-                      </div>
-                    </div>
-                  </AnimateIn>
-                )
-              }
-              return (
-                <AnimateIn key={card._id} delay={idx * 80}>
-                  <Link
-                    href={card.href}
-                    className="border-t-[3px] border-t-primary bg-card border border-border rounded-2xl p-6 flex flex-col gap-4 card-hover group h-full"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <CardIcon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-foreground text-base leading-snug">{cardTitle}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{cardSubtitle}</p>
-                    </div>
-                    <div className="mt-auto flex items-center gap-1.5 text-sm font-semibold text-primary group-hover:gap-2.5 transition-all">
-                      {cardCta} <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </Link>
-                </AnimateIn>
-              )
-            })}
-          </div>
-        </section>
+        <ServiceCards
+          cards={allServiceCards}
+          visibleHrefs={visibleHrefs}
+          seedCardById={seedCardById}
+          cardsHeading={cardsHeading}
+          locale={locale}
+          d={d}
+        />
       )}
 
       {/* ── FEATURES / WHY ── */}
@@ -249,7 +189,7 @@ export default async function Home() {
       {sections.stats !== false && stats.length > 0 && (
         <section>
           <div className="container mx-auto px-4 py-16">
-            <h2 className="text-xl md:text-2xl font-bold text-center text-foreground mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-8">
               {statsHeading}
             </h2>
             <div className={`grid ${statsGrid(stats.length)} gap-6`}>
@@ -293,7 +233,7 @@ export default async function Home() {
         <section>
           <div className="container mx-auto px-4 py-16">
             <div className="max-w-2xl mx-auto border-t-[3px] border-t-primary bg-card border border-border rounded-2xl p-10 text-center shadow-sm card-hover">
-              <h2 className="text-3xl font-bold text-foreground">{ctaTitle}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">{ctaTitle}</h2>
               <p className="mt-3 text-muted-foreground">{ctaSubtitle}</p>
               <Link
                 href={ctaButtonHref}

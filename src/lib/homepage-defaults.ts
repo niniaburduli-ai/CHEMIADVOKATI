@@ -34,7 +34,7 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
       title: "დოკუმენტები", titleEn: "Documents",
       subtitle: "დოკუმენტის ანალიზი", subtitleEn: "Check a document",
       ctaText: "ფაილის შემოწმება", ctaTextEn: "Check file",
-      href: "/docs", icon: "FolderOpen", comingSoon: true, visible: true, order: 2,
+      href: "/review", icon: "FolderOpen", comingSoon: false, visible: true, order: 2,
     },
   ],
   cardsHeading: "მომსახურებები",

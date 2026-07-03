@@ -133,6 +133,10 @@ export async function getHomePage(): Promise<HomePageData | null> {
         ...card,
         subtitle:  INFORMAL_CARD_SUBTITLES[card.subtitle]  ?? card.subtitle,
         ctaText:   INFORMAL_CARD_CTA[card.ctaText ?? ""]   ?? card.ctaText,
+        // Pre-launch "Documents" card pointed at the placeholder /docs route;
+        // it's now the document analysis modal trigger.
+        href:       card.href === "/docs" ? "/review" : card.href,
+        comingSoon: card.href === "/docs" ? false : card.comingSoon,
       }))
     }
     return data
