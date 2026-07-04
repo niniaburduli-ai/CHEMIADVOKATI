@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { FileText, Download, Copy, ArrowLeft, Loader2, Pencil, Eye } from "lucide-react";
+import { FileText, Download, Copy, ArrowLeft, Loader2, Pencil, Eye, Maximize2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,12 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const DOC_TYPES = [
   { value: "complaint", label: "საჩივარი" },
@@ -84,6 +90,7 @@ export function GenerateClient() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const fields = QUESTION_SCHEMAS[type] ?? [];
 
@@ -291,6 +298,9 @@ export function GenerateClient() {
                   <Button variant="outline" size="sm" onClick={downloadTxt}>
                     <Download className="h-4 w-4 mr-1" /> .txt
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
+                    <Maximize2 className="h-4 w-4 mr-1" /> სრულ ეკრანზე
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -326,6 +336,26 @@ export function GenerateClient() {
           </Card>
         )}
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="sm:max-w-4xl h-[90vh] overflow-y-auto">
+          {result && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{result.title}</DialogTitle>
+              </DialogHeader>
+              <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                {renderMarkdownBold(normalizeSpacing(result.content))}
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={downloadTxt}>
+                  <Download className="h-4 w-4 mr-1" /> .txt
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
