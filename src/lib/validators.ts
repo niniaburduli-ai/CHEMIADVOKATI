@@ -89,6 +89,11 @@ export const GenerateDocSchema = z.object({
 });
 export type GenerateDocInput = z.infer<typeof GenerateDocSchema>;
 
+export const UpdateGeneratedDocSchema = z.object({
+  content: z.string().min(1).max(20000),
+});
+export type UpdateGeneratedDocInput = z.infer<typeof UpdateGeneratedDocSchema>;
+
 export const ReviewDocTextSchema = z.object({
   text: z.string().min(20).max(10000),
   fileName: z.string().max(200).optional(),
