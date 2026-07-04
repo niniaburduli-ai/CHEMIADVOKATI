@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { renderMarkdownBold } from "@/lib/markdown-bold";
 
 const DOC_TYPES = [
   { value: "complaint", label: "საჩივარი" },
@@ -69,6 +70,10 @@ const QUESTION_SCHEMAS: Record<string, QuestionField[]> = {
   ],
 };
 
+function normalizeSpacing(text: string): string {
+  return text.replace(/\n{3,}/g, "\n\n");
+}
+
 export function GenerateClient() {
   const [type, setType] = useState("complaint");
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -88,6 +93,7 @@ export function GenerateClient() {
   }
 
   const details = buildDetails();
+  const wordCount = result ? result.content.trim().split(/\s+/).filter(Boolean).length : 0;
 
   function setAnswer(key: string, value: string) {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -244,7 +250,7 @@ export function GenerateClient() {
                 <div>
                   <CardTitle className="text-base">{result.title}</CardTitle>
                   <CardDescription>
-                    დოკუმენტი შეიქმნა და შენახულია ანგარიშში
+                    დოკუმენტი შეიქმნა და შენახულია ანგარიშში · {wordCount} სიტყვა
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -258,9 +264,9 @@ export function GenerateClient() {
               </div>
             </CardHeader>
             <CardContent>
-              <pre className="text-sm whitespace-pre-wrap bg-muted/40 rounded p-4 leading-relaxed max-h-[70vh] overflow-y-auto">
-                {result.content}
-              </pre>
+              <div className="text-sm whitespace-pre-wrap bg-muted/40 rounded p-4 leading-relaxed max-h-[70vh] overflow-y-auto">
+                {renderMarkdownBold(normalizeSpacing(result.content))}
+              </div>
             </CardContent>
           </Card>
         ) : (
