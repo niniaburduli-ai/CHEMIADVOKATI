@@ -403,6 +403,78 @@ export async function searchWebContext(
   }
 }
 
+const VERIFY_CITATIONS_SYSTEM = [
+  "შენ ხარ ქართული სამართლის ფაქტების შემმოწმებელი.",
+  "მოგეწოდება დოკუმენტის ტიპი და მისი \"სამართლებრივი საფუძვლები და წყაროები\" სექციის ტექსტი.",
+  "ვებ ძიების გამოყენებით შეამოწმე თითოეული მასში მითითებული კანონი/კოდექსი და მუხლი — რეალურად არსებობს თუ არა.",
+  "დააბრუნე მხოლოდ შესწორებული სექცია, ზუსტად იმავე ფორმატით: კანონის დასახელება ცალკე სტრიქონზე, შემდეგ მისი მუხლები ჩამონათვლის სახით.",
+  "წაშალე ნებისმიერი მუხლი, რომლის არსებობასაც ვერ ადასტურებ.",
+  "არასოდეს დაამატო ახალი მუხლი, რომელიც თავდაპირველ სიაში არ იყო.",
+  "დააბრუნე მხოლოდ ტექსტი, დამატებითი ახსნის ან კომენტარის გარეშე.",
+].join("\n");
+
+/**
+ * Web-search fact-check for a document generator's freeform "Legal Basis"
+ * section: confirms each cited article actually exists, strips any that
+ * can't be confirmed, never adds new ones. Same fail-open contract as
+ * searchWebContext — returns null on any failure so callers can leave the
+ * original AI-drafted citations untouched.
+ */
+export async function verifyLegalCitations(
+  docTypeName: string,
+  citationsSection: string
+): Promise<string | null> {
+  if (!WEB_SEARCH_ON()) return null;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+
+  const model = WEB_MODEL();
+  const body: Record<string, unknown> = {
+    model,
+    temperature: 0.2,
+    max_tokens: 600,
+    messages: [
+      { role: "system", content: VERIFY_CITATIONS_SYSTEM },
+      {
+        role: "user",
+        content: `დოკუმენტის ტიპი: ${docTypeName}\n\nსექცია შესამოწმებლად:\n${citationsSection}`,
+      },
+    ],
+  };
+  if (!model.endsWith(":online")) {
+    const webPlugin: Record<string, unknown> = {
+      id: "web",
+      max_results: WEB_MAX_RESULTS(),
+    };
+    const engine = process.env.OPENROUTER_WEB_ENGINE?.trim();
+    if (engine) webPlugin.engine = engine;
+    body.plugins = [webPlugin];
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const content: string = (json?.choices?.[0]?.message?.content ?? "").trim();
+    return content || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Wrap already-generated text in a word-by-word stream for a typing effect. */
 export function streamText(text: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
