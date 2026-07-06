@@ -125,7 +125,6 @@ export async function getNavMenu(locale: Locale = "ka"): Promise<NavMenuData> {
 }
 
 const INFORMAL_PRICING = "აირჩიე თქვენზე მორგებული პაკეტი"
-const INFORMAL_CTA_TITLE = "მზად ხარ?"
 const INFORMAL_CARD_SUBTITLES: Record<string, string> = {
   "დასვი კითხვა":        "დასვით კითხვა",
   "შექმენი შაბლონი":    "შექმენით შაბლონი",
@@ -143,9 +142,6 @@ export async function getHomePage(): Promise<HomePageData | null> {
     const data = toPlain(doc as unknown as HomePageData)
     if (data.pricingHeading === INFORMAL_PRICING) {
       data.pricingHeading = HOME_SEED.pricingHeading
-    }
-    if (data.ctaSection?.title === INFORMAL_CTA_TITLE) {
-      data.ctaSection = { ...data.ctaSection, ...HOME_SEED.ctaSection }
     }
     if (data.serviceCards?.length) {
       data.serviceCards = data.serviceCards.map((card) => ({

@@ -114,7 +114,7 @@ export function PricingSection({
               className={[
                 "relative rounded-2xl border bg-card flex flex-col p-7 card-hover h-full",
                 p.highlighted
-                  ? "border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20"
+                  ? "border-2 border-primary shadow-xl shadow-primary/10 md:scale-105 z-10"
                   : "border-border",
               ].join(" ")}
             >

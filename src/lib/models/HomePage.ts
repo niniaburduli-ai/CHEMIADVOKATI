@@ -72,7 +72,6 @@ const HomePageSchema = new Schema(
       features: { type: Boolean, default: true },
       pricing: { type: Boolean, default: true },
       faq: { type: Boolean, default: true },
-      cta: { type: Boolean, default: true },
     },
     hero: {
       title: { type: String, default: "" },
@@ -99,10 +98,6 @@ const HomePageSchema = new Schema(
     faqHeading: { type: String, default: "" },
     faqHeadingEn: { type: String, default: "" },
     ctaSection: {
-      title: { type: String, default: "" },
-      titleEn: { type: String, default: "" },
-      subtitle: { type: String, default: "" },
-      subtitleEn: { type: String, default: "" },
       buttonText: { type: String, default: "" },
       buttonTextEn: { type: String, default: "" },
       buttonHref: { type: String, default: "" },

@@ -1,11 +1,14 @@
 import Link from "next/link"
+import { ArrowRight, BadgeCheck, Star } from "lucide-react"
 import { AnimateIn } from "@/components/site/AnimateIn"
 import { PricingSection } from "@/components/site/PricingSection"
 import { ServiceCards } from "@/components/site/service-cards"
+import { FaqCarousel } from "@/components/site/FaqCarousel"
 import { getHomePage, getFAQ } from "@/lib/cms"
 import { getVisiblePlans } from "@/lib/plans-db"
 import { getFeatureFlags } from "@/lib/features"
 import { getPublicStats, resolveMetric } from "@/lib/stats"
+import { getFeedbackSummary } from "@/lib/feedback"
 import { getLocale } from "@/lib/i18n/locale"
 import { pick } from "@/lib/i18n/loc"
 import { getHomeSeed } from "@/lib/homepage-defaults"
@@ -19,25 +22,18 @@ function statsGrid(n: number) {
   return "grid-cols-2 md:grid-cols-4"
 }
 
-function featuresGrid(n: number) {
-  if (n <= 1) return "grid-cols-1"
-  if (n === 2) return "grid-cols-1 sm:grid-cols-2"
-  if (n === 3) return "grid-cols-1 sm:grid-cols-3"
-  if (n === 4) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-  return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"
-}
-
 export const dynamic = "force-dynamic"
 
 export default async function Home() {
   const locale = await getLocale()
   const d = getDict(locale)
   const seed = getHomeSeed()
-  const [cmsData, flags, publicStats, faqData] = await Promise.all([
+  const [cmsData, flags, publicStats, faqData, feedbackSummary] = await Promise.all([
     getHomePage(),
     getFeatureFlags(),
     getPublicStats(),
     getFAQ(locale),
+    getFeedbackSummary(),
   ])
   const dbPlans = await getVisiblePlans()
 
@@ -53,9 +49,27 @@ export default async function Home() {
   const heroSubtitle = pick(cmsHero.subtitle || seed.hero.subtitle, cmsHero.subtitleEn || seed.hero.subtitleEn, locale)
 
   // ── Stats ─────────────────────────────────────────────────────────────────────
+  // "registered users" is dropped in favor of live feedback metrics below.
+  const REGISTERED_USERS_LABELS = new Set(["რეგისტრირებული მომხმარებელი", "Registered users"])
   const stats = (cmsData?.stats ?? seed.stats)
-    .filter((s) => s.visible !== false)
+    .filter(
+      (s) =>
+        s.visible !== false &&
+        s.metric !== "users" &&
+        !REGISTERED_USERS_LABELS.has(s.label) &&
+        !(s.labelEn && REGISTERED_USERS_LABELS.has(s.labelEn)),
+    )
     .sort((a, b) => a.order - b.order)
+
+  const feedbackCard =
+    feedbackSummary.count > 0
+      ? {
+          percentage: `${feedbackSummary.percentage}%`,
+          percentageLabel: d.feedback.positiveFeedbackLabel,
+          rating: `${feedbackSummary.avgRating.toLocaleString("ka-GE")}/5.0`,
+          ratingLabel: d.feedback.ratingLabel,
+        }
+      : null
 
   const cardsHeading = pick(
     cmsData?.cardsHeading   || seed.cardsHeading,
@@ -96,8 +110,6 @@ export default async function Home() {
 
   // ── CTA ───────────────────────────────────────────────────────────────────────
   const cmsCta = cmsData?.ctaSection ?? seed.ctaSection
-  const ctaTitle      = pick(cmsCta.title      || seed.ctaSection.title,      cmsCta.titleEn      || seed.ctaSection.titleEn,      locale)
-  const ctaSubtitle   = pick(cmsCta.subtitle   || seed.ctaSection.subtitle,   cmsCta.subtitleEn   || seed.ctaSection.subtitleEn,   locale)
   const ctaButtonText = pick(cmsCta.buttonText || seed.ctaSection.buttonText, cmsCta.buttonTextEn || seed.ctaSection.buttonTextEn, locale)
   const ctaButtonHref = cmsCta.buttonHref || seed.ctaSection.buttonHref
 
@@ -128,13 +140,26 @@ export default async function Home() {
           </div>
 
           <div className="relative container mx-auto px-4">
-            <div className="flex flex-col justify-center min-h-[560px] py-12 lg:py-16 max-w-[620px]">
-              <h1 className="text-6xl md:text-7xl font-bold text-white leading-tight mb-5 animate-fade-up">
+            <div className="flex flex-col justify-center min-h-[560px] py-12 lg:py-16 max-w-[620px] gap-5">
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full backdrop-blur-sm w-fit animate-fade-up">
+                <BadgeCheck className="h-4 w-4 text-gold" />
+                <span className="text-xs font-semibold text-gold uppercase tracking-wider">
+                  {d.home.heroBadge}
+                </span>
+              </div>
+              <h1 className="text-6xl md:text-7xl font-bold text-white leading-tight animate-fade-up delay-150">
                 {heroTitle}
               </h1>
-              <p className="text-2xl font-semibold text-gold leading-snug animate-fade-up delay-150">
+              <p className="text-2xl font-semibold text-gold leading-snug animate-fade-up delay-300">
                 {heroSubtitle}
               </p>
+              <Link
+                href={ctaButtonHref}
+                className="mt-3 inline-flex items-center gap-2 w-fit bg-gold text-slate-900 px-8 py-4 rounded-xl text-sm font-semibold hover:brightness-95 btn-hover animate-fade-up delay-400"
+              >
+                {ctaButtonText}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </section>
@@ -149,59 +174,97 @@ export default async function Home() {
         />
       )}
 
-      {/* ── FEATURES / WHY ── */}
-      {sections.features !== false && features.length > 0 && (
-        <section className="container mx-auto px-4 py-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
-            {featuresHeading}
-          </h2>
-          <div className={`grid ${featuresGrid(features.length)} gap-6`}>
-            {features.map((f, idx) => {
-              const FIcon = resolveIcon(f.icon)
-              const seedFeature = seedFeatureById.get(f._id)
-              const featureTitle = pick(f.title, f.titleEn || seedFeature?.titleEn, locale)
-              const featureBody  = pick(f.body,  f.bodyEn  || seedFeature?.bodyEn,  locale)
-              return (
-                <AnimateIn key={f._id} delay={idx * 60}>
-                  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 card-hover h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <FIcon className="h-4 w-4 text-primary" />
-                      </div>
-                      <p className="font-bold text-foreground text-sm leading-snug">{featureTitle}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{featureBody}</p>
-                  </div>
-                </AnimateIn>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* ── STATS ── */}
-      {sections.stats !== false && stats.length > 0 && (
-        <section>
+      {/* ── FEATURES + STATS ── */}
+      {((sections.features !== false && features.length > 0) ||
+        (sections.stats !== false && stats.length > 0)) && (
+        <section className="bg-background">
           <div className="container mx-auto px-4 py-16">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-8">
-              {statsHeading}
-            </h2>
-            <div className={`grid ${statsGrid(stats.length)} gap-6`}>
-              {stats.map((s, idx) => {
-                const metric = resolveMetric(s.metric, s.label)
-                const display = metric ? publicStats[metric].toLocaleString("ka-GE") : s.value
-                const seedStat = seedStatById.get(s._id)
-                const statLabel = pick(s.label, s.labelEn || seedStat?.labelEn, locale)
-                return (
-                  <AnimateIn key={s._id} delay={idx * 100}>
-                    <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-3 card-hover h-full">
-                      <p className="text-6xl font-bold text-primary leading-none tabular-nums">{display}</p>
-                      <div className="w-8 h-px bg-border" />
-                      <p className="text-sm text-muted-foreground leading-snug max-w-[140px]">{statLabel}</p>
-                    </div>
-                  </AnimateIn>
-                )
-              })}
+            <div
+              className={`grid gap-10 items-start ${
+                sections.features !== false &&
+                features.length > 0 &&
+                sections.stats !== false &&
+                (stats.length > 0 || feedbackCard)
+                  ? "md:grid-cols-[2fr_1fr]"
+                  : "md:grid-cols-1"
+              }`}
+            >
+              {sections.features !== false && features.length > 0 && (
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8">
+                    {featuresHeading}
+                  </h2>
+                  <div className="flex flex-col gap-6">
+                    {features.map((f, idx) => {
+                      const FIcon = resolveIcon(f.icon)
+                      const seedFeature = seedFeatureById.get(f._id)
+                      const featureTitle = pick(f.title, f.titleEn || seedFeature?.titleEn, locale)
+                      const featureBody  = pick(f.body,  f.bodyEn  || seedFeature?.bodyEn,  locale)
+                      return (
+                        <AnimateIn key={f._id} delay={idx * 60}>
+                          <div className="flex gap-4 group">
+                            <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary">
+                              <FIcon className="h-5 w-5 text-primary transition-colors group-hover:text-primary-foreground" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-foreground mb-1">{featureTitle}</p>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{featureBody}</p>
+                            </div>
+                          </div>
+                        </AnimateIn>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {sections.stats !== false && (stats.length > 0 || feedbackCard) && (
+                <div className={sections.features !== false && features.length > 0 ? "" : "max-w-3xl mx-auto w-full"}>
+                  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8">
+                    {statsHeading}
+                  </h2>
+                  <div
+                    className={`grid gap-4 ${
+                      sections.features !== false && features.length > 0
+                        ? "grid-cols-1"
+                        : statsGrid(stats.length + (feedbackCard ? 1 : 0))
+                    }`}
+                  >
+                    {stats.map((s, idx) => {
+                      const metric = resolveMetric(s.metric, s.label)
+                      const display = metric ? publicStats[metric].toLocaleString("ka-GE") : s.value
+                      const seedStat = seedStatById.get(s._id)
+                      const statLabel = pick(s.label, s.labelEn || seedStat?.labelEn, locale)
+                      return (
+                        <AnimateIn key={s._id} delay={idx * 100} className="h-full">
+                          <div className="h-full bg-card border border-border rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-1.5 card-hover">
+                            <p className="text-3xl font-bold text-primary leading-none tabular-nums">{display}</p>
+                            <p className="text-xs text-muted-foreground leading-snug">{statLabel}</p>
+                          </div>
+                        </AnimateIn>
+                      )
+                    })}
+                    {feedbackCard && (
+                      <AnimateIn delay={stats.length * 100} className="h-full">
+                        <div className="h-full bg-card border border-border rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-1.5 card-hover">
+                          <Star className="h-5 w-5 mx-auto text-gold fill-gold" />
+                          <div className="flex items-center justify-center gap-4">
+                            <div>
+                              <p className="text-3xl font-bold text-primary leading-none tabular-nums">{feedbackCard.percentage}</p>
+                              <p className="text-xs text-muted-foreground leading-snug mt-1">{feedbackCard.percentageLabel}</p>
+                            </div>
+                            <div className="w-px h-10 bg-border shrink-0" />
+                            <div>
+                              <p className="text-3xl font-bold text-primary leading-none tabular-nums">{feedbackCard.rating}</p>
+                              <p className="text-xs text-muted-foreground leading-snug mt-1">{feedbackCard.ratingLabel}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </AnimateIn>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -224,42 +287,17 @@ export default async function Home() {
 
       {/* ── FAQ ── */}
       {sections.faq !== false && faqData.items.length > 0 && (
-        <section>
-          <div className="container mx-auto px-4 py-16 max-w-2xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
-              {faqHeading}
-            </h2>
-            <div className="space-y-4">
-              {faqData.items.map((f, idx) => (
-                <AnimateIn key={f._id} delay={idx * 60}>
-                  <div className="bg-card border border-border rounded-2xl p-5 card-hover">
-                    <p className="font-bold text-sm">{f.question}</p>
-                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{f.answer}</p>
-                  </div>
-                </AnimateIn>
-              ))}
+        <section className="bg-background overflow-hidden">
+          <div className="container mx-auto px-4 py-16">
+            <div className="text-center mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">{faqHeading}</h2>
+              <div className="h-1 w-24 bg-primary mx-auto mt-4 rounded-full" />
             </div>
+            <FaqCarousel items={faqData.items} />
           </div>
         </section>
       )}
 
-      {/* ── CTA ── */}
-      {sections.cta !== false && (
-        <section>
-          <div className="container mx-auto px-4 py-16">
-            <div className="max-w-2xl mx-auto border-t-[3px] border-t-primary bg-card border border-border rounded-2xl p-10 text-center shadow-sm card-hover">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground">{ctaTitle}</h2>
-              <p className="mt-3 text-muted-foreground">{ctaSubtitle}</p>
-              <Link
-                href={ctaButtonHref}
-                className="mt-8 inline-flex items-center justify-center px-8 py-3.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 btn-hover"
-              >
-                {ctaButtonText}
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   )
 }

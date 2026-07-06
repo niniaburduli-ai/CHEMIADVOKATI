@@ -84,3 +84,39 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
 
   await transport.sendMail({ from: fromAddress(), to, subject, text, html });
 }
+
+/** Notifies the configured contact address when a visitor submits site feedback. */
+export async function sendFeedbackEmail(
+  to: string,
+  feedback: { rating: number; message: string }
+): Promise<void> {
+  const transport = getTransport();
+
+  const stars = "★".repeat(feedback.rating) + "☆".repeat(5 - feedback.rating);
+  const subject = `ახალი უკუკავშირი · New feedback (${feedback.rating}/5)`;
+  const escapedMessage = feedback.message
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  const text = [
+    "ახალი უკუკავშირი საიტიდან",
+    `შეფასება: ${stars} (${feedback.rating}/5)`,
+    "",
+    feedback.message,
+  ].join("\n");
+
+  const html = `
+  <div style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e4e4e7;overflow:hidden">
+      <tr><td style="height:4px;background:#4338ca"></td></tr>
+      <tr><td style="padding:32px">
+        <h1 style="margin:0 0 8px;font-size:20px;font-weight:700">ახალი უკუკავშირი</h1>
+        <p style="margin:0 0 16px;font-size:20px;letter-spacing:2px;color:#f59e0b">${stars}</p>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#3f3f46;white-space:pre-wrap">${escapedMessage}</p>
+      </td></tr>
+    </table>
+  </div>`;
+
+  await transport.sendMail({ from: fromAddress(), to, subject, text, html });
+}

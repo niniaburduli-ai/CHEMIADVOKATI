@@ -14,6 +14,7 @@ const ka = {
     usefulInfo: "სასარგებლო ინფორმაცია",
     contact: "კონტაქტი",
     address: "თბილისი, საქართველო",
+    paymentMethods: "გადახდა",
     brandBlurb:
       "AI-ზე დაფუძნებული პლატფორმა, რომელიც იურიდიულ დახმარებას ხელმისაწვდომს და მარტივს ხდის ყველასთვის.",
     nav: {
@@ -93,6 +94,7 @@ const ka = {
   },
   home: {
     comingSoon: "მალე",
+    heroBadge: "ინოვაციური სამართალი",
     learnMore: "გაიგეთ მეტი",
     perMonth: "/ თვეში",
     heroTitle: "ჩემი იურისტი",
@@ -100,9 +102,6 @@ const ka = {
     statsHeading: "ჩვენი შედეგები ციფრებში",
     featuresHeading: "რატომ ჩემი იურისტი?",
     pricingHeading: "აირჩიეთ თქვენზე მორგებული პაკეტი",
-    ctaTitle: "მზად ხართ?",
-    ctaSubtitle: "დაარეგისტრირდით წამში და მიიღეთ პირველი კონსულტაცია უფასოდ.",
-    ctaButton: "რეგისტრაცია",
     imageAlt: "ქართლის დედა სასწორით",
   },
   chat: {
@@ -312,6 +311,24 @@ const ka = {
     generateCta: "გენერირება",
     warningLabel: "გაფრთხილება:",
   },
+  feedback: {
+    tabLabel: "გამოხმაურება",
+    modalTitle: "უკუკავშირი",
+    modalDescription:
+      "რით შეგვიძლია დაგეხმაროთ? გაგვიზიარეთ თქვენი აზრი, შეგვატყობინეთ პრობლემის შესახებ ან შემოგვთავაზეთ რის დამატებას ისურვებდით.",
+    rateUsLabel: "შეგვაფასეთ",
+    placeholder: "გაგვიზიარეთ თქვენი უკუკავშირი (არასავალდებულო)...",
+    cancel: "გაუქმება",
+    send: "გაგზავნა",
+    sending: "იგზავნება...",
+    successToast: "მადლობა თქვენი უკუკავშირისთვის!",
+    errorToast: "ვერ გაიგზავნა — სცადეთ ხელახლა",
+    validationError: "აირჩიეთ შეფასება ვარსკვლავებით",
+    reviewCardHeading: "მომხმარებელთა კმაყოფილება",
+    reviewCardBasedOn: "შეფასების საფუძველზე",
+    positiveFeedbackLabel: "კმაყოფილი მომხმარებელი",
+    ratingLabel: "შეფასება",
+  },
 }
 
 export type Dict = typeof ka
@@ -329,6 +346,7 @@ const en: Dict = {
     usefulInfo: "Useful information",
     contact: "Contact",
     address: "Tbilisi, Georgia",
+    paymentMethods: "Payment",
     brandBlurb:
       "An AI-powered legal platform delivering smart answers quickly, in plain and clear language.",
     nav: {
@@ -408,6 +426,7 @@ const en: Dict = {
   },
   home: {
     comingSoon: "Coming soon",
+    heroBadge: "Innovative Law",
     learnMore: "Learn more",
     perMonth: "/ month",
     heroTitle: "My Lawyer",
@@ -415,9 +434,6 @@ const en: Dict = {
     statsHeading: "Our results in numbers",
     featuresHeading: "Why My Lawyer?",
     pricingHeading: "Choose the plan that fits you",
-    ctaTitle: "Ready?",
-    ctaSubtitle: "Register in seconds and get your first consultation for free.",
-    ctaButton: "Sign up",
     imageAlt: "Lady Justice with scales",
   },
   chat: {
@@ -627,6 +643,24 @@ const en: Dict = {
     templatesNoResults: "No templates found",
     generateCta: "Generate",
     warningLabel: "Notice:",
+  },
+  feedback: {
+    tabLabel: "Feedback",
+    modalTitle: "Feedback",
+    modalDescription:
+      "How can we help? Share your thoughts, report a problem, or suggest what you'd like added.",
+    rateUsLabel: "Rate us",
+    placeholder: "Share your feedback (optional)...",
+    cancel: "Cancel",
+    send: "Send",
+    sending: "Sending...",
+    successToast: "Thanks for your feedback!",
+    errorToast: "Couldn't send — please try again",
+    validationError: "Please select a star rating",
+    reviewCardHeading: "Customer satisfaction",
+    reviewCardBasedOn: "based on ratings",
+    positiveFeedbackLabel: "Satisfied customers",
+    ratingLabel: "Rating",
   },
 }
 

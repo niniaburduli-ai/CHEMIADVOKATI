@@ -3,6 +3,7 @@ import { Noto_Sans_Georgian, Noto_Serif_Georgian } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
+import { FeedbackWidget } from "@/components/site/FeedbackWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getThemeConfig, buildThemeCss } from "@/lib/theme";
@@ -45,6 +46,7 @@ export default async function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <FeedbackWidget locale={locale} />
           <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
