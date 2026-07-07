@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Noto_Sans_Georgian, Noto_Serif_Georgian } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/site/header";
@@ -100,6 +101,12 @@ export default async function RootLayout({
           <FeedbackWidget locale={locale} />
           <Toaster richColors position="top-center" />
         </ThemeProvider>
+        {/* WebInsights analytics */}
+        <Script
+          src="https://webinsights.vercel.app/js/script.js"
+          data-site-id="493bMjuYWhOg"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
