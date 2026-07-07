@@ -72,11 +72,8 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
-  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to the code from Search Console
-  // (URL-prefix property → HTML tag method) to emit the verification meta tag.
-  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
-    : {}),
+  // Google Search Console verification (URL-prefix property, HTML-tag method).
+  verification: { google: "0VcyKMbTH9PBma4pNZkSDb9WbAilRphdOxCr_vxTFxA" },
 };
 
 export default async function RootLayout({
