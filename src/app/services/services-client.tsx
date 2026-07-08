@@ -243,8 +243,8 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
     <div className="flex flex-col h-full">
       <header className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>
-          <h3 className="text-lg font-bold text-primary">{sm.templatesTab}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">{sm.templatesHint}</p>
+          <h3 className="text-lg font-bold text-primary">{sm.customDocsTab}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{sm.customDocsHint}</p>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -330,7 +330,7 @@ export function ServicesPageClient({
   const tabs: { key: Tab; label: string; icon: LucideIcon; enabled: boolean }[] = [
     { key: "ai", label: sm.aiTab, icon: Sparkles, enabled: flags.chat },
     { key: "docs", label: d.documentAnalysis.title, icon: ScanSearch, enabled: flags.review },
-    { key: "templates", label: sm.templatesTab, icon: FileText, enabled: flags.generate },
+    { key: "templates", label: sm.customDocsTab, icon: FileText, enabled: flags.generate },
   ];
   const enabledTabs = tabs.filter((t) => t.enabled);
   const [activeTab, setActiveTab] = useState<Tab>(enabledTabs[0]?.key ?? "ai");
