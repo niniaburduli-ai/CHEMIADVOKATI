@@ -18,12 +18,16 @@ export type PlanData = {
   docGeneration: number
   includeDocReview: boolean
   docReview: number
+  includeDocTemplates: boolean
+  docTemplates: number
   features: string[]
   featuresEn: string[]
   featuresDocGeneration: string[]
   featuresDocGenerationEn: string[]
   featuresDocReview: string[]
   featuresDocReviewEn: string[]
+  featuresDocTemplates: string[]
+  featuresDocTemplatesEn: string[]
   isFree: boolean
   highlighted: boolean
   visible: boolean
@@ -35,6 +39,7 @@ export type PlanLimits = {
   consultations: number
   docGeneration: number
   docReview: number
+  docTemplates: number
 }
 
 /** Seed defaults only when a plan is first created. DB is source of truth after that. */
@@ -48,10 +53,13 @@ const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
     docGeneration: PLAN_LIMITS.free.docGeneration,
     includeDocReview: true,
     docReview: PLAN_LIMITS.free.docReview,
+    includeDocTemplates: true,
+    docTemplates: PLAN_LIMITS.free.docTemplates,
     features: ["9 კონსულტაცია AI იურისტთან", "ოფიციალური წყაროების მითითება", "კითხვების ისტორიის ნახვა"],
     featuresEn: ["9 AI lawyer consultations", "Official source citations", "View question history"],
     featuresDocGeneration: ["3 შაბლონის გენერირება"], featuresDocGenerationEn: ["3 template generations"],
     featuresDocReview: ["1 დოკუმენტის შემოწმება"], featuresDocReviewEn: ["1 document review"],
+    featuresDocTemplates: ["20 მზა შაბლონის შევსება"], featuresDocTemplatesEn: ["20 ready-made template fills"],
     isFree: true, highlighted: false, visible: true, active: true, order: 0,
   },
   {
@@ -63,10 +71,13 @@ const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
     docGeneration: PLAN_LIMITS.standard.docGeneration,
     includeDocReview: true,
     docReview: PLAN_LIMITS.standard.docReview,
+    includeDocTemplates: true,
+    docTemplates: PLAN_LIMITS.standard.docTemplates,
     features: ["29 კონსულტაცია AI იურისტთან", "ოფიციალური წყაროების მითითება", "კითხვების ისტორიის ნახვა"],
     featuresEn: ["29 AI lawyer consultations", "Official source citations", "View question history"],
     featuresDocGeneration: ["19 შაბლონის გენერირება"], featuresDocGenerationEn: ["19 template generations"],
     featuresDocReview: ["9 დოკუმენტის შემოწმება"], featuresDocReviewEn: ["9 document reviews"],
+    featuresDocTemplates: ["50 მზა შაბლონის შევსება"], featuresDocTemplatesEn: ["50 ready-made template fills"],
     isFree: false, highlighted: true, visible: true, active: true, order: 1,
   },
   {
@@ -78,10 +89,13 @@ const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
     docGeneration: PLAN_LIMITS.premium.docGeneration,
     includeDocReview: true,
     docReview: PLAN_LIMITS.premium.docReview,
+    includeDocTemplates: true,
+    docTemplates: PLAN_LIMITS.premium.docTemplates,
     features: ["199 კონსულტაცია AI იურისტთან", "ოფიციალური წყაროების მითითება", "კითხვების ისტორიის ნახვა"],
     featuresEn: ["199 AI lawyer consultations", "Official source citations", "View question history"],
     featuresDocGeneration: ["99 შაბლონის გენერირება"], featuresDocGenerationEn: ["99 template generations"],
     featuresDocReview: ["99 დოკუმენტის/ხელშეკრულების შემოწმება"], featuresDocReviewEn: ["99 document/contract reviews"],
+    featuresDocTemplates: ["200 მზა შაბლონის შევსება"], featuresDocTemplatesEn: ["200 ready-made template fills"],
     isFree: false, highlighted: false, visible: true, active: true, order: 2,
   },
 ]
@@ -91,6 +105,7 @@ function toData(d: PlanDoc): PlanData {
   const def = DEFAULT_PLANS.find((p) => p.key === d.key)
   const defGen = def?.includeDocGeneration ?? true
   const defRev = def?.includeDocReview ?? true
+  const defTpl = def?.includeDocTemplates ?? true
   return {
     id: String(d._id),
     key: d.key,
@@ -106,12 +121,16 @@ function toData(d: PlanDoc): PlanData {
     docGeneration: d.docGeneration ?? 0,
     includeDocReview: d.includeDocReview == null ? defRev : d.includeDocReview,
     docReview: d.docReview ?? 0,
+    includeDocTemplates: d.includeDocTemplates == null ? defTpl : d.includeDocTemplates,
+    docTemplates: d.docTemplates ?? 0,
     features: d.features ?? [],
     featuresEn: d.featuresEn ?? [],
     featuresDocGeneration: d.featuresDocGeneration?.length ? d.featuresDocGeneration : (def?.featuresDocGeneration ?? []),
     featuresDocGenerationEn: d.featuresDocGenerationEn?.length ? d.featuresDocGenerationEn : (def?.featuresDocGenerationEn ?? []),
     featuresDocReview: d.featuresDocReview?.length ? d.featuresDocReview : (def?.featuresDocReview ?? []),
     featuresDocReviewEn: d.featuresDocReviewEn?.length ? d.featuresDocReviewEn : (def?.featuresDocReviewEn ?? []),
+    featuresDocTemplates: d.featuresDocTemplates?.length ? d.featuresDocTemplates : (def?.featuresDocTemplates ?? []),
+    featuresDocTemplatesEn: d.featuresDocTemplatesEn?.length ? d.featuresDocTemplatesEn : (def?.featuresDocTemplatesEn ?? []),
     isFree: !!d.isFree,
     highlighted: !!d.highlighted,
     visible: d.visible !== false,
@@ -179,10 +198,11 @@ export async function getPlanLimits(key: string): Promise<PlanLimits> {
       consultations: plan.consultations,
       docGeneration: plan.includeDocGeneration ? plan.docGeneration : 0,
       docReview: plan.includeDocReview ? plan.docReview : 0,
+      docTemplates: plan.includeDocTemplates ? plan.docTemplates : 0,
     }
   }
   const f = PLAN_LIMITS.free
-  return { consultations: f.consultations, docGeneration: f.docGeneration, docReview: f.docReview }
+  return { consultations: f.consultations, docGeneration: f.docGeneration, docReview: f.docReview, docTemplates: f.docTemplates }
 }
 
 /** Keys of plans a user may subscribe to (paid + active). */

@@ -172,6 +172,7 @@ export function planActivationFields(plan: PlanKey, limits: PlanLimits) {
     consultationsRemaining: limits.consultations,
     docGenerationRemaining: limits.docGeneration,
     docReviewRemaining: limits.docReview,
+    docTemplatesRemaining: limits.docTemplates,
     resetAt: new Date(Date.now() + PERIOD_MS),
   };
 }
@@ -185,6 +186,7 @@ export function planDeactivationFields(status: string) {
     consultationsRemaining: limits.consultations,
     docGenerationRemaining: limits.docGeneration,
     docReviewRemaining: limits.docReview,
+    docTemplatesRemaining: limits.docTemplates,
     resetAt: new Date(Date.now() + PERIOD_MS),
   };
 }

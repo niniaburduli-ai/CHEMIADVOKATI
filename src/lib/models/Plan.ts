@@ -21,6 +21,7 @@ const PlanSchema = new Schema(
     consultations: { type: Number, default: 0, min: 0 },
     docGeneration: { type: Number, default: 0, min: 0 },
     docReview: { type: Number, default: 0, min: 0 },
+    docTemplates: { type: Number, default: 0, min: 0 },
     // Bullet list shown on the pricing card — base (always visible).
     features: { type: [String], default: [] },
     featuresEn: { type: [String], default: [] },
@@ -29,8 +30,11 @@ const PlanSchema = new Schema(
     featuresDocGenerationEn: { type: [String], default: [] },
     featuresDocReview: { type: [String], default: [] },
     featuresDocReviewEn: { type: [String], default: [] },
+    featuresDocTemplates: { type: [String], default: [] },
+    featuresDocTemplatesEn: { type: [String], default: [] },
     includeDocGeneration: { type: Boolean, default: true },
     includeDocReview: { type: Boolean, default: true },
+    includeDocTemplates: { type: Boolean, default: true },
     isFree: { type: Boolean, default: false },
     highlighted: { type: Boolean, default: false },
     visible: { type: Boolean, default: true },   // show on public pricing page
@@ -55,12 +59,16 @@ export type PlanDoc = {
   docGeneration: number
   includeDocReview: boolean
   docReview: number
+  includeDocTemplates: boolean
+  docTemplates: number
   features: string[]
   featuresEn: string[]
   featuresDocGeneration: string[]
   featuresDocGenerationEn: string[]
   featuresDocReview: string[]
   featuresDocReviewEn: string[]
+  featuresDocTemplates: string[]
+  featuresDocTemplatesEn: string[]
   isFree: boolean
   highlighted: boolean
   visible: boolean
