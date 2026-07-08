@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   const dateLocale = locale === "en" ? "en-GB" : "ka-GE";
 
   await dbConnect();
-  const [user, sub, flags, consultations, documents, reviews, consultationsCount, documentsCount, reviewsCount] =
+  const [user, sub, flags, consultations, documents, reviews, consultationsCount, documentsCount, reviewsCount, templatesCount] =
     await Promise.all([
       User.findById(session.user.id).select("-passwordHash").lean(),
       Subscription.findOne({ userId: session.user.id }).lean(),
@@ -51,8 +51,9 @@ export default async function DashboardPage() {
       GeneratedDocument.find({ userId: session.user.id }).sort({ createdAt: -1 }).limit(5).lean(),
       DocumentReview.find({ userId: session.user.id }).sort({ createdAt: -1 }).limit(5).lean(),
       Consultation.countDocuments({ userId: session.user.id }),
-      GeneratedDocument.countDocuments({ userId: session.user.id }),
+      GeneratedDocument.countDocuments({ userId: session.user.id, source: "ai" }),
       DocumentReview.countDocuments({ userId: session.user.id }),
+      GeneratedDocument.countDocuments({ userId: session.user.id, source: "template" }),
     ]);
   if (!user) redirect("/login");
 
@@ -63,12 +64,15 @@ export default async function DashboardPage() {
   const consultLimit = planData?.consultations ?? 9;
   const showGenerate = flags.generate && planData ? planData.includeDocGeneration : false;
   const showReview = flags.review && planData ? planData.includeDocReview : false;
+  const showTemplates = flags.templates && planData ? planData.includeDocTemplates : false;
   const genLimit = showGenerate ? (planData?.docGeneration ?? 0) : 0;
   const reviewLimit = showReview ? (planData?.docReview ?? 0) : 0;
+  const templatesLimit = showTemplates ? (planData?.docTemplates ?? 0) : 0;
 
   const consultRemaining = user.consultationsRemaining ?? 0;
   const docGenRemaining = user.docGenerationRemaining ?? 0;
   const docReviewRemaining = user.docReviewRemaining ?? 0;
+  const docTemplatesRemaining = user.docTemplatesRemaining ?? 0;
 
   const subStatus = user.subscriptionStatus || (sub as { status?: string } | null)?.status || null;
   const periodEnd = (sub as { currentPeriodEnd?: Date } | null)?.currentPeriodEnd
@@ -128,6 +132,19 @@ export default async function DashboardPage() {
             remaining: docReviewRemaining,
             total: reviewLimit,
             isUnlimited: isAdmin || reviewLimit >= 9999,
+          },
+        ]
+      : []),
+    ...(showTemplates
+      ? [
+          {
+            key: "templates",
+            label: dp.templatesFilled,
+            icon: <FileText className="h-4 w-4 text-primary" />,
+            used: templatesCount,
+            remaining: docTemplatesRemaining,
+            total: templatesLimit,
+            isUnlimited: isAdmin || templatesLimit >= 9999,
           },
         ]
       : []),
