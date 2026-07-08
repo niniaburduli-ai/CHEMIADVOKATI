@@ -8,20 +8,108 @@ import { APPROVED_SOURCES, cleanLawName } from "@/lib/legal/sources";
 import { fetchApprovedSource } from "@/lib/legal/fetch-source";
 import { searchSources, type SearchQuery } from "@/lib/legal/search";
 import { expandQuery } from "@/lib/legal/query-understanding";
-import { buildLegalBasis } from "@/lib/legal/citations";
+import { isCircuitOpen, recordFetchFailure, recordFetchSuccess } from "@/lib/legal/fetch-circuit";
+import {
+  buildLegalBasis,
+  hasVerifiedCitation,
+  type LegalBasisGroup,
+} from "@/lib/legal/citations";
 import {
   SYSTEM_PROMPT,
   FEWSHOT,
   NOT_FOUND_MSG,
+  TECHNICAL_ERROR_MSG,
   buildGroundedPrompt,
   generateLegalAnswer,
   parseAnswer,
   searchWebContext,
+  answerViaWebSearch,
   streamText,
+  type WebSource,
 } from "@/lib/legal/openrouter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Save the consultation, decrement quota, and stream the answer to the client. */
+async function finalizeAnswer(params: {
+  userId: string;
+  isAdmin: boolean;
+  question: string;
+  answer: string;
+  legalBasis: LegalBasisGroup[];
+  webSources?: WebSource[];
+}): Promise<Response> {
+  const { userId, isAdmin, question, answer, legalBasis, webSources } = params;
+
+  // Grounded-source citations when we have them; otherwise fall back to the
+  // web-search sources so a web-fallback answer still records where it came
+  // from (title/url only — no article, since it's not a matsne citation).
+  const sources =
+    legalBasis.length > 0
+      ? legalBasis.flatMap((g) =>
+          g.items.map((i) => ({
+            title: g.lawName,
+            code: g.lawName,
+            url: g.url,
+            article: i.article,
+            paragraph: i.paragraph ?? undefined,
+            subparagraph: i.subparagraph ?? undefined,
+          }))
+        )
+      : (webSources ?? []).map((s) => ({ title: s.title, url: s.url }));
+
+  const saveOps: Promise<unknown>[] = [
+    Consultation.create({ userId, question, answer, sources }),
+  ];
+  if (!isAdmin) {
+    saveOps.push(
+      User.findByIdAndUpdate(userId, { $inc: { consultationsRemaining: -1 } })
+    );
+  }
+  await Promise.all(saveOps);
+
+  return new Response(streamText(answer), {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Legal-Basis": encodeURIComponent(JSON.stringify(legalBasis)),
+      ...(webSources && webSources.length > 0
+        ? { "X-Web-Sources": encodeURIComponent(JSON.stringify(webSources)) }
+        : {}),
+    },
+  });
+}
+
+/**
+ * Last resort when the 8 approved sources don't cover the question: search
+ * the web for the real answer across all of Georgian legislation instead of
+ * refusing. Only reaches here on a genuine miss, so it doesn't add cost to
+ * the common case. Falls back to the literal NOT_FOUND_MSG if the web
+ * search itself comes up empty too.
+ */
+async function tryWebFallback(
+  userId: string,
+  isAdmin: boolean,
+  question: string
+): Promise<Response> {
+  const web = await answerViaWebSearch(question);
+  const prose = web?.prose.trim();
+  if (web && prose && prose !== NOT_FOUND_MSG) {
+    return finalizeAnswer({
+      userId,
+      isAdmin,
+      question,
+      answer: prose,
+      legalBasis: [],
+      webSources: web.sources,
+    });
+  }
+  return NextResponse.json(
+    { answer: NOT_FOUND_MSG, legalBasis: [] },
+    { status: 200 }
+  );
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -68,18 +156,21 @@ export async function POST(req: Request) {
       ? APPROVED_SOURCES.filter((s) => expanded.sourceIds.includes(s.id))
       : APPROVED_SOURCES;
 
-  const fetchedRaw = await Promise.all(
-    selected.map((s) => fetchApprovedSource(s.url, s.title))
-  );
-  const fetched = fetchedRaw.filter(
-    (s): s is NonNullable<typeof s> => s !== null
-  );
+  let fetched: NonNullable<Awaited<ReturnType<typeof fetchApprovedSource>>>[] = [];
+  if (!isCircuitOpen()) {
+    const fetchedRaw = await Promise.all(
+      selected.map((s) => fetchApprovedSource(s.url, s.title))
+    );
+    fetched = fetchedRaw.filter((s): s is NonNullable<typeof s> => s !== null);
+    if (fetched.length > 0) {
+      recordFetchSuccess();
+    } else {
+      recordFetchFailure();
+    }
+  }
 
   if (fetched.length === 0) {
-    return NextResponse.json(
-      { answer: NOT_FOUND_MSG, legalBasis: [] },
-      { status: 200 }
-    );
+    return tryWebFallback(session.user.id, isAdmin, question);
   }
 
   const searchQuery: SearchQuery = {
@@ -89,10 +180,7 @@ export async function POST(req: Request) {
   };
   const matches = searchSources(fetched, searchQuery, 10);
   if (matches.length === 0) {
-    return NextResponse.json(
-      { answer: NOT_FOUND_MSG, legalBasis: [] },
-      { status: 200 }
-    );
+    return tryWebFallback(session.user.id, isAdmin, question);
   }
 
   const web = await webPromise;
@@ -102,63 +190,67 @@ export async function POST(req: Request) {
     web?.summary
   );
 
-  let full: string;
+  const messages = [
+    { role: "system" as const, content: SYSTEM_PROMPT },
+    ...FEWSHOT,
+    { role: "user" as const, content: userPrompt },
+  ];
+
+  // Try the cheap model first for every question, regardless of topic. Only
+  // escalate to the expensive backup model when the cheap answer fails to
+  // ground itself in a verified matsne.gov.ge citation (or errors outright) —
+  // this is a retry, not an upfront complexity guess, so simple questions
+  // (criminal law included) never pay for the expensive model.
+  let prose = "";
+  let citations: ReturnType<typeof parseAnswer>["citations"] = [];
   try {
-    full = await generateLegalAnswer([
-      { role: "system", content: SYSTEM_PROMPT },
-      ...FEWSHOT,
-      { role: "user", content: userPrompt },
-    ]);
-  } catch (err) {
-    return NextResponse.json(
-      {
-        error: "AI service unavailable",
-        detail: String(err instanceof Error ? err.message : err),
-      },
-      { status: 502 }
-    );
+    const full = await generateLegalAnswer(messages, false);
+    ({ prose, citations } = parseAnswer(full));
+  } catch {
+    // fall through to escalation below
   }
 
-  const { prose, citations } = parseAnswer(full);
+  const cheapIsGrounded =
+    prose.trim() !== "" &&
+    prose.trim() !== NOT_FOUND_MSG &&
+    hasVerifiedCitation(matches, citations);
+
+  if (!cheapIsGrounded) {
+    try {
+      const full = await generateLegalAnswer(messages, true);
+      ({ prose, citations } = parseAnswer(full));
+    } catch {
+      if (!prose) {
+        // Both the cheap and expensive draft calls threw — OpenRouter itself
+        // is unreachable/misconfigured, not a "law doesn't cover this" case.
+        // Distinct from NOT_FOUND_MSG so the user sees a retry prompt, not a
+        // scary "not found in approved sources".
+        return NextResponse.json(
+          { answer: TECHNICAL_ERROR_MSG, legalBasis: [] },
+          { status: 200 }
+        );
+      }
+      // Expensive retry failed but the cheap model at least produced
+      // something — keep it rather than failing the request outright.
+    }
+  }
+
   const answer = prose || NOT_FOUND_MSG;
 
+  // The 8 approved sources didn't have it, per the grounded model itself —
+  // last resort before refusing: search the web across all Georgian law.
   if (answer.trim() === NOT_FOUND_MSG) {
-    return NextResponse.json(
-      { answer: NOT_FOUND_MSG, legalBasis: [] },
-      { status: 200 }
-    );
+    return tryWebFallback(session.user.id, isAdmin, question);
   }
 
   const legalBasis = buildLegalBasis(matches, citations);
 
-  // Save consultation and decrement quota after a successful AI answer.
-  const sources = legalBasis.flatMap((g) =>
-    g.items.map((i) => ({
-      title: g.lawName,
-      code: g.lawName,
-      url: g.url,
-      article: i.article,
-      paragraph: i.paragraph ?? undefined,
-      subparagraph: i.subparagraph ?? undefined,
-    }))
-  );
-
-  const saveOps: Promise<unknown>[] = [
-    Consultation.create({ userId: session.user.id, question, answer, sources }),
-  ];
-  if (!isAdmin) {
-    saveOps.push(User.findByIdAndUpdate(session.user.id, { $inc: { consultationsRemaining: -1 } }));
-  }
-  await Promise.all(saveOps);
-
-  return new Response(streamText(answer), {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Legal-Basis": encodeURIComponent(JSON.stringify(legalBasis)),
-      ...(web && web.sources.length > 0
-        ? { "X-Web-Sources": encodeURIComponent(JSON.stringify(web.sources)) }
-        : {}),
-    },
+  return finalizeAnswer({
+    userId: session.user.id,
+    isAdmin,
+    question,
+    answer,
+    legalBasis,
+    webSources: web?.sources,
   });
 }

@@ -35,6 +35,9 @@ type Message = {
 
 // Keep in sync with NOT_FOUND_MSG in src/lib/legal/openrouter.ts.
 const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
+// Keep in sync with TECHNICAL_ERROR_MSG in src/lib/legal/openrouter.ts.
+const TECHNICAL_ERROR_MSG =
+  "ტექნიკური შეფერხება იურიდიულ რეესტრთან დაკავშირებისას — გთხოვთ სცადოთ მოგვიანებით.";
 
 export function ChatClient({ locale }: { locale: Locale }) {
   const d = getDict(locale);
@@ -73,11 +76,18 @@ export function ChatClient({ locale }: { locale: Locale }) {
       if (ct.includes("application/json")) {
         const data = await res.json();
         const rawContent = data.answer ?? data.error ?? d.chat.errorGeneric;
-        const content = rawContent.trim() === NOT_FOUND_MSG ? d.chat.notFound : rawContent;
+        const trimmed = rawContent.trim();
+        const isTerminal = trimmed === NOT_FOUND_MSG || trimmed === TECHNICAL_ERROR_MSG;
+        const content =
+          trimmed === NOT_FOUND_MSG
+            ? d.chat.notFound
+            : trimmed === TECHNICAL_ERROR_MSG
+              ? d.chat.technicalError
+              : rawContent;
         patch((msg) => ({
           ...msg,
           content,
-          legalBasis: rawContent.trim() === NOT_FOUND_MSG ? [] : data.legalBasis ?? [],
+          legalBasis: isTerminal ? [] : data.legalBasis ?? [],
         }));
         return;
       }
@@ -116,12 +126,15 @@ export function ChatClient({ locale }: { locale: Locale }) {
         acc += decoder.decode(value, { stream: true });
         patch((msg) => ({ ...msg, content: acc }));
       }
-      const isNotFound = acc.trim() === NOT_FOUND_MSG;
+      const trimmedAcc = acc.trim();
+      const isNotFound = trimmedAcc === NOT_FOUND_MSG;
+      const isTechnicalError = trimmedAcc === TECHNICAL_ERROR_MSG;
+      const isTerminal = isNotFound || isTechnicalError;
       patch((msg) => ({
         ...msg,
-        content: isNotFound ? d.chat.notFound : acc,
-        legalBasis: isNotFound ? [] : legalBasis,
-        webSources: isNotFound ? [] : webSources,
+        content: isNotFound ? d.chat.notFound : isTechnicalError ? d.chat.technicalError : acc,
+        legalBasis: isTerminal ? [] : legalBasis,
+        webSources: isTerminal ? [] : webSources,
       }));
     } catch {
       patch((msg) => ({

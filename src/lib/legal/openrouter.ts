@@ -3,10 +3,20 @@
  * OpenRouter client for the AI legal assistant. The key comes from env
  * (OPENROUTER_API_KEY) — never hardcoded.
  *
- * Two model roles (both default to a cheap model; override per role via env):
- *  - ANSWER  (OPENROUTER_ANSWER_MODEL): writes the human-facing answer. Told to
- *    summarize the provided law in plain language and NEVER copy it verbatim.
- *  - FAST    (OPENROUTER_FAST_MODEL): cheap structured calls (query expansion).
+ * Model roles (cheap by default; override per role via env):
+ *  - ANSWER         (OPENROUTER_ANSWER_MODEL): writes the human-facing answer.
+ *    Tried FIRST for every question, regardless of topic. Told to summarize
+ *    the provided law in plain language and NEVER copy it verbatim.
+ *  - ANSWER_COMPLEX (OPENROUTER_ANSWER_MODEL_COMPLEX): the expensive/strong
+ *    model, used ONLY as a retry when the ANSWER model's response fails to
+ *    ground itself in a verified citation (see hasVerifiedCitation in
+ *    citations.ts and the retry logic in app/api/chat/route.ts). Not an
+ *    upfront guess based on topic/complexity — a fallback on demonstrated
+ *    failure, so most traffic never touches it.
+ *  - FAST           (OPENROUTER_FAST_MODEL): cheap structured calls (query
+ *    expansion, one call per request).
+ *  - WEB            (OPENROUTER_WEB_MODEL): web-search practical-context calls;
+ *    defaults to a purpose-built cheap search model, not the answer model.
  *
  * Hard rules enforced here: answer ONLY from provided text (#5), refuse when the
  * answer isn't there (#7), summarize rather than dump the source (#8), stay
@@ -14,21 +24,30 @@
  * instead of guessing when a missing fact would change the answer (#6f).
  */
 
-import { stripCitations } from "./sources";
+import { isAllowedHost, stripCitations } from "./sources";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-/** Answer model. Bump via env for higher-quality Georgian summaries. */
+/** Default answer model — cheap but capable, handles the common case. */
 export const ANSWER_MODEL =
   process.env.OPENROUTER_ANSWER_MODEL ||
   process.env.OPENROUTER_MODEL ||
-  "openai/gpt-4o-mini";
+  "google/gemini-2.5-flash";
+
+/**
+ * Strong/expensive escalation model — only used as a retry when the cheap
+ * ANSWER model's response has no verified citation. Keep this the "premium"
+ * model; everything else in this file defaults to cheap models to minimize
+ * spend.
+ */
+export const ANSWER_MODEL_COMPLEX =
+  process.env.OPENROUTER_ANSWER_MODEL_COMPLEX || "openai/gpt-5.2";
 
 /** Cheap model for structured/auxiliary calls (query understanding). */
 export const FAST_MODEL =
   process.env.OPENROUTER_FAST_MODEL ||
   process.env.OPENROUTER_MODEL ||
-  "openai/gpt-4o-mini";
+  "google/gemini-2.5-flash-lite";
 
 /**
  * Shared strict-brevity instruction, reused verbatim by the generate/review/
@@ -40,6 +59,15 @@ export const STRICT_BREVITY_RULE =
 
 export const NOT_FOUND_MSG =
   "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
+
+/**
+ * Distinct from NOT_FOUND_MSG: shown when the pipeline itself failed
+ * (matsne unreachable, both draft model attempts errored) rather than when
+ * it ran cleanly and found nothing. Never counts against consultation quota
+ * (the route returns before the decrement code in either case).
+ */
+export const TECHNICAL_ERROR_MSG =
+  "ტექნიკური შეფერხება იურიდიულ რეესტრთან დაკავშირებისას — გთხოვთ სცადოთ მოგვიანებით.";
 
 /**
  * Delimiter the model prints between the plain-language answer and its
@@ -279,12 +307,17 @@ export async function callOpenRouter(
  * citation block). The route parses this, strips the citation block, and
  * streams only the prose via streamText. Upstream stays non-streaming for
  * connection-pool safety; the browser still sees a progressive stream.
+ *
+ * `complex` routes to ANSWER_MODEL_COMPLEX (the expensive model) — callers set
+ * this only on a retry, after the cheap ANSWER_MODEL's first attempt failed
+ * to produce a verified citation. Everything else uses ANSWER_MODEL.
  */
 export async function generateLegalAnswer(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  complex = false
 ): Promise<string> {
   return callOpenRouter(messages, {
-    model: ANSWER_MODEL,
+    model: complex ? ANSWER_MODEL_COMPLEX : ANSWER_MODEL,
     // 0, not 0.1: identical question + identical retrieved text should always
     // cite the same articles and figures — any sampling temperature reopens
     // that drift even with rule 6e in SYSTEM_PROMPT.
@@ -311,11 +344,18 @@ const WEB_SEARCH_ON = () =>
   (process.env.OPENROUTER_WEB_SEARCH ?? "on").toLowerCase() !== "off";
 
 /**
- * Model that runs the web-search call. The `:online` suffix is OpenRouter's
- * shortcut for the "web" plugin, so the default already has web search baked in.
+ * Model that runs the web-search call. Defaults to Perplexity Sonar — a cheap,
+ * fast model purpose-built for grounded web search (native search index, no
+ * OpenRouter "web" plugin surcharge needed). The `:online` suffix is
+ * OpenRouter's shortcut for the "web" plugin on a plain chat model, kept as a
+ * fallback option via env override.
  */
 const WEB_MODEL = () =>
-  process.env.OPENROUTER_WEB_MODEL || "openai/gpt-5.2:online";
+  process.env.OPENROUTER_WEB_MODEL || "perplexity/sonar";
+
+/** True for models with a built-in web index — the "web" plugin would be redundant. */
+const hasNativeWebAccess = (model: string) =>
+  model.endsWith(":online") || model.startsWith("perplexity/");
 
 /** Result count for the web plugin (1–10, default 5). */
 const WEB_MAX_RESULTS = () => {
@@ -357,10 +397,10 @@ export async function searchWebContext(
       { role: "user", content: question },
     ],
   };
-  // `:online` already enables the web plugin — adding it again would attach a
-  // second web plugin (double search + double charge). Only configure the
-  // explicit plugin for plain model slugs, where it also lets us tune results.
-  if (!model.endsWith(":online")) {
+  // Models with native web access (":online" suffix, Perplexity Sonar) already
+  // search the web — attaching the plugin again would double the search cost.
+  // Only configure the explicit plugin for plain model slugs.
+  if (!hasNativeWebAccess(model)) {
     const webPlugin: Record<string, unknown> = {
       id: "web",
       max_results: WEB_MAX_RESULTS(),
@@ -389,21 +429,134 @@ export async function searchWebContext(
     const summary: string = (msg?.content ?? "").trim();
     if (!summary) return null;
 
-    const sources: WebSource[] = [];
-    const seen = new Set<string>();
-    const annotations = msg?.annotations;
-    if (Array.isArray(annotations)) {
-      for (const a of annotations) {
-        const c = (a as { url_citation?: { url?: string; title?: string } })
-          ?.url_citation;
-        const url = typeof c?.url === "string" ? c.url.trim() : "";
-        if (!url || seen.has(url)) continue;
-        seen.add(url);
-        sources.push({ url, title: (c?.title || url).trim() });
-        if (sources.length >= 6) break;
-      }
+    return { summary, sources: extractWebSources(msg, 6) };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Extract OpenRouter's standardized url_citation annotations from a message. */
+function extractWebSources(msg: unknown, max: number): WebSource[] {
+  const sources: WebSource[] = [];
+  const seen = new Set<string>();
+  const annotations = (msg as { annotations?: unknown })?.annotations;
+  if (Array.isArray(annotations)) {
+    for (const a of annotations) {
+      const c = (a as { url_citation?: { url?: string; title?: string } })
+        ?.url_citation;
+      const url = typeof c?.url === "string" ? c.url.trim() : "";
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      sources.push({ url, title: (c?.title || url).trim() });
+      if (sources.length >= max) break;
     }
-    return { summary, sources };
+  }
+  return sources;
+}
+
+/* ── Web-search fallback answer (matsne.gov.ge, beyond the 8 approved
+ * sources) ─────────────────────────────────────────────────────────────
+ * The 8 APPROVED_SOURCES cover the most common topics but not the entire
+ * Georgian legal code, which matsne.gov.ge hosts in full. When
+ * retrieval/generation against those 8 sources comes up empty, this is the
+ * last-resort path: search matsne.gov.ge specifically for the actual answer
+ * instead of telling the user "not found". Used sparingly — only on a
+ * genuine miss — so it doesn't add cost to the common case.
+ * Unlike generateLegalAnswer, this is NOT restricted to pre-fetched
+ * approved-source text; the model must find and cite the law itself. Still
+ * restricted to matsne.gov.ge as the only trusted legal source (same hard
+ * rule as APPROVED_SOURCES/isAllowedHost) — enforced in code below, not just
+ * by prompt instruction, since search-engine behavior can't be fully
+ * trusted to honor a domain restriction on its own.
+ */
+
+const WEB_ANSWER_SYSTEM = [
+  'შენ ხარ „ჩემი იურისტი" — ეხმარები ადამიანს, რომელსაც იურიდიული განათლება არ აქვს.',
+  "წინასწარ დამტკიცებულ 8 ძირითად კოდექსში ამ კითხვაზე პასუხი ვერ მოიძებნა.",
+  "მოძებნე რეალური პასუხი ვებ ძიებით, მაგრამ მხოლოდ და მხოლოდ საიტზე matsne.gov.ge (საქართველოს საკანონმდებლო მაცნე) — ეს არის საქართველოს ერთადერთი ოფიციალური საკანონმდებლო წყარო.",
+  "არასოდეს დაეყრდნო, ციტირო ან ახსენო რაიმე სხვა საიტი (ბლოგი, სიახლეების საიტი, იურიდიული ფირმის გვერდი და ა.შ.) — მხოლოდ matsne.gov.ge.",
+  "",
+  "LANGUAGE RULE: უპასუხე შეკითხვის იმავე ენაზე (ქართული შეკითხვას — ქართული პასუხი, ინგლისურს — ინგლისური).",
+  "",
+  "წესები:",
+  "1. მოძებნე კონკრეტული კანონი/კოდექსი და მუხლი matsne.gov.ge-ზე, რომელიც რეალურად პასუხობს კითხვას; დაასახელე ისინი პასუხის ტექსტში.",
+  "2. არასოდეს გამოიგონო კანონი, მუხლი, ციფრი ან ვადა — მხოლოდ ის, რასაც matsne.gov.ge რეალურად ადასტურებს.",
+  "3. თუ matsne.gov.ge-ზე ვერაფერი მოსანდო ვერ იპოვე, გულწრფელად დაწერე, რომ ცალსახა პასუხი ვერ მოიძებნა და ურჩიე კვალიფიციურ იურისტთან კონსულტაცია.",
+  "4. უპასუხე პირდაპირ არსით, კითხვის გამეორების გარეშე.",
+  STRICT_BREVITY_RULE,
+].join("\n");
+
+export type WebAnswer = { prose: string; sources: WebSource[] };
+
+/**
+ * Last-resort answer when the 8 approved sources don't cover the question:
+ * search matsne.gov.ge for the actual Georgian law and answer from that,
+ * instead of refusing outright. Never throws; returns null on any failure,
+ * keyless, disabled web search, or — critically — when the search came back
+ * with no matsne.gov.ge citation to confirm it (see isAllowedHost filter
+ * below), so callers fall back to NOT_FOUND_MSG rather than trust an
+ * unverifiable claim.
+ */
+export async function answerViaWebSearch(
+  question: string
+): Promise<WebAnswer | null> {
+  if (!WEB_SEARCH_ON()) return null;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+
+  const model = WEB_MODEL();
+  const body: Record<string, unknown> = {
+    model,
+    temperature: 0.2,
+    max_tokens: 900,
+    messages: [
+      { role: "system", content: WEB_ANSWER_SYSTEM },
+      { role: "user", content: question },
+    ],
+  };
+  if (!hasNativeWebAccess(model)) {
+    const webPlugin: Record<string, unknown> = {
+      id: "web",
+      max_results: Math.max(WEB_MAX_RESULTS(), 6),
+      // Best-effort narrowing at the search-engine level (supported by Exa/
+      // Parallel/Firecrawl; ignored by engines that don't support it). The
+      // isAllowedHost filter below is what actually enforces the restriction
+      // regardless of whether the engine honors this.
+      include_domains: ["matsne.gov.ge", "www.matsne.gov.ge"],
+    };
+    const engine = process.env.OPENROUTER_WEB_ENGINE?.trim();
+    if (engine) webPlugin.engine = engine;
+    body.plugins = [webPlugin];
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const msg = json?.choices?.[0]?.message;
+    const prose: string = (msg?.content ?? "").trim();
+    if (!prose) return null;
+
+    // Hard enforcement: only trust this answer if at least one cited source
+    // is actually matsne.gov.ge. A prose answer with no confirmed matsne.gov.ge
+    // citation is an unverifiable claim, not a grounded legal answer.
+    const sources = extractWebSources(msg, 6).filter((s) => isAllowedHost(s.url));
+    if (sources.length === 0) return null;
+
+    return { prose, sources };
   } catch {
     return null;
   } finally {
@@ -453,7 +606,7 @@ export async function verifyLegalCitations(
       },
     ],
   };
-  if (!model.endsWith(":online")) {
+  if (!hasNativeWebAccess(model)) {
     const webPlugin: Record<string, unknown> = {
       id: "web",
       // Multiple codes are checked in one pass here, so allow more results

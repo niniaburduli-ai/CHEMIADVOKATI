@@ -24,6 +24,21 @@ export type LegalBasisGroup = {
 const norm = (a: string) =>
   a.replace(/\s+/g, "").replace(/[.\-–]/g, "").toLowerCase();
 
+/**
+ * True if at least one model-claimed citation matches an article we actually
+ * provided (a matsne.gov.ge-sourced chunk) — i.e. the answer is grounded, not
+ * a bare NOT_FOUND or an unverifiable claim. Used to decide whether the cheap
+ * model's answer is trustworthy or needs escalation to the expensive model.
+ */
+export function hasVerifiedCitation(
+  matches: ScoredChunk[],
+  citations: RawCitation[]
+): boolean {
+  if (citations.length === 0) return false;
+  const known = new Set(matches.map((m) => norm(m.article)));
+  return citations.some((c) => known.has(norm(c.article)));
+}
+
 export function buildLegalBasis(
   matches: ScoredChunk[],
   citations: RawCitation[]

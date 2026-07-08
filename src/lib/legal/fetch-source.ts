@@ -16,7 +16,7 @@ export type FetchedSource = {
 
 type CacheEntry = { value: FetchedSource; expires: number };
 
-const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — law text changes rarely; avoid hammering matsne
 const FETCH_TIMEOUT_MS = 30_000; // matsne law pages can be 5–8 MB
 const MAX_ATTEMPTS = 2; // matsne's WAF returns flaky "Access Denied" stubs
 const RETRY_DELAY_MS = 600;

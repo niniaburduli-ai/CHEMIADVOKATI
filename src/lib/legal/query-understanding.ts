@@ -108,25 +108,34 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
     { role: "user", content: original },
   ];
 
-  try {
-    const raw = await callOpenRouter(messages, {
-      model: FAST_MODEL,
-      // 0, not a small positive value: this call picks which laws/keywords get
-      // searched, so any sampling variance here changes which articles get
-      // retrieved — and therefore the legal basis shown — for the identical
-      // question across two runs.
-      temperature: 0,
-      maxTokens: 260,
-      json: true,
-      timeoutMs: 12_000,
-    });
-    const { keywords, hypothetical, sourceIds } = parseExpansion(raw);
-    // If the model returned nothing usable, fall back rather than pass empties.
-    if (keywords.length === 0 && !hypothetical && sourceIds.length === 0) {
-      return fallback;
+  // FAST_MODEL is a cheap model with a non-trivial intermittent upstream
+  // error rate (observed: malformed/truncated JSON on an outright API error,
+  // not a token-budget issue). One retry recovers most of those transient
+  // failures; without it, a single flaky call silently degrades to
+  // keyword-less search, which loses recall on any question whose everyday
+  // phrasing doesn't lexically overlap the formal legal text.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = await callOpenRouter(messages, {
+        model: FAST_MODEL,
+        // 0, not a small positive value: this call picks which laws/keywords get
+        // searched, so any sampling variance here changes which articles get
+        // retrieved — and therefore the legal basis shown — for the identical
+        // question across two runs.
+        temperature: 0,
+        maxTokens: 260,
+        json: true,
+        timeoutMs: 12_000,
+      });
+      const { keywords, hypothetical, sourceIds } = parseExpansion(raw);
+      // If the model returned nothing usable, fall back rather than pass empties.
+      if (keywords.length === 0 && !hypothetical && sourceIds.length === 0) {
+        return fallback;
+      }
+      return { original, keywords, hypothetical, sourceIds };
+    } catch {
+      if (attempt === 0) continue;
     }
-    return { original, keywords, hypothetical, sourceIds };
-  } catch {
-    return fallback;
   }
+  return fallback;
 }
