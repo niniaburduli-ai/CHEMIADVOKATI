@@ -20,11 +20,7 @@ import { DocumentResultPanel, type DocumentResult } from "@/components/site/Docu
 
 export const DOC_TYPES = [
   { value: "complaint", label: "საჩივარი" },
-  { value: "rental-agreement", label: "ქირავნობის ხელშეკრულება" },
-  { value: "employment-contract", label: "შრომის ხელშეკრულება" },
-  { value: "power-of-attorney", label: "მინდობილობა" },
   { value: "demand-letter", label: "სამართლებრივი მოთხოვნა" },
-  { value: "termination-notice", label: "სამსახურიდან გათავისუფლება" },
 ];
 
 export function GenerateClient({ initialType }: { initialType?: string } = {}) {
@@ -90,10 +86,10 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
         </Link>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <FileText className="h-5 w-5" /> დოკუმენტის გენერაცია
+            <FileText className="h-5 w-5" /> დოკუმენტის მომზადება
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            AI ქმნის სრულ ქართულ იურიდიულ დოკუმენტს
+            AI ადგენს საჩივარს ან მოთხოვნას შენი კონკრეტული სიტუაციის მიხედვით
           </p>
         </div>
       </div>
