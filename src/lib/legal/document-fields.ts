@@ -1,0 +1,75 @@
+export type FieldType = "text" | "textarea" | "date";
+export type QuestionField = { key: string; label: string; type: FieldType; required?: boolean };
+
+export const COMMON_FIELDS: QuestionField[] = [
+  { key: "city", label: "ქალაქი", type: "text", required: true },
+  { key: "docDate", label: "დოკუმენტის თარიღი", type: "date", required: true },
+];
+
+export const QUESTION_SCHEMAS: Record<string, QuestionField[]> = {
+  complaint: [
+    { key: "yourName", label: "შენი სახელი და გვარი", type: "text", required: true },
+    { key: "yourId", label: "შენი პირადი ნომერი", type: "text", required: true },
+    { key: "yourAddress", label: "შენი მისამართი", type: "text", required: true },
+    { key: "respondent", label: "ვის ეხება საჩივარი", type: "text", required: true },
+    { key: "amount", label: "თანხა/ზიანი (ასეთის არსებობისას)", type: "text" },
+    { key: "paymentMethod", label: "გადახდის მეთოდი (ნაღდი/საბანკო გადარიცხვა) — თანხის მოთხოვნისას", type: "text" },
+    { key: "bankAccount", label: "საბანკო ანგარიშის № (თუ გადარიცხვას ითხოვ)", type: "text" },
+    { key: "incidentDate", label: "მოვლენის თარიღი", type: "date" },
+  ],
+  "rental-agreement": [
+    { key: "landlord", label: "გამქირავებელი (სახელი, გვარი)", type: "text", required: true },
+    { key: "landlordId", label: "გამქირავებლის პირადი ნომერი", type: "text", required: true },
+    { key: "landlordAddress", label: "გამქირავებლის მისამართი", type: "text", required: true },
+    { key: "landlordPhone", label: "გამქირავებლის ტელეფონი", type: "text" },
+    { key: "tenant", label: "დამქირავებელი (სახელი, გვარი)", type: "text", required: true },
+    { key: "tenantId", label: "დამქირავებლის პირადი ნომერი", type: "text", required: true },
+    { key: "tenantAddress", label: "დამქირავებლის მისამართი", type: "text", required: true },
+    { key: "tenantPhone", label: "დამქირავებლის ტელეფონი", type: "text" },
+    { key: "address", label: "ბინის მისამართი", type: "text", required: true },
+    { key: "rent", label: "ქირის ოდენობა", type: "text", required: true },
+    { key: "paymentMethod", label: "ქირის გადახდის მეთოდი (ნაღდი/საბანკო გადარიცხვა)", type: "text", required: true },
+    { key: "bankAccount", label: "საბანკო ანგარიშის № (თუ გადარიცხვაა)", type: "text" },
+    { key: "duration", label: "ხელშეკრულების ვადა", type: "text", required: true },
+  ],
+  "employment-contract": [
+    { key: "employer", label: "დამსაქმებელი", type: "text", required: true },
+    { key: "employerId", label: "დამსაქმებლის საიდენტიფიკაციო/პირადი ნომერი", type: "text", required: true },
+    { key: "employerAddress", label: "დამსაქმებლის მისამართი", type: "text", required: true },
+    { key: "employee", label: "თანამშრომელი", type: "text", required: true },
+    { key: "employeeId", label: "თანამშრომლის პირადი ნომერი", type: "text", required: true },
+    { key: "employeeAddress", label: "თანამშრომლის მისამართი", type: "text", required: true },
+    { key: "position", label: "პოზიცია", type: "text", required: true },
+    { key: "salary", label: "ხელფასი", type: "text", required: true },
+    { key: "salaryPaymentMethod", label: "ხელფასის გადახდის მეთოდი (ნაღდი/საბანკო გადარიცხვა)", type: "text", required: true },
+    { key: "bankAccount", label: "თანამშრომლის საბანკო ანგარიშის № (თუ გადარიცხვაა)", type: "text" },
+    { key: "startDate", label: "დაწყების თარიღი", type: "date", required: true },
+  ],
+  "power-of-attorney": [
+    { key: "principal", label: "მინდობელი", type: "text", required: true },
+    { key: "idNumber", label: "მინდობელის პირადი ნომერი", type: "text", required: true },
+    { key: "principalAddress", label: "მინდობელის მისამართი", type: "text", required: true },
+    { key: "agent", label: "მინდობილი პირი", type: "text", required: true },
+    { key: "agentId", label: "მინდობილი პირის პირადი ნომერი", type: "text", required: true },
+    { key: "agentAddress", label: "მინდობილი პირის მისამართი", type: "text", required: true },
+    { key: "scope", label: "მინდობის ფარგლები", type: "textarea", required: true },
+  ],
+  "demand-letter": [
+    { key: "yourName", label: "შენი სახელი და გვარი", type: "text", required: true },
+    { key: "yourAddress", label: "შენი მისამართი", type: "text", required: true },
+    { key: "recipient", label: "ადრესატი", type: "text", required: true },
+    { key: "amount", label: "მოთხოვნილი თანხა", type: "text" },
+    { key: "paymentMethod", label: "გადახდის სასურველი მეთოდი (ნაղდი/საბანკო გადარიცხვა)", type: "text" },
+    { key: "bankAccount", label: "საბანკო ანგარიშის № (თუ გადარიცხვას ითხოვ)", type: "text" },
+    { key: "reason", label: "მოთხოვნის საფუძველი", type: "textarea", required: true },
+    { key: "deadline", label: "ვადა", type: "text", required: true },
+  ],
+  "termination-notice": [
+    { key: "employer", label: "დამსაქმებელი", type: "text", required: true },
+    { key: "employee", label: "თანამშრომელი", type: "text", required: true },
+    { key: "employeeId", label: "თანამშრომლის პირადი ნომერი", type: "text", required: true },
+    { key: "employeeAddress", label: "თანამშრომლის მისამართი", type: "text", required: true },
+    { key: "reason", label: "საფუძველი", type: "text", required: true },
+    { key: "lastDay", label: "ბოლო სამუშაო დღე", type: "date", required: true },
+  ],
+};
