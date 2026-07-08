@@ -89,6 +89,22 @@ export const GenerateDocSchema = z.object({
 });
 export type GenerateDocInput = z.infer<typeof GenerateDocSchema>;
 
+export const TEMPLATE_TYPES = [
+  "rental-agreement",
+  "employment-contract",
+  "power-of-attorney",
+  "termination-notice",
+] as const;
+
+export const GenerateTemplateSchema = z.object({
+  type: z.enum(TEMPLATE_TYPES),
+  answers: z.record(z.string(), z.string().max(500)).refine(
+    (obj) => Object.keys(obj).length <= 30,
+    { message: "Too many fields" }
+  ),
+});
+export type GenerateTemplateInput = z.infer<typeof GenerateTemplateSchema>;
+
 export const UpdateGeneratedDocSchema = z.object({
   content: z.string().min(1).max(20000),
 });
