@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TEMPLATE_TYPES } from "@/lib/legal/templates";
 
 export const RegisterSchema = z.object({
   name: z.string().min(2, { message: "სახელი მინიმუმ 2 სიმბოლო" }).max(80).trim(),
@@ -82,13 +83,6 @@ export const GenerateDocSchema = z.object({
 });
 export type GenerateDocInput = z.infer<typeof GenerateDocSchema>;
 
-export const TEMPLATE_TYPES = [
-  "rental-agreement",
-  "employment-contract",
-  "power-of-attorney",
-  "termination-notice",
-] as const;
-
 export const GenerateTemplateSchema = z.object({
   type: z.enum(TEMPLATE_TYPES),
   answers: z.record(z.string(), z.string().max(500)).refine(
@@ -120,10 +114,14 @@ export const AdminUserUpdateSchema = z
   .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" });
 export type AdminUserUpdateInput = z.infer<typeof AdminUserUpdateSchema>;
 
-export const FeedbackCreateSchema = z.object({
-  rating: z.coerce.number().int().min(1).max(5),
-  message: z.string().trim().max(2000).optional().default(""),
-});
+export const FeedbackCreateSchema = z
+  .object({
+    rating: z.coerce.number().int().min(1).max(5).optional(),
+    message: z.string().trim().max(2000).optional().default(""),
+  })
+  .refine((d) => d.rating != null || d.message.length > 0, {
+    message: "Rating or message is required",
+  });
 export type FeedbackCreateInput = z.infer<typeof FeedbackCreateSchema>;
 
 export const DocumentImproveSchema = z.object({
