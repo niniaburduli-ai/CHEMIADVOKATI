@@ -59,7 +59,7 @@ export const QUESTION_SCHEMAS: Record<string, QuestionField[]> = {
     { key: "yourAddress", label: "შენი მისამართი", type: "text", required: true },
     { key: "recipient", label: "ადრესატი", type: "text", required: true },
     { key: "amount", label: "მოთხოვნილი თანხა", type: "text" },
-    { key: "paymentMethod", label: "გადახდის სასურველი მეთოდი (ნაղდი/საბანკო გადარიცხვა)", type: "text" },
+    { key: "paymentMethod", label: "გადახდის სასურველი მეთოდი (ნაღდი/საბანკო გადარიცხვა)", type: "text" },
     { key: "bankAccount", label: "საბანკო ანგარიშის № (თუ გადარიცხვას ითხოვ)", type: "text" },
     { key: "reason", label: "მოთხოვნის საფუძველი", type: "textarea", required: true },
     { key: "deadline", label: "ვადა", type: "text", required: true },
