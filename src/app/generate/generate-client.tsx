@@ -193,6 +193,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
         </Card>
 
         <DocumentResultPanel
+          key={result?.id ?? 'empty'}
           result={result}
           setResult={setResult}
           emptyHint={<>შეავსე დეტალები და დააჭირე „შექმენი დოკუმენტი”</>}
