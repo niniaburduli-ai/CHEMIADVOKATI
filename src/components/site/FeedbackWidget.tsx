@@ -32,7 +32,8 @@ export function FeedbackWidget({ locale }: { locale: Locale }) {
   }
 
   async function submit() {
-    if (rating < 1) {
+    const trimmed = message.trim()
+    if (rating < 1 && trimmed.length === 0) {
       toast.error(d.validationError)
       return
     }
@@ -41,7 +42,7 @@ export function FeedbackWidget({ locale }: { locale: Locale }) {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, message: message.trim() }),
+        body: JSON.stringify({ rating: rating > 0 ? rating : undefined, message: trimmed }),
       })
       if (!res.ok) throw new Error("request failed")
       toast.success(d.successToast)

@@ -2,7 +2,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = () =>
   process.env.OPENROUTER_ANSWER_MODEL ||
   process.env.OPENROUTER_MODEL ||
-  "openai/gpt-4o-mini";
+  "google/gemini-2.5-flash";
 
 export async function callOpenRouterChat(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,

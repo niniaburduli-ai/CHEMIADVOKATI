@@ -2,7 +2,7 @@ import { Schema, model, models, type InferSchemaType, type Model } from "mongoos
 
 const FeedbackSchema = new Schema(
   {
-    rating: { type: Number, required: true, min: 1, max: 5 },
+    rating: { type: Number, required: false, min: 1, max: 5 },
     message: { type: String, trim: true, maxlength: 2000, default: "" },
   },
   { timestamps: true }

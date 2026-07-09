@@ -226,7 +226,7 @@ export default async function Home() {
                   <div
                     className={`grid gap-3 mx-auto ${
                       sections.features !== false && features.length > 0
-                        ? "grid-cols-1 max-w-md"
+                        ? "grid-cols-1 w-[65%] mx-auto"
                         : statsGrid(stats.length + (feedbackCard ? 1 : 0))
                     }`}
                   >

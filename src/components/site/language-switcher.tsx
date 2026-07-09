@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Languages } from "lucide-react"
+import { Globe } from "lucide-react"
 import { LOCALES, LOCALE_COOKIE, type Locale } from "@/lib/i18n/config"
 
 export function LanguageSwitcher({ current }: { current: Locale }) {
@@ -17,7 +17,7 @@ export function LanguageSwitcher({ current }: { current: Locale }) {
 
   return (
     <div className="flex items-center gap-0.5 rounded-md border p-0.5 text-xs">
-      <Languages className="mx-1 h-3.5 w-3.5 text-muted-foreground" />
+      <Globe className="mx-1 h-3.5 w-3.5 text-muted-foreground" />
       {LOCALES.map((l) => (
         <button
           key={l}
