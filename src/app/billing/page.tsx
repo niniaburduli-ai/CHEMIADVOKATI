@@ -20,6 +20,7 @@ import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
 import { pick } from "@/lib/i18n/loc";
 import { getPlans, type PlanData } from "@/lib/plans-db";
+import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { PageHero } from "@/components/site/PageHero";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +37,12 @@ export default async function BillingPage() {
   const d = getDict(locale);
 
   await dbConnect();
-  const [user, plans] = await Promise.all([
+  const [userRaw, plans] = await Promise.all([
     User.findById(session.user.id).lean(),
     getPlans(),
   ]);
-  if (!user) redirect("/login");
+  if (!userRaw) redirect("/login");
+  const user = await applyPlanExpiryIfDue(userRaw);
 
   const plan = (user.plan ?? "free") as string;
   const planMap = new Map(plans.map((p) => [p.key, p]));

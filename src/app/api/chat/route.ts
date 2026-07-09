@@ -9,6 +9,7 @@ import { fetchApprovedSource } from "@/lib/legal/fetch-source";
 import { searchSources, type SearchQuery } from "@/lib/legal/search";
 import { expandQuery } from "@/lib/legal/query-understanding";
 import { isCircuitOpen, recordFetchFailure, recordFetchSuccess } from "@/lib/legal/fetch-circuit";
+import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 import {
   buildLegalBasis,
   hasVerifiedCitation,
@@ -91,9 +92,10 @@ async function finalizeAnswer(params: {
 async function tryWebFallback(
   userId: string,
   isAdmin: boolean,
-  question: string
+  question: string,
+  keywords?: string[]
 ): Promise<Response> {
-  const web = await answerViaWebSearch(question);
+  const web = await answerViaWebSearch(question, keywords);
   const prose = web?.prose.trim();
   if (web && prose && prose !== NOT_FOUND_MSG) {
     return finalizeAnswer({
@@ -134,10 +136,11 @@ export async function POST(req: Request) {
   const question = parsed.data.question;
 
   await dbConnect();
-  const user = await User.findById(session.user.id).lean();
+  let user = await User.findById(session.user.id).lean();
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+  user = await applyPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
   if (!isAdmin && (user.consultationsRemaining ?? 0) <= 0) {
     return NextResponse.json(
@@ -170,7 +173,7 @@ export async function POST(req: Request) {
   }
 
   if (fetched.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, question);
+    return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
   }
 
   const searchQuery: SearchQuery = {
@@ -180,7 +183,7 @@ export async function POST(req: Request) {
   };
   const matches = searchSources(fetched, searchQuery, 10);
   if (matches.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, question);
+    return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
   }
 
   const web = await webPromise;
@@ -240,7 +243,7 @@ export async function POST(req: Request) {
   // The 8 approved sources didn't have it, per the grounded model itself —
   // last resort before refusing: search the web across all Georgian law.
   if (answer.trim() === NOT_FOUND_MSG) {
-    return tryWebFallback(session.user.id, isAdmin, question);
+    return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
   }
 
   const legalBasis = buildLegalBasis(matches, citations);

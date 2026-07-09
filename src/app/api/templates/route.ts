@@ -5,6 +5,7 @@ import { User } from "@/lib/models/user";
 import { GeneratedDocument } from "@/lib/models/generated-document";
 import { GenerateTemplateSchema, DOC_TYPES } from "@/lib/validators";
 import { renderTemplate } from "@/lib/legal/templates";
+import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +32,11 @@ export async function POST(req: Request) {
   }
 
   await dbConnect();
-  const user = await User.findById(session.user.id).lean();
+  let user = await User.findById(session.user.id).lean();
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+  user = await applyPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
   if (!isAdmin && (user.docTemplatesRemaining ?? 0) <= 0) {
     return NextResponse.json(

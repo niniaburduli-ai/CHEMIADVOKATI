@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { DocumentReview } from "@/lib/models/document-review";
+import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { callOpenRouterChat } from "@/lib/ai-call";
 import { DocumentImproveSchema } from "@/lib/validators";
 import type { RiskFinding } from "@/lib/legal/document-analysis";
@@ -38,10 +39,11 @@ export async function POST(req: Request) {
   }
 
   await dbConnect();
-  const user = await User.findById(session.user.id).lean();
+  let user = await User.findById(session.user.id).lean();
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+  user = await applyPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
   if (!isAdmin && (user.docReviewRemaining ?? 0) <= 0) {
     return NextResponse.json(

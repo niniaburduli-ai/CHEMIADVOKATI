@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getPlanByKey } from "@/lib/plans-db";
+import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { getFeatureFlags } from "@/lib/features";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
   const dateLocale = locale === "en" ? "en-GB" : "ka-GE";
 
   await dbConnect();
-  const [user, sub, flags, consultations, documents, reviews, consultationsCount, documentsCount, reviewsCount, templatesCount] =
+  const [userRaw, sub, flags, consultations, documents, reviews, consultationsCount, documentsCount, reviewsCount, templatesCount] =
     await Promise.all([
       User.findById(session.user.id).select("-passwordHash").lean(),
       Subscription.findOne({ userId: session.user.id }).lean(),
@@ -55,7 +56,8 @@ export default async function DashboardPage() {
       DocumentReview.countDocuments({ userId: session.user.id }),
       GeneratedDocument.countDocuments({ userId: session.user.id, source: "template" }),
     ]);
-  if (!user) redirect("/login");
+  if (!userRaw) redirect("/login");
+  const user = await applyPlanExpiryIfDue(userRaw);
 
   const isAdmin = user.role === "admin";
   const plan = user.plan ?? "free";

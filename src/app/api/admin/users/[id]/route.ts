@@ -6,8 +6,16 @@ import { User } from "@/lib/models/user";
 import { Upload } from "@/lib/models/upload";
 import { destroyAsset } from "@/lib/cloudinary";
 import { AdminUserUpdateSchema } from "@/lib/validators";
+import { getPlanLimits } from "@/lib/plans-db";
 
 export const runtime = "nodejs";
+
+/** Add N calendar months to `date`, e.g. addMonths(now, 3). */
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
 
 export async function PATCH(
   req: Request,
@@ -47,9 +55,20 @@ export async function PATCH(
   // Admin-set plans are comp/support grants, not real payments — tag them so
   // they never count as "active subscriptions" or revenue in admin stats.
   // Only touched when `plan` is actually part of this update.
-  const update: Record<string, unknown> = { ...parsed.data };
+  const { planDurationMonths, ...fields } = parsed.data;
+  const update: Record<string, unknown> = { ...fields };
   if (parsed.data.plan !== undefined) {
+    // Assigning a plan grants its full quota immediately, the same way a
+    // real Flitt activation does (see planActivationFields in lib/flitt.ts)
+    // — an admin grant shouldn't leave the user on stale/partial limits.
+    const limits = await getPlanLimits(parsed.data.plan);
     update.planGrantedByAdmin = parsed.data.plan !== "free";
+    update.consultationsRemaining = limits.consultations;
+    update.docGenerationRemaining = limits.docGeneration;
+    update.docReviewRemaining = limits.docReview;
+    update.docTemplatesRemaining = limits.docTemplates;
+    update.planExpiresAt =
+      parsed.data.plan === "free" ? null : addMonths(new Date(), planDurationMonths!);
   }
 
   await dbConnect();
@@ -65,6 +84,10 @@ export async function PATCH(
     role: doc.role ?? "user",
     plan: doc.plan ?? "free",
     consultationsRemaining: doc.consultationsRemaining ?? 0,
+    docGenerationRemaining: doc.docGenerationRemaining ?? 0,
+    docReviewRemaining: doc.docReviewRemaining ?? 0,
+    docTemplatesRemaining: doc.docTemplatesRemaining ?? 0,
+    planExpiresAt: doc.planExpiresAt ? new Date(doc.planExpiresAt).toISOString() : null,
   });
 }
 

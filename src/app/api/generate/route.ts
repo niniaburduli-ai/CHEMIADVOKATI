@@ -6,6 +6,7 @@ import { GeneratedDocument } from "@/lib/models/generated-document";
 import { GenerateDocSchema, DOC_TYPES } from "@/lib/validators";
 import { callOpenRouterChat } from "@/lib/ai-call";
 import { verifyLegalCitations, STRICT_BREVITY_RULE } from "@/lib/legal/openrouter";
+import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,10 +64,11 @@ export async function POST(req: Request) {
   }
 
   await dbConnect();
-  const user = await User.findById(session.user.id).lean();
+  let user = await User.findById(session.user.id).lean();
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+  user = await applyPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
   if (!isAdmin && (user.docGenerationRemaining ?? 0) <= 0) {
     return NextResponse.json(

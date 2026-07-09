@@ -72,6 +72,8 @@ export type UserRow = {
   consultationsRemaining: number;
   docGenerationRemaining: number;
   docReviewRemaining: number;
+  docTemplatesRemaining?: number;
+  planExpiresAt?: string | null;
   createdAt: string | null;
 };
 
@@ -299,6 +301,7 @@ function UsersTable({
             <th>მომხმარებელი</th>
             <th>როლი</th>
             <th>გეგმა</th>
+            <th>ვადა</th>
             <th>კონს.</th>
             <th>დოკ.გ</th>
             <th>მიმ.</th>
@@ -308,7 +311,7 @@ function UsersTable({
         </thead>
         <tbody>
           {users.length === 0 && (
-            <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">მომხმარებლები არ არის</td></tr>
+            <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">მომხმარებლები არ არის</td></tr>
           )}
           {users.map((u) => (
             <tr key={u.id} className="border-b last:border-0 [&>td]:px-4 [&>td]:py-3">
@@ -318,6 +321,7 @@ function UsersTable({
               </td>
               <td><Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge></td>
               <td>{u.plan}</td>
+              <td className="text-muted-foreground">{u.planExpiresAt ? formatDate(u.planExpiresAt) : "—"}</td>
               <td>{u.consultationsRemaining}</td>
               <td>{u.docGenerationRemaining}</td>
               <td>{u.docReviewRemaining}</td>
@@ -363,7 +367,7 @@ function EditUserDialog({
   const [name, setName] = useState("");
   const [role, setRole] = useState<"user" | "admin">("user");
   const [plan, setPlan] = useState<string>("free");
-  const [remaining, setRemaining] = useState("0");
+  const [durationMonths, setDurationMonths] = useState("");
   const [saving, setSaving] = useState(false);
   const [syncedId, setSyncedId] = useState<string | null>(null);
   const [planOptions, setPlanOptions] = useState<{ key: string; name: string }[]>([]);
@@ -382,22 +386,40 @@ function EditUserDialog({
     setName(user.name);
     setRole(user.role);
     setPlan(user.plan);
-    setRemaining(String(user.consultationsRemaining));
+    setDurationMonths("");
   }
 
+  const isFreePlan = plan === "free";
+  const durationValid = isFreePlan || (Number(durationMonths) >= 1 && Number.isInteger(Number(durationMonths)));
+
   async function save() {
-    if (!user) return;
+    if (!user || !durationValid) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, role, plan, consultationsRemaining: Number(remaining) }),
+        body: JSON.stringify({
+          name,
+          role,
+          plan,
+          ...(isFreePlan ? {} : { planDurationMonths: Number(durationMonths) }),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data?.error ?? "შენახვა ვერ მოხერხდა"); return; }
-      toast.success("შენახულია");
-      onSaved({ ...user, name: data.name, role: data.role, plan: data.plan, consultationsRemaining: data.consultationsRemaining });
+      toast.success("შენახულია — გეგმის ლიმიტები განახლდა");
+      onSaved({
+        ...user,
+        name: data.name,
+        role: data.role,
+        plan: data.plan,
+        consultationsRemaining: data.consultationsRemaining,
+        docGenerationRemaining: data.docGenerationRemaining,
+        docReviewRemaining: data.docReviewRemaining,
+        docTemplatesRemaining: data.docTemplatesRemaining,
+        planExpiresAt: data.planExpiresAt,
+      });
     } catch { toast.error("ქსელის შეცდომა"); }
     finally { setSaving(false); }
   }
@@ -434,15 +456,29 @@ function EditUserDialog({
                 </option>
               ))}
             </select>
+            <p className="text-xs text-muted-foreground">გეგმის შენახვისას ავტომატურად მიენიჭება ამ გეგმის სრული ლიმიტები (კონსულტაცია, დოკ. გენერაცია, მიმოხილვა, შაბლონები).</p>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-remaining">დარჩ. კონსულტაცია</Label>
-            <Input id="edit-remaining" type="number" min={0} value={remaining} onChange={(e) => setRemaining(e.target.value)} />
-          </div>
+          {!isFreePlan && (
+            <div className="grid gap-2">
+              <Label htmlFor="edit-duration">ხანგრძლივობა (თვე) *</Label>
+              <Input
+                id="edit-duration"
+                type="number"
+                min={1}
+                step={1}
+                value={durationMonths}
+                onChange={(e) => setDurationMonths(e.target.value)}
+                placeholder="მაგ. 1"
+              />
+              {!durationValid && durationMonths !== "" && (
+                <p className="text-xs text-destructive">მიუთითეთ თვეების მთელი რიცხვი (მინ. 1).</p>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>გაუქმება</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "ინახება..." : "შენახვა"}</Button>
+          <Button onClick={save} disabled={saving || !durationValid}>{saving ? "ინახება..." : "შენახვა"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -565,8 +601,8 @@ function ReviewsTable({ initial }: { initial: ReviewRow[] }) {
             <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">მიმოხილვები არ არის</td></tr>
           )}
           {initial.map((r) => (
-            <>
-              <tr key={r.id} className="border-b [&>td]:px-4 [&>td]:py-3">
+            <React.Fragment key={r.id}>
+              <tr className="border-b [&>td]:px-4 [&>td]:py-3">
                 <td className="max-w-[180px] truncate font-medium">{r.fileName}</td>
                 <td>
                   <div className="text-xs">
@@ -590,7 +626,7 @@ function ReviewsTable({ initial }: { initial: ReviewRow[] }) {
                   </td>
                 </tr>
               )}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>

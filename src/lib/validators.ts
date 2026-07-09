@@ -110,14 +110,26 @@ export const AdminUserUpdateSchema = z
     // Plan keys are dynamic (DB-backed); validate shape only.
     plan: z.string().trim().min(1).max(40).regex(PLAN_KEY_RE).optional(),
     consultationsRemaining: z.coerce.number().int().min(0).max(9999).optional(),
+    // How many months an admin-assigned paid plan stays active before it
+    // auto-reverts to free. Required whenever a non-free plan is assigned so
+    // every manual grant has a defined expiration.
+    planDurationMonths: z.coerce.number().int().min(1).max(60).optional(),
   })
-  .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" });
+  .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" })
+  .refine((d) => d.plan === undefined || d.plan === "free" || d.planDurationMonths !== undefined, {
+    message: "planDurationMonths is required when assigning a paid plan",
+    path: ["planDurationMonths"],
+  });
 export type AdminUserUpdateInput = z.infer<typeof AdminUserUpdateSchema>;
 
-export const FeedbackCreateSchema = z.object({
-  rating: z.coerce.number().int().min(1).max(5),
-  message: z.string().trim().max(2000).optional().default(""),
-});
+export const FeedbackCreateSchema = z
+  .object({
+    rating: z.coerce.number().int().min(1).max(5).optional(),
+    message: z.string().trim().max(2000).optional().default(""),
+  })
+  .refine((d) => d.rating != null || d.message.length > 0, {
+    message: "Rating or message is required",
+  });
 export type FeedbackCreateInput = z.infer<typeof FeedbackCreateSchema>;
 
 export const DocumentImproveSchema = z.object({

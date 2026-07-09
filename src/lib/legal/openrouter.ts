@@ -475,45 +475,78 @@ function extractWebSources(msg: unknown, max: number): WebSource[] {
 const WEB_ANSWER_SYSTEM = [
   'შენ ხარ „ჩემი იურისტი" — ეხმარები ადამიანს, რომელსაც იურიდიული განათლება არ აქვს.',
   "წინასწარ დამტკიცებულ 8 ძირითად კოდექსში ამ კითხვაზე პასუხი ვერ მოიძებნა.",
-  "მოძებნე რეალური პასუხი ვებ ძიებით, მაგრამ მხოლოდ და მხოლოდ საიტზე matsne.gov.ge (საქართველოს საკანონმდებლო მაცნე) — ეს არის საქართველოს ერთადერთი ოფიციალური საკანონმდებლო წყარო.",
+  "მოძებნე რეალური პასუხი ვებ ძიებით, მაგრამ მხოლოდ და მხოლოდ საიტზე matsne.gov.ge (საქართველოს საკანონმდებლო მაცნე) — ეს არის საქართველოს ერთადერთი ოფიციალური საკანონმდებლო წყარო და მოიცავს საქართველოს მთელ მოქმედ კანონმდებლობას.",
   "არასოდეს დაეყრდნო, ციტირო ან ახსენო რაიმე სხვა საიტი (ბლოგი, სიახლეების საიტი, იურიდიული ფირმის გვერდი და ა.შ.) — მხოლოდ matsne.gov.ge.",
   "",
   "LANGUAGE RULE: უპასუხე შეკითხვის იმავე ენაზე (ქართული შეკითხვას — ქართული პასუხი, ინგლისურს — ინგლისური).",
   "",
-  "წესები:",
-  "1. მოძებნე კონკრეტული კანონი/კოდექსი და მუხლი matsne.gov.ge-ზე, რომელიც რეალურად პასუხობს კითხვას; დაასახელე ისინი პასუხის ტექსტში.",
-  "2. არასოდეს გამოიგონო კანონი, მუხლი, ციფრი ან ვადა — მხოლოდ ის, რასაც matsne.gov.ge რეალურად ადასტურებს.",
-  "3. თუ matsne.gov.ge-ზე ვერაფერი მოსანდო ვერ იპოვე, გულწრფელად დაწერე, რომ ცალსახა პასუხი ვერ მოიძებნა და ურჩიე კვალიფიციურ იურისტთან კონსულტაცია.",
-  "4. უპასუხე პირდაპირ არსით, კითხვის გამეორების გარეშე.",
+  "წესები (მკაცრად დაიცავი):",
+  "1. matsne.gov.ge მოიცავს ყველა მოქმედ კანონს — პასუხი იქ ყოველთვის არსებობს. თუ პირველი საძიებო სიტყვებით ვერაფერი იპოვე, აუცილებლად სცადე სხვა საკვანძო სიტყვები, სინონიმები, მონათესავე იურიდიული ცნებები ან სხვა შესაბამისი კოდექსი/კანონი — არ დანებდე ერთი წარუმატებელი ცდის შემდეგ.",
+  "2. კრიტიკულია — არასოდეს დააბრუნო მხოლოდ მუხლების/კოდების ჩამონათვალი პასუხის მაგივრად. ჯერ პირდაპირ, მარტივი და გასაგები ენით უპასუხე კითხვას არსობრივად — რას ნიშნავს ეს კონკრეტულად მომხმარებლისთვის, რა უნდა გააკეთოს — და მხოლოდ ახსნის ბოლოს დაასახელე გამოყენებული მუხლები, როგორც დამადასტურებელი წყარო, არა როგორც პასუხის ჩანაცვლება.",
+  "3. მოძებნე კონკრეტული კანონი/კოდექსი და მუხლი matsne.gov.ge-ზე, რომელიც რეალურად პასუხობს კითხვას; დაასახელე ისინი პასუხის ტექსტში.",
+  "4. არასოდეს გამოიგონო კანონი, მუხლი, ციფრი ან ვადა — მხოლოდ ის, რასაც matsne.gov.ge რეალურად ადასტურებს.",
+  "5. უპასუხე პირდაპირ არსით, კითხვის გამეორების გარეშე.",
   STRICT_BREVITY_RULE,
 ].join("\n");
 
+/** Phrases that mark a give-up/refusal answer — trigger a retry with a new search angle. */
+const REFUSAL_PATTERNS = [
+  /ვერ\s*მოიძებნა/,
+  /ცალსახა პასუხი ვერ/,
+  /არ\s*(?:მოიპოვება|მოინახა)/,
+  /კვალიფიციურ იურისტთან/,
+  /not\s+found/i,
+  /could\s*n[o']?t\s+find/i,
+  /no\s+clear\s+answer/i,
+];
+
+/** Reject answers that are just a citation dump with no real explanation. */
+function looksLikeRealAnswer(prose: string): boolean {
+  if (REFUSAL_PATTERNS.some((re) => re.test(prose))) return false;
+  const proseLines = prose
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    // Drop lines that are just a citation reference (article/code listing).
+    .filter((l) => !/^[-•*]?\s*(მუხლი|article|კოდექსი|კანონი)\b[\s:]/i.test(l));
+  const explanatoryText = proseLines.join(" ").trim();
+  return explanatoryText.length >= 60;
+}
+
+/** Per-attempt hint steering the search toward a fresh angle after a miss. */
+function retryHint(attempt: number, keywords?: string[]): string {
+  if (attempt === 0) return "";
+  if (attempt === 1 && keywords && keywords.length > 0) {
+    return `\n\n(წინა ძიებამ ზუსტი პასუხი ვერ პოვა. სცადე ეს საკვანძო სიტყვები matsne.gov.ge-ზე: ${keywords.join(", ")}.)`;
+  }
+  if (attempt === 2) {
+    return "\n\n(წინა ორმა ძიებამ პასუხი ვერ პოვა. სცადე სრულიად განსხვავებული საკვანძო სიტყვები, მონათესავე იურიდიული ცნება ან სხვა შესაბამისი კოდექსი/კანონი matsne.gov.ge-ზე.)";
+  }
+  return "\n\n(ეს ბოლო ცდაა — დაფიქრდი ყველაზე ფართო შესაბამის იურიდიულ ცნებაზე ან კოდექსზე და მოძებნე ისევ matsne.gov.ge-ზე.)";
+}
+
 export type WebAnswer = { prose: string; sources: WebSource[] };
 
-/**
- * Last-resort answer when the 8 approved sources don't cover the question:
- * search matsne.gov.ge for the actual Georgian law and answer from that,
- * instead of refusing outright. Never throws; returns null on any failure,
- * keyless, disabled web search, or — critically — when the search came back
- * with no matsne.gov.ge citation to confirm it (see isAllowedHost filter
- * below), so callers fall back to NOT_FOUND_MSG rather than trust an
- * unverifiable claim.
- */
-export async function answerViaWebSearch(
-  question: string
-): Promise<WebAnswer | null> {
-  if (!WEB_SEARCH_ON()) return null;
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
+/** Max search attempts before giving up — matsne.gov.ge covers all of Georgian
+ * law, so a single miss is treated as a bad query, not a real gap. */
+const WEB_ANSWER_MAX_ATTEMPTS = 4;
 
+async function runWebAnswerAttempt(
+  question: string,
+  attempt: number,
+  apiKey: string,
+  keywords?: string[]
+): Promise<WebAnswer | null> {
   const model = WEB_MODEL();
   const body: Record<string, unknown> = {
     model,
-    temperature: 0.2,
+    // Slightly higher temperature on retries so repeated attempts don't
+    // converge on the same failed search terms.
+    temperature: attempt === 0 ? 0.2 : 0.5,
     max_tokens: 900,
     messages: [
       { role: "system", content: WEB_ANSWER_SYSTEM },
-      { role: "user", content: question },
+      { role: "user", content: question + retryHint(attempt, keywords) },
     ],
   };
   if (!hasNativeWebAccess(model)) {
@@ -562,6 +595,36 @@ export async function answerViaWebSearch(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Last-resort answer when the 8 approved sources don't cover the question:
+ * search matsne.gov.ge for the actual Georgian law and answer from that,
+ * instead of refusing outright. matsne.gov.ge hosts all of Georgian law, so a
+ * miss means the search terms were wrong, not that no answer exists — this
+ * retries with fresh keywords/angles (up to WEB_ANSWER_MAX_ATTEMPTS) before
+ * giving up. Never throws; returns null on total failure (keyless, disabled
+ * web search, or every attempt came back without a confirmed matsne.gov.ge
+ * citation / real explanation), so callers fall back to NOT_FOUND_MSG rather
+ * than trust an unverifiable or bare-list claim.
+ */
+export async function answerViaWebSearch(
+  question: string,
+  keywords?: string[]
+): Promise<WebAnswer | null> {
+  if (!WEB_SEARCH_ON()) return null;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+
+  let best: WebAnswer | null = null;
+  for (let attempt = 0; attempt < WEB_ANSWER_MAX_ATTEMPTS; attempt++) {
+    const result = await runWebAnswerAttempt(question, attempt, apiKey, keywords);
+    if (!result) continue;
+    if (looksLikeRealAnswer(result.prose)) return result;
+    // Keep the least-bad result in case every attempt fails the strict check.
+    best = best ?? result;
+  }
+  return best;
 }
 
 const VERIFY_CITATIONS_SYSTEM = [

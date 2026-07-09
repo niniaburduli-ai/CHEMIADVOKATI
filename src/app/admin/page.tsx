@@ -75,6 +75,8 @@ export default async function AdminPage() {
     consultationsRemaining: u.consultationsRemaining ?? 0,
     docGenerationRemaining: u.docGenerationRemaining ?? 0,
     docReviewRemaining: u.docReviewRemaining ?? 0,
+    docTemplatesRemaining: u.docTemplatesRemaining ?? 0,
+    planExpiresAt: u.planExpiresAt ? new Date(u.planExpiresAt).toISOString() : null,
     createdAt: (u as { createdAt?: Date }).createdAt?.toISOString() ?? null,
   }));
 

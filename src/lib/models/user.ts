@@ -14,6 +14,12 @@ const UserSchema = new Schema(
     docReviewRemaining: { type: Number, default: 1 },
     docTemplatesRemaining: { type: Number, default: 20 },
     resetAt: { type: Date },
+    // Set only for admin-assigned plans (see planDurationMonths in the admin
+    // PATCH route) — the plan auto-reverts to free once this date passes
+    // (checked lazily in applyPlanExpiryIfDue, there's no cron). Null/unset
+    // for free accounts and for real Flitt subscriptions (those renew/expire
+    // via subscriptionStatus + resetAt instead).
+    planExpiresAt: { type: Date, default: null },
     // Flitt Payments subscription state.
     flittOrderId: { type: String, index: true },
     flittPaymentId: { type: String },
