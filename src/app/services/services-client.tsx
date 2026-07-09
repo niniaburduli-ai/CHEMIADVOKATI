@@ -18,6 +18,7 @@ import {
   Mail,
   UserMinus,
   LayoutTemplate,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -180,7 +181,7 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
                   {m.legalBasis.map((g) => {
                     const articleGroups = groupItemsByArticle(g.items);
                     return (
-                      <div key={g.url} className="space-y-0.5">
+                      <div key={g.url} className="space-y-1">
                         <p className="text-xs font-medium">{g.lawName}:</p>
                         <ul className="ml-1 space-y-0.5">
                           {articleGroups.map(({ article, points }) => (
@@ -195,6 +196,15 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
                             </li>
                           ))}
                         </ul>
+                        <a
+                          href={g.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="flex items-start gap-1.5 text-xs text-primary hover:underline"
+                        >
+                          <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>{d.chat.source}</span>
+                        </a>
                       </div>
                     );
                   })}

@@ -282,8 +282,12 @@ export function searchSources(
   >();
   for (const src of sources) {
     for (const chunk of chunkDocument(src)) {
-      const { score, distinct, titleHit } = scoreChunk(chunk.text, weightedStems);
-      if (!((titleHit || distinct >= 2) && score >= 3)) continue;
+      const { score, distinct } = scoreChunk(chunk.text, weightedStems);
+      // Require 2+ DISTINCT matching terms, not just a title-zone bonus off one
+      // generic keyword (e.g. a broad synonym like "სასჯელი" alone used to admit
+      // an unrelated article whose heading happens to contain that one word,
+      // even though nothing else in it relates to the question).
+      if (!(distinct >= 2 && score >= 3)) continue;
       const prev = best.get(chunk.articleKey);
       if (!prev) {
         best.set(chunk.articleKey, { chunk, score, hits: 1 });

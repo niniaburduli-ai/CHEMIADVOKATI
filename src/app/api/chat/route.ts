@@ -10,6 +10,7 @@ import { searchSources, type SearchQuery } from "@/lib/legal/search";
 import { expandQuery } from "@/lib/legal/query-understanding";
 import { isCircuitOpen, recordFetchFailure, recordFetchSuccess } from "@/lib/legal/fetch-circuit";
 import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { getCachedAnswer, setCachedAnswer } from "@/lib/legal/answer-cache";
 import {
   buildLegalBasis,
   hasVerifiedCitation,
@@ -98,6 +99,7 @@ async function tryWebFallback(
   const web = await answerViaWebSearch(question, keywords);
   const prose = web?.prose.trim();
   if (web && prose && prose !== NOT_FOUND_MSG) {
+    setCachedAnswer(question, { answer: prose, legalBasis: [], webSources: web.sources });
     return finalizeAnswer({
       userId,
       isAdmin,
@@ -149,9 +151,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // Kick off web-search enrichment in parallel — it overlaps the whole
-  // retrieval pipeline and degrades to null on any failure (never blocks).
-  const webPromise = searchWebContext(question);
+  const cached = getCachedAnswer(question);
+  if (cached) {
+    return finalizeAnswer({
+      userId: session.user.id,
+      isAdmin,
+      question,
+      answer: cached.answer,
+      legalBasis: cached.legalBasis,
+      webSources: cached.webSources,
+    });
+  }
 
   const expanded = await expandQuery(question);
   const selected =
@@ -186,7 +196,11 @@ export async function POST(req: Request) {
     return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
   }
 
-  const web = await webPromise;
+  // Only pay Perplexity's per-request search fee once we know it'll actually
+  // be used — firing this earlier in parallel with fetch/expand billed the
+  // fee on every miss that fell through to tryWebFallback above, which never
+  // reads this result.
+  const web = await searchWebContext(question);
   const userPrompt = buildGroundedPrompt(
     question,
     matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) })),
@@ -247,6 +261,8 @@ export async function POST(req: Request) {
   }
 
   const legalBasis = buildLegalBasis(matches, citations);
+
+  setCachedAnswer(question, { answer, legalBasis, webSources: web?.sources });
 
   return finalizeAnswer({
     userId: session.user.id,

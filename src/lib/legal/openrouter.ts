@@ -41,7 +41,7 @@ export const ANSWER_MODEL =
  * spend.
  */
 export const ANSWER_MODEL_COMPLEX =
-  process.env.OPENROUTER_ANSWER_MODEL_COMPLEX || "openai/gpt-5.2";
+  process.env.OPENROUTER_ANSWER_MODEL_COMPLEX || "anthropic/claude-haiku-4.5";
 
 /** Cheap model for structured/auxiliary calls (query understanding). */
 export const FAST_MODEL =
@@ -400,7 +400,14 @@ export async function searchWebContext(
   // Models with native web access (":online" suffix, Perplexity Sonar) already
   // search the web — attaching the plugin again would double the search cost.
   // Only configure the explicit plugin for plain model slugs.
-  if (!hasNativeWebAccess(model)) {
+  if (hasNativeWebAccess(model)) {
+    // This call only needs a short practical-context summary, not deep
+    // research — request Perplexity's cheapest search tier to cut the
+    // per-request search fee (unlike the matsne fallback search below, which
+    // stays at the default depth since finding the right article there
+    // matters for answer correctness).
+    body.web_search_options = { search_context_size: "low" };
+  } else {
     const webPlugin: Record<string, unknown> = {
       id: "web",
       max_results: WEB_MAX_RESULTS(),
