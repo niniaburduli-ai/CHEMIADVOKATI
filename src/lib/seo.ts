@@ -9,11 +9,11 @@ import type { Metadata } from "next"
  * production domain in every environment. Wrong value = wrong canonicals.
  */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://chemiadvokati.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://chemiiuristi.com"
 ).replace(/\/$/, "")
 
 export const SITE_NAME_KA = "ჩემი იურისტი"
-export const SITE_NAME_EN = "Chemi Advokati — My Lawyer"
+export const SITE_NAME_EN = "Chemi Iuristi — My Lawyer"
 export const TWITTER_HANDLE = "" // set if/when a handle exists
 
 /**
@@ -21,7 +21,28 @@ export const TWITTER_HANDLE = "" // set if/when a handle exists
  * high-intent long-tail. Order roughly = priority. Keep the head terms here in
  * sync with the Wincher tracked-keyword list.
  */
+/** Brand terms — highest priority. Must rank #1 for the site's own name. */
+export const BRAND_KEYWORDS = [
+  "ჩემი იურისტი",
+  "იურისტი",
+  "იურისტი ონლაინ",
+  "ონლაინ იურისტი",
+  "იურისტი საქართველო",
+  // Latin transliterations (people type the brand in Latin too)
+  "chemi iuristi",
+  "iuristi",
+  "chemiiuristi",
+  "chemi iuristi online",
+  "chemi advokati",
+] as const
+
 export const KEYWORDS_KA = [
+  // brand first
+  "ჩემი იურისტი",
+  "იურისტი",
+  "იურისტი ონლაინ",
+  "ონლაინ იურისტი",
+  // core services
   "იურიდიული კონსულტაცია",
   "ხელშეკრულების შემოწმება",
   "ხელშეკრულების გენერირება",
@@ -34,8 +55,6 @@ export const KEYWORDS_KA = [
   "მანქანის ჯარიმები",
   "რისი უფლება მაქვს",
   // related / long-tail
-  "ონლაინ იურისტი",
-  "იურისტი ონლაინ",
   "იურიდიული დახმარება",
   "ადვოკატის კონსულტაცია",
   "ხელშეკრულების შედგენა",
@@ -44,9 +63,17 @@ export const KEYWORDS_KA = [
   "საქართველოს კანონმდებლობა",
   "იურიდიული დოკუმენტები",
   "ხელოვნური ინტელექტი იურისტი",
+  "იურისტის კონსულტაცია",
+  "ადვოკატი ონლაინ",
 ] as const
 
 export const KEYWORDS_EN = [
+  // brand / transliteration
+  "chemi iuristi",
+  "iuristi",
+  "chemiiuristi",
+  "chemi advokati",
+  // services
   "legal consultation",
   "contract review",
   "contract generation",
