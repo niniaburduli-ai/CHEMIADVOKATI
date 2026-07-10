@@ -76,7 +76,8 @@ export async function Footer() {
     { href: "/about", label: d.footer.nav.about },
     { href: "/services", label: d.footer.nav.services },
     { href: "/legislation", label: d.footer.nav.legislation },
-    { href: "/blog", label: d.footer.nav.blog },
+    { href: "/pricing", label: d.footer.nav.pricing },
+    { href: "/faq", label: d.footer.nav.faq },
   ].filter((n) => isPathEnabled(n.href, flags));
 
   const staticLegal = [

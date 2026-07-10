@@ -32,7 +32,8 @@ const DEFAULT_NAV: NavMenuData = {
     { _id: "2", label: "ჩვენ შესახებ", href: "/about", order: 1, isExternal: false },
     { _id: "3", label: "მომსახურებები", href: "/services", order: 2, isExternal: false },
     { _id: "4", label: "კანონმდებლობა", href: "/legislation", order: 3, isExternal: false },
-    { _id: "5", label: "ბლოგი", href: "/blog", order: 4, isExternal: false },
+    { _id: "5", label: "ფასები", href: "/pricing", order: 4, isExternal: false },
+    { _id: "6", label: "კითხვები", href: "/faq", order: 5, isExternal: false },
   ],
   status: "published",
 }
@@ -52,7 +53,8 @@ const DEFAULT_NAV_EN: NavMenuData = {
     { _id: "2", label: "About us", href: "/about", order: 1, isExternal: false },
     { _id: "3", label: "Services", href: "/services", order: 2, isExternal: false },
     { _id: "4", label: "Legislation", href: "/legislation", order: 3, isExternal: false },
-    { _id: "5", label: "Blog", href: "/blog", order: 4, isExternal: false },
+    { _id: "5", label: "Pricing", href: "/pricing", order: 4, isExternal: false },
+    { _id: "6", label: "FAQ", href: "/faq", order: 5, isExternal: false },
   ],
   status: "published",
 }

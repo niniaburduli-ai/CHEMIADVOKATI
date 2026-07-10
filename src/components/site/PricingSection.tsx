@@ -26,6 +26,7 @@ type DisplayPlan = {
   planKey: string
   highlighted: boolean
   items: string[]
+  isFree: boolean
 }
 
 function buildDisplayPlans(
@@ -53,6 +54,7 @@ function buildDisplayPlans(
       planKey: paid ? p.key : "",
       highlighted: p.highlighted,
       items: [base[0], ...gen, ...rev, ...base.slice(1)],
+      isFree: p.isFree,
     }
   })
 }
@@ -104,9 +106,11 @@ export function PricingSection({
 
   return (
     <section className="container mx-auto px-4 py-16 max-w-5xl">
-      <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
-        {heading}
-      </h2>
+      {heading && (
+        <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
+          {heading}
+        </h2>
+      )}
       <div className={`grid gap-6 ${gridCols(plans.length)} items-start`}>
         {plans.map((p, idx) => (
           <AnimateIn key={p.id} delay={idx * 100}>
@@ -133,7 +137,9 @@ export function PricingSection({
               <div className="flex items-end gap-1 mb-6">
                 <span className="text-5xl font-bold text-foreground leading-none">{p.price}</span>
                 <span className="text-lg font-semibold text-foreground mb-0.5">₾</span>
-                <span className="text-sm text-muted-foreground mb-1">{strings.perMonth}</span>
+                {!p.isFree && (
+                  <span className="text-sm text-muted-foreground mb-1">{strings.perMonth}</span>
+                )}
               </div>
 
               <ul className="space-y-3 text-sm flex-1 mb-8">

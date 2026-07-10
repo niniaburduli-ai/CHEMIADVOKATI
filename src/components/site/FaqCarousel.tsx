@@ -1,7 +1,8 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, ChevronDown, HelpCircle } from "lucide-react"
+import Link from "next/link"
+import { ChevronLeft, ChevronRight, ChevronDown, HelpCircle, ArrowLeft, List } from "lucide-react"
 
 type FaqItem = { _id: string; question: string; answer: string }
 
@@ -12,9 +13,22 @@ function cardStateClass(idx: number, current: number, total: number) {
   return idx < current ? "faq-card-hidden-left" : "faq-card-hidden-right"
 }
 
-export function FaqCarousel({ items }: { items: FaqItem[] }) {
+const VIEW_ALL_CLASS =
+  "inline-flex items-center gap-2 text-sm font-semibold text-primary border border-border rounded-xl px-5 py-2.5 hover:bg-primary/5 transition-colors btn-hover"
+
+export function FaqCarousel({
+  items,
+  labels = { viewAll: "View all questions", back: "Back" },
+  viewAllHref,
+}: {
+  items: FaqItem[]
+  labels?: { viewAll: string; back: string }
+  /** When set, "view all" navigates here instead of toggling an inline list. */
+  viewAllHref?: string
+}) {
   const [current, setCurrent] = useState(0)
   const [expanded, setExpanded] = useState(false)
+  const [viewAll, setViewAll] = useState(false)
   const innerRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -43,8 +57,45 @@ export function FaqCarousel({ items }: { items: FaqItem[] }) {
     setExpanded(false)
   }
 
+  if (viewAll) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setViewAll(false)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:gap-3 transition-all mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {labels.back}
+        </button>
+        <div className="space-y-4">
+          {items.map((f) => (
+            <div key={f._id} className="bg-card border border-border rounded-2xl p-6 md:p-7">
+              <p className="font-bold text-foreground mb-2">{f.question}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{f.answer}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
+      <div className="flex justify-center mb-6">
+        {viewAllHref ? (
+          <Link href={viewAllHref} className={VIEW_ALL_CLASS}>
+            <List className="h-4 w-4" />
+            {labels.viewAll}
+          </Link>
+        ) : (
+          <button type="button" onClick={() => setViewAll(true)} className={VIEW_ALL_CLASS}>
+            <List className="h-4 w-4" />
+            {labels.viewAll}
+          </button>
+        )}
+      </div>
+
       {items.length > 1 && (
         <div className="flex justify-center items-center gap-2 mb-8">
           {items.map((f, idx) => (

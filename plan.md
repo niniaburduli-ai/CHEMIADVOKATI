@@ -24,7 +24,7 @@ AI-powered legal advice platform for Georgian citizens. Simple-language answers 
    - `/dashboard` (consultation count, history)
    - `/chat` (consultation UI, mock responses)
    - `/legislation` (browse sources)
-   - `/pricing`, `/billing`
+   - `/pricing`, `/billing`, `/faq`
 4. shadcn components: Button, Card, Dialog, Form, Input, Toast, Sheet
 5. Georgian font (FiraGO / BPG Nino Mtavruli), proper spacing
 6. Theme: light/dark

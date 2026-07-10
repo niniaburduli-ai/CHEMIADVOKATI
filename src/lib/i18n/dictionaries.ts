@@ -25,7 +25,8 @@ const ka = {
       about: "ჩვენ შესახებ",
       services: "მომსახურებები",
       legislation: "კანონმდებლობა",
-      blog: "ბლოგი",
+      pricing: "ფასები",
+      faq: "კითხვები",
     },
     legal: {
       privacy: "კონფიდენციალურობის პოლიტიკა",
@@ -40,6 +41,16 @@ const ka = {
     perMonth: "თვეში",
     join: "აირჩიეთ პაკეტი",
     start: "დაიწყეთ უფასოდ",
+  },
+  faq: {
+    viewAll: "ყველა კითხვის ნახვა",
+    back: "დაბრუნება",
+  },
+  quota: {
+    title: "კრედიტები ამოწურულია",
+    body: "თქვენ გამოწურეთ ამ სერვისის უფასო კრედიტები. გასაგრძელებლად გთხოვთ განაახლოთ პაკეტი.",
+    upgradeCta: "გეგმის განახლება",
+    close: "დახურვა",
   },
   auth: {
     loginTitle: "შესვლა",
@@ -367,7 +378,8 @@ const en: Dict = {
       about: "About us",
       services: "Services",
       legislation: "Legislation",
-      blog: "Blog",
+      pricing: "Pricing",
+      faq: "FAQ",
     },
     legal: {
       privacy: "Privacy policy",
@@ -382,6 +394,16 @@ const en: Dict = {
     perMonth: "mo",
     join: "Choose plan",
     start: "Get started for free",
+  },
+  faq: {
+    viewAll: "View all questions",
+    back: "Back",
+  },
+  quota: {
+    title: "Out of free credits",
+    body: "You've used up your free credits for this feature. Please upgrade your plan to continue.",
+    upgradeCta: "Upgrade plan",
+    close: "Close",
   },
   auth: {
     loginTitle: "Sign in",

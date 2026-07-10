@@ -296,7 +296,7 @@ export default async function Home() {
               <h2 className="text-2xl md:text-3xl font-bold text-foreground">{faqHeading}</h2>
               <div className="h-1 w-24 bg-primary mx-auto mt-4 rounded-full" />
             </div>
-            <FaqCarousel items={faqData.items} />
+            <FaqCarousel items={faqData.items} labels={d.faq} viewAllHref="/faq" />
           </div>
         </section>
       )}
