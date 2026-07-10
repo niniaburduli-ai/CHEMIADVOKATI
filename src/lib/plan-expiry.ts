@@ -1,5 +1,4 @@
 import { User } from "@/lib/models/user";
-import { getPlanLimits } from "@/lib/plans-db";
 
 type PlanCheckable = {
   _id: unknown;
@@ -12,6 +11,11 @@ type PlanCheckable = {
  * expiry date has passed. There's no cron in this app, so enforcement
  * happens on next read instead — call this right after fetching any user
  * doc whose plan/limits matter (quota checks, dashboard, billing).
+ *
+ * Deliberately does NOT refill *Remaining quota fields — the Basic (free)
+ * plan is a one-time lifetime allowance, granted once at account creation,
+ * that never resets. Whatever quota is left over from the expired plan
+ * simply carries over.
  */
 export async function applyPlanExpiryIfDue<T extends PlanCheckable>(
   user: T
@@ -26,13 +30,8 @@ export async function applyPlanExpiryIfDue<T extends PlanCheckable>(
     return user;
   }
 
-  const limits = await getPlanLimits("free");
   const fields = {
     plan: "free",
-    consultationsRemaining: limits.consultations,
-    docGenerationRemaining: limits.docGeneration,
-    docReviewRemaining: limits.docReview,
-    docTemplatesRemaining: limits.docTemplates,
     planExpiresAt: null,
     planGrantedByAdmin: false,
   };

@@ -17,6 +17,14 @@ import {
 import { toast } from "sonner";
 import { COMMON_FIELDS, QUESTION_SCHEMAS } from "@/lib/legal/document-fields";
 import { DocumentResultPanel, type DocumentResult } from "@/components/site/DocumentResultPanel";
+import { UpgradeRequiredDialog } from "@/components/site/upgrade-required-dialog";
+
+const QUOTA_STRINGS = {
+  title: "კრედიტები ამოწურულია",
+  body: "თქვენ გამოწურეთ ამ სერვისის უფასო კრედიტები. გასაგრძელებლად გთხოვთ განაახლოთ პაკეტი.",
+  upgradeCta: "გეგმის განახლება",
+  close: "დახურვა",
+};
 
 const TEMPLATE_DOC_TYPES = [
   { value: "rental-agreement", label: "ქირავნობის ხელშეკრულება" },
@@ -33,6 +41,7 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DocumentResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
 
   const fields = [...COMMON_FIELDS, ...(QUESTION_SCHEMAS[type] ?? [])];
   const missingRequired = fields.filter((f) => f.required && !answers[f.key]?.trim());
@@ -53,6 +62,10 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
       });
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 403) {
+          setQuotaExceeded(true);
+          return;
+        }
         setError(data.error ?? "შეცდომა");
         return;
       }
@@ -160,6 +173,7 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
           emptyHint={<>შეავსე დეტალები და დააჭირე „შექმენი დოკუმენტი”</>}
         />
       </div>
+      <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={QUOTA_STRINGS} />
     </div>
   );
 }

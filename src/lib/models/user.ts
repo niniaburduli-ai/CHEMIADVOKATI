@@ -9,8 +9,12 @@ const UserSchema = new Schema(
     role: { type: String, enum: ["user", "admin"], default: "user", index: true },
     // Plan is a DB-backed plan key (see models/Plan.ts) — no fixed enum.
     plan: { type: String, default: "free", index: true },
-    consultationsRemaining: { type: Number, default: 1 },
-    docGenerationRemaining: { type: Number, default: 1 },
+    // Basic (free) plan's one-time lifetime allowance — granted once at
+    // account creation, decremented on use, never refilled/reset (see
+    // plan-expiry.ts and flitt.ts planDeactivationFields, which deliberately
+    // leave these untouched when reverting a paid/comp plan back to free).
+    consultationsRemaining: { type: Number, default: 9 },
+    docGenerationRemaining: { type: Number, default: 3 },
     docReviewRemaining: { type: Number, default: 1 },
     docTemplatesRemaining: { type: Number, default: 20 },
     resetAt: { type: Date },

@@ -8,7 +8,6 @@
  * Credentials come from env (FLITT_*) — never hardcoded.
  */
 import { createHash } from "crypto";
-import { PLAN_LIMITS } from "./plans";
 import type { PlanLimits } from "./plans-db";
 
 const CHECKOUT_URL = "https://pay.flitt.com/api/checkout/url/";
@@ -192,17 +191,16 @@ export function planActivationFields(plan: PlanKey, limits: PlanLimits) {
   };
 }
 
-/** Fields set when a subscription ends — drop back to the free tier. */
+/**
+ * Fields set when a subscription ends — drop back to the free tier.
+ * Deliberately does NOT refill *Remaining quota — the Basic (free) plan is a
+ * one-time lifetime allowance granted once at account creation, never reset.
+ * Whatever quota is left over from the paid plan simply carries over.
+ */
 export function planDeactivationFields(status: string) {
-  const limits = PLAN_LIMITS.free;
   return {
     plan: "free" as const,
     subscriptionStatus: status,
-    consultationsRemaining: limits.consultations,
-    docGenerationRemaining: limits.docGeneration,
-    docReviewRemaining: limits.docReview,
-    docTemplatesRemaining: limits.docTemplates,
-    resetAt: new Date(Date.now() + PERIOD_MS),
     planGrantedByAdmin: false,
   };
 }

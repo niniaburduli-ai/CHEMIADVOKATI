@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/site/file-upload";
+import { UpgradeRequiredDialog } from "@/components/site/upgrade-required-dialog";
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { groupItemsByArticle } from "@/lib/legal/citations";
@@ -44,6 +45,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
@@ -70,6 +72,12 @@ export function ChatClient({ locale }: { locale: Locale }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: text }),
       });
+
+      if (res.status === 403) {
+        setMessages((m) => m.filter((msg) => msg.id !== assistantId));
+        setQuotaExceeded(true);
+        return;
+      }
 
       const ct = res.headers.get("content-type") ?? "";
 
@@ -147,7 +155,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
   };
 
   return (
-    <div>
+    <>
       <section className="bg-slate-900">
         <div className="container mx-auto px-4 py-16 max-w-3xl">
           <p className="animate-fade-up leading-tight">
@@ -287,6 +295,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
         {d.chat.disclaimer}
       </p>
     </div>
-    </div>
+    <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={d.quota} />
+    </>
   );
 }

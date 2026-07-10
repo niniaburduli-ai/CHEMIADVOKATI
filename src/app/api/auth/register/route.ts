@@ -31,13 +31,13 @@ export async function POST(req: Request) {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  // Free-tier quota comes from the User schema's defaults (the Basic plan's
+  // one-time lifetime allowance) — no need to set it here.
   const user = await User.create({
     name,
     email,
     passwordHash,
     plan: "free",
-    consultationsRemaining: 1,
-    docTemplatesRemaining: 20,
   });
 
   return NextResponse.json(
