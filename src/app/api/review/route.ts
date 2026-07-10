@@ -5,17 +5,21 @@ import { User } from "@/lib/models/user";
 import { DocumentReview } from "@/lib/models/document-review";
 import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { callOpenRouterChat } from "@/lib/ai-call";
+import { ReviewDocTextSchema } from "@/lib/validators";
 import {
   ANALYSIS_SYSTEM_PROMPT,
   MAX_ANALYSIS_TEXT,
   MAX_FILE_BYTES,
   MAX_IMAGES,
   MAX_IMAGE_BYTES,
+  MAX_REVIEW_PAGES,
   extensionOf,
   isSupportedExtension,
   isImageExtension,
   extractDocumentText,
   extractTextFromImages,
+  estimatePages,
+  reviewCreditCost,
   parseAnalysisResponse,
 } from "@/lib/legal/document-analysis";
 
@@ -47,6 +51,7 @@ export async function POST(req: Request) {
   let text = "";
   let fileName = "document";
   let skippedImages = 0;
+  let pages = 1;
 
   if (ct.includes("multipart/form-data")) {
     const formData = await req.formData();
@@ -98,6 +103,9 @@ export async function POST(req: Request) {
       fileName = `${ocr.succeededCount} ფოტოს დოკუმენტი`;
       text = ocr.combinedText;
       skippedImages = ocr.failedCount;
+      // Each uploaded image is already one physical page of the source
+      // document — no heuristic needed, unlike DOCX/TXT/pasted text below.
+      pages = ocr.succeededCount;
     } else if (file && file.size > 0) {
       fileName = file.name;
       const ext = extensionOf(fileName);
@@ -112,7 +120,9 @@ export async function POST(req: Request) {
       }
       const buf = Buffer.from(await file.arrayBuffer());
       try {
-        text = await extractDocumentText(fileName, buf);
+        const extracted = await extractDocumentText(fileName, buf);
+        text = extracted.text;
+        pages = extracted.pages;
       } catch (err) {
         return NextResponse.json(
           {
@@ -123,21 +133,60 @@ export async function POST(req: Request) {
         );
       }
     } else if (pastedText) {
-      text = pastedText;
+      const parsedText = ReviewDocTextSchema.shape.text.safeParse(pastedText);
+      if (!parsedText.success) {
+        return NextResponse.json(
+          { error: "Validation failed", fields: parsedText.error.flatten().formErrors },
+          { status: 400 }
+        );
+      }
+      text = parsedText.data;
+      pages = estimatePages(text);
     }
   } else {
+    let body: unknown;
     try {
-      const body = (await req.json()) as { text?: string; fileName?: string };
-      text = String(body.text ?? "");
-      fileName = String(body.fileName ?? "document");
+      body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
+    const parsedBody = ReviewDocTextSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: parsedBody.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    text = parsedBody.data.text;
+    fileName = parsedBody.data.fileName ?? "document";
+    pages = estimatePages(text);
   }
 
   text = text.replace(/\s+/g, " ").trim().slice(0, MAX_ANALYSIS_TEXT);
   if (!text) {
     return NextResponse.json({ error: "No document text provided" }, { status: 400 });
+  }
+
+  if (pages > MAX_REVIEW_PAGES) {
+    return NextResponse.json(
+      {
+        error: `Document too long (${pages} pages). Maximum ${MAX_REVIEW_PAGES} pages per review — please split it.`,
+      },
+      { status: 400 }
+    );
+  }
+
+  // Base quota covers up to BASE_REVIEW_PAGES pages for 1 credit; longer
+  // documents are analyzed in full (never truncated) but cost proportionally
+  // more credits instead — see reviewCreditCost.
+  const creditsRequired = reviewCreditCost(pages);
+  if (!isAdmin && (user.docReviewRemaining ?? 0) < creditsRequired) {
+    return NextResponse.json(
+      {
+        error: `This document (${pages} pages) requires ${creditsRequired} review credits; you have ${user.docReviewRemaining ?? 0} remaining.`,
+      },
+      { status: 403 }
+    );
   }
 
   let raw: string;
@@ -173,6 +222,8 @@ export async function POST(req: Request) {
     );
   }
 
+  const creditsUsed = isAdmin ? 0 : creditsRequired;
+
   const review = await DocumentReview.create({
     userId: session.user.id,
     fileName,
@@ -180,9 +231,13 @@ export async function POST(req: Request) {
     findings: analysis.findings,
     recommendations: analysis.recommendations,
     sourceText: text,
+    pages,
+    creditsUsed,
   });
   if (!isAdmin) {
-    await User.findByIdAndUpdate(session.user.id, { $inc: { docReviewRemaining: -1 } });
+    await User.findByIdAndUpdate(session.user.id, {
+      $inc: { docReviewRemaining: -creditsRequired },
+    });
   }
 
   return NextResponse.json(
@@ -192,6 +247,8 @@ export async function POST(req: Request) {
       summary: analysis.summary,
       findings: analysis.findings,
       recommendations: analysis.recommendations,
+      pagesAnalyzed: pages,
+      creditsUsed,
       ...(skippedImages > 0 ? { skippedImages } : {}),
     },
     { status: 201 }

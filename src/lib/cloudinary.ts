@@ -40,7 +40,7 @@ export function uploadBuffer(
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        folder: options.folder ?? "chemiadvokati",
+        folder: options.folder ?? "chemiiuristi",
         resource_type: "auto",
         filename_override: options.filename,
         use_filename: Boolean(options.filename),

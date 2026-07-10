@@ -99,7 +99,7 @@ async function tryWebFallback(
   const web = await answerViaWebSearch(question, keywords);
   const prose = web?.prose.trim();
   if (web && prose && prose !== NOT_FOUND_MSG) {
-    setCachedAnswer(question, { answer: prose, legalBasis: [], webSources: web.sources });
+    await setCachedAnswer(question, { answer: prose, legalBasis: [], webSources: web.sources });
     return finalizeAnswer({
       userId,
       isAdmin,
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const cached = getCachedAnswer(question);
+  const cached = await getCachedAnswer(question);
   if (cached) {
     return finalizeAnswer({
       userId: session.user.id,
@@ -199,8 +199,11 @@ export async function POST(req: Request) {
   // Only pay Perplexity's per-request search fee once we know it'll actually
   // be used — firing this earlier in parallel with fetch/expand billed the
   // fee on every miss that fell through to tryWebFallback above, which never
-  // reads this result.
-  const web = await searchWebContext(question);
+  // reads this result. Also skip it outright when the classifier (expandQuery)
+  // decided this question is a pure fact/definition lookup that the law text
+  // already answers fully — practical/real-world context is explicitly
+  // secondary color (SYSTEM_PROMPT rule 10), not needed on every request.
+  const web = expanded.needsWebContext ? await searchWebContext(question) : null;
   const userPrompt = buildGroundedPrompt(
     question,
     matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) })),
@@ -262,7 +265,7 @@ export async function POST(req: Request) {
 
   const legalBasis = buildLegalBasis(matches, citations);
 
-  setCachedAnswer(question, { answer, legalBasis, webSources: web?.sources });
+  await setCachedAnswer(question, { answer, legalBasis, webSources: web?.sources });
 
   return finalizeAnswer({
     userId: session.user.id,

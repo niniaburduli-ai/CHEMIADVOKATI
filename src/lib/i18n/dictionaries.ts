@@ -2,6 +2,9 @@ import type { Locale } from "./config"
 
 /** Static UI strings (non-CMS). ka is the source of truth; en mirrors its shape. */
 const ka = {
+  testModeBanner: {
+    message: "საიტი მუშაობს სატესტო რეჟიმში",
+  },
   header: {
     signIn: "შესვლა",
     signUp: "რეგისტრაცია",
@@ -263,6 +266,8 @@ const ka = {
     title: "დოკუმენტის ანალიზი",
     subtitle: "AI აანალიზებს რისკებს კატეგორიების მიხედვით",
     dropzoneHint: "აირჩიეთ ფაილი — PDF, DOCX, TXT ან MD",
+    pageCreditNotice:
+      "შენიშვნა: 10 გვერდამდე დოკუმენტის შემოწმება აკლებს 1 კრედიტს. თუ ატვირთავთ უფრო დიდ დოკუმენტს (მაქსიმუმ 50 გვერდამდე), სისტემა სრულ ანალიზს გააკეთებს, თუმცა ბალანსიდან შესაბამისი რაოდენობის დამატებითი კრედიტი ჩამოგეჭრებათ.",
     modeDocumentLabel: "დოკუმენტი",
     modePhotosLabel: "ფოტოები",
     dropzoneHintPhotos: "აირჩიეთ სურათები — JPG, მაქს. 10",
@@ -339,6 +344,9 @@ const ka = {
 export type Dict = typeof ka
 
 const en: Dict = {
+  testModeBanner: {
+    message: "The website is operating in test mode",
+  },
   header: {
     signIn: "Sign in",
     signUp: "Sign up",
@@ -600,6 +608,8 @@ const en: Dict = {
     title: "Document Analysis",
     subtitle: "AI analyzes risks by category",
     dropzoneHint: "Choose a file — PDF, DOCX, TXT, or MD",
+    pageCreditNotice:
+      "Note: reviewing a document up to 10 pages costs 1 credit. If you upload a larger document (up to 50 pages max), the system will run the full analysis, but the corresponding number of extra credits will be deducted from your balance.",
     modeDocumentLabel: "Document",
     modePhotosLabel: "Photos",
     dropzoneHintPhotos: "Choose photos — JPG, max 10",

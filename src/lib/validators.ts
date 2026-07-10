@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TEMPLATE_TYPES } from "@/lib/legal/templates";
+import { MAX_ANALYSIS_TEXT } from "@/lib/legal/review-limits";
 
 export const RegisterSchema = z.object({
   name: z.string().min(2, { message: "სახელი მინიმუმ 2 სიმბოლო" }).max(80).trim(),
@@ -98,7 +99,11 @@ export const UpdateGeneratedDocSchema = z.object({
 export type UpdateGeneratedDocInput = z.infer<typeof UpdateGeneratedDocSchema>;
 
 export const ReviewDocTextSchema = z.object({
-  text: z.string().min(20).max(10000),
+  // Bounded by MAX_ANALYSIS_TEXT, the same hard safety ceiling applied to
+  // extracted file text — pasted text shouldn't get a looser cap than
+  // uploads. Page-based credit cost (see reviewCreditCost) is what actually
+  // scales spend with document length, not this validator.
+  text: z.string().min(20).max(MAX_ANALYSIS_TEXT),
   fileName: z.string().max(200).optional(),
 });
 export type ReviewDocTextInput = z.infer<typeof ReviewDocTextSchema>;
@@ -135,6 +140,10 @@ export type FeedbackCreateInput = z.infer<typeof FeedbackCreateSchema>;
 export const DocumentImproveSchema = z.object({
   reviewId: z.string().trim().min(1).max(64),
   instruction: z.string().trim().max(2000).optional().default(""),
-  answers: z.record(z.string(), z.string().max(2000)).optional().default({}),
+  answers: z
+    .record(z.string(), z.string().max(2000))
+    .refine((obj) => Object.keys(obj).length <= 30, { message: "Too many fields" })
+    .optional()
+    .default({}),
 });
 export type DocumentImproveInput = z.infer<typeof DocumentImproveSchema>;

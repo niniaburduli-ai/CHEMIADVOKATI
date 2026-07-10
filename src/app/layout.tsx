@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Noto_Sans_Georgian, Noto_Serif_Georgian } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/site/header";
+import { TestModeBanner } from "@/components/site/test-mode-banner";
 import { Footer } from "@/components/site/footer";
 import { FeedbackWidget } from "@/components/site/FeedbackWidget";
 import { Toaster } from "@/components/ui/sonner";
@@ -103,6 +104,7 @@ export default async function RootLayout({
         <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <Header />
+          <TestModeBanner />
           <main className="flex-1">{children}</main>
           <Footer />
           <FeedbackWidget locale={locale} />

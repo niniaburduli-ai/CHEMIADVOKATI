@@ -308,6 +308,9 @@ export function DocumentAnalysisPanel({ locale }: { locale: Locale }) {
                   className="hidden"
                   onChange={handlePick}
                 />
+                <p className="text-xs text-muted-foreground text-center">
+                  {t.pageCreditNotice}
+                </p>
               </>
             ) : (
               <>

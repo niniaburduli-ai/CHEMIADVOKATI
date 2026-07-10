@@ -6,6 +6,7 @@ import { GeneratedDocument } from "@/lib/models/generated-document";
 import { GenerateDocSchema, DOC_TYPES } from "@/lib/validators";
 import { callOpenRouterChat } from "@/lib/ai-call";
 import { verifyLegalCitations, STRICT_BREVITY_RULE } from "@/lib/legal/openrouter";
+import { getCachedCitations, setCachedCitations } from "@/lib/legal/doc-citation-cache";
 import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 
 export const runtime = "nodejs";
@@ -112,10 +113,19 @@ export async function POST(req: Request) {
   const citationsSection =
     delimIndex === -1 ? "" : raw.slice(delimIndex + CITATIONS_DELIM.length).trim();
 
+  // Only two doc types exist and their typically-applicable articles barely
+  // change over time — verify live once per type, then reuse that result
+  // instead of paying a live web-search fee on every generation.
   let legalBasis = citationsSection;
-  if (citationsSection) {
+  const cachedCitations = getCachedCitations(parsed.data.type);
+  if (cachedCitations) {
+    legalBasis = cachedCitations;
+  } else if (citationsSection) {
     const verified = await verifyLegalCitations(typeName, citationsSection);
-    if (verified) legalBasis = verified;
+    if (verified) {
+      legalBasis = verified;
+      setCachedCitations(parsed.data.type, verified);
+    }
   }
 
   const title = `${typeName} — ${new Date().toISOString().slice(0, 10)}`;

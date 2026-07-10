@@ -26,6 +26,15 @@ export type ExpandedQuery = {
   hypothetical: string;
   /** Source ids the question is about; empty = couldn't classify. */
   sourceIds: string[];
+  /**
+   * Whether practical/real-world context (procedure, timelines, where to go)
+   * would meaningfully improve the answer. Decided by this same classifier
+   * call so gating searchWebContext costs nothing extra — false for
+   * questions that are purely about a specific legal fact/definition/number,
+   * which the law text alone already answers fully. Defaults to true on any
+   * parse failure so a classifier hiccup never silently downgrades quality.
+   */
+  needsWebContext: boolean;
 };
 
 // Catalog of laws the classifier chooses from.
@@ -39,10 +48,11 @@ const EXPAND_SYSTEM = [
   CATALOG,
   "",
   "დააბრუნე მხოლოდ JSON ობიექტი:",
-  '{"sources": ["id", "..."], "keywords": ["...", "..."], "hypothetical": "..."}',
+  '{"sources": ["id", "..."], "keywords": ["...", "..."], "hypothetical": "...", "needsPracticalContext": true|false}',
   "- sources: მხოლოდ ზემოთ სიიდან არსებული id-ები, რომელთა შინაარსიც ეხმიანება შეკითხვას (შეიძლება ერთი ან რამდენიმე). თუ არცერთი არ ერგება — [].",
   "- keywords: 4–10 ქართული იურიდიული ტერმინი/სინონიმი, რომელიც კანონის ტექსტში სავარაუდოდ გვხვდება.",
   "- hypothetical: 1–2 წინადადება იურიდიული რეგისტრით, თითქოს კანონი პასუხობს შეკითხვას.",
+  "- needsPracticalContext: true, თუ პასუხს რეალურად გააუმჯობესებდა პრაქტიკული კონტექსტი (რა ხდება პრაქტიკაში, ვადები, პროცედურა, რომელ ორგანოს მიმართო); false, თუ შეკითხვა ეხება მხოლოდ კონკრეტულ სამართლებრივ ფაქტს, განსაზღვრებას ან რიცხვს, რასაც კანონის ტექსტი თავისთავად სრულად პასუხობს.",
   "სხვა ტექსტი არ დაამატო. მხოლოდ JSON.",
 ].join("\n");
 
@@ -51,6 +61,7 @@ function parseExpansion(raw: string): {
   keywords: string[];
   hypothetical: string;
   sourceIds: string[];
+  needsWebContext: boolean;
 } {
   let s = raw.trim();
   // Strip ```json ... ``` fences if the model added them.
@@ -84,8 +95,13 @@ function parseExpansion(raw: string): {
         )
       )
     : [];
+  // Default true (do the web search) on a missing/malformed field — a
+  // classifier hiccup should fall back to the old always-search behavior,
+  // not silently degrade answer quality.
+  const needsWebContext =
+    typeof rec.needsPracticalContext === "boolean" ? rec.needsPracticalContext : true;
 
-  return { keywords, hypothetical, sourceIds };
+  return { keywords, hypothetical, sourceIds, needsWebContext };
 }
 
 /**
@@ -99,6 +115,7 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
     keywords: [],
     hypothetical: "",
     sourceIds: [],
+    needsWebContext: true,
   };
 
   if (!process.env.OPENROUTER_API_KEY) return fallback;
@@ -127,12 +144,12 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
         json: true,
         timeoutMs: 12_000,
       });
-      const { keywords, hypothetical, sourceIds } = parseExpansion(raw);
+      const { keywords, hypothetical, sourceIds, needsWebContext } = parseExpansion(raw);
       // If the model returned nothing usable, fall back rather than pass empties.
       if (keywords.length === 0 && !hypothetical && sourceIds.length === 0) {
         return fallback;
       }
-      return { original, keywords, hypothetical, sourceIds };
+      return { original, keywords, hypothetical, sourceIds, needsWebContext };
     } catch {
       if (attempt === 0) continue;
     }

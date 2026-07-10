@@ -3,6 +3,17 @@ import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 import { createScheduler, createWorker } from "tesseract.js";
 import { STRICT_BREVITY_RULE } from "./openrouter";
+import { estimatePages } from "./review-limits";
+
+export {
+  MAX_ANALYSIS_TEXT,
+  BASE_REVIEW_PAGES,
+  PAGES_PER_EXTRA_CREDIT,
+  MAX_REVIEW_PAGES,
+  PAGE_CHAR_ESTIMATE,
+  reviewCreditCost,
+  estimatePages,
+} from "./review-limits";
 
 export const RISK_CATEGORIES = [
   "liability",
@@ -31,7 +42,6 @@ export interface DocumentAnalysisResult {
   recommendations: string[];
 }
 
-export const MAX_ANALYSIS_TEXT = 10_000;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export const SUPPORTED_EXTENSIONS = ["pdf", "docx", "txt", "md"] as const;
@@ -117,26 +127,33 @@ export async function extractTextFromImages(
   return { combinedText, succeededCount, failedCount };
 }
 
-export async function extractDocumentText(fileName: string, buffer: Buffer): Promise<string> {
+export type ExtractedDocument = { text: string; pages: number };
+
+export async function extractDocumentText(
+  fileName: string,
+  buffer: Buffer
+): Promise<ExtractedDocument> {
   const ext = extensionOf(fileName);
   if (ext === "pdf") {
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();
-      return result.text;
+      return { text: result.text, pages: result.total || 1 };
     } finally {
       await parser.destroy();
     }
   }
   if (ext === "docx") {
     const { value } = await mammoth.extractRawText({ buffer });
-    return value;
+    return { text: value, pages: estimatePages(value) };
   }
-  return buffer.toString("utf-8").replace(/\0/g, " ");
+  const text = buffer.toString("utf-8").replace(/\0/g, " ");
+  return { text, pages: estimatePages(text) };
 }
 
 export const ANALYSIS_SYSTEM_PROMPT = `შენ ხარ ქართული იურიდიული დოკუმენტების რისკ-ანალიტიკოსი.
 ${STRICT_BREVITY_RULE}
+"summary", "explanation" და "recommendation" ველები დაწერე მარტივი, ყოველდღიური ენით — თითქოს არაიურისტ ადამიანს ხსნი, არა კოლეგა იურისტს. აარიდე იურიდიულ ჟარგონს; თუ ტერმინი აუცილებელია, ერთი მარტივი სიტყვით ახსენი ფრჩხილებში.
 გაანალიზე მოწოდებული დოკუმენტი და დააბრუნე მხოლოდ JSON, ზუსტად ამ ფორმატით, დამატებითი ტექსტის ან ახსნის გარეშე:
 
 {
@@ -226,6 +243,7 @@ export interface DocumentRevision extends DocumentImprovementResult {
 
 export const IMPROVEMENT_SYSTEM_PROMPT = `შენ ხარ ქართული იურიდიული დოკუმენტების რედაქტორი.
 ${STRICT_BREVITY_RULE}
+"summary", "explanation" და "recommendation" ველები დაწერე მარტივი, ყოველდღიური ენით — თითქოს არაიურისტ ადამიანს ხსნი, არა კოლეგა იურისტს. აარიდე იურიდიულ ჟარგონს; თუ ტერმინი აუცილებელია, ერთი მარტივი სიტყვით ახსენი ფრჩხილებში. (revisedText თავად ოფიციალურ სამართლებრივ ენაზე რჩება — ეს წესი მხოლოდ ახსნა-განმარტების ველებზეა.)
 მოგეწოდება ხელშეკრულების ტექსტი და მასში გამოვლენილი რისკები. შენი ამოცანაა შეასწორო დოკუმენტი ამ რისკების გათვალისწინებით და დააბრუნო მხოლოდ JSON, ზუსტად ამ ფორმატით, დამატებითი ტექსტის ან ახსნის გარეშე:
 
 {

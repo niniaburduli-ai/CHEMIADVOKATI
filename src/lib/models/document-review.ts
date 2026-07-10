@@ -34,6 +34,8 @@ const DocumentReviewSchema = new Schema(
     findings: { type: [RiskFindingSchema], default: [] },
     recommendations: { type: [String], default: [] },
     sourceText: { type: String, default: "" },
+    pages: { type: Number, default: 1 },
+    creditsUsed: { type: Number, default: 1 },
     revisions: { type: [DocumentRevisionSchema], default: [] },
   },
   { timestamps: true }
