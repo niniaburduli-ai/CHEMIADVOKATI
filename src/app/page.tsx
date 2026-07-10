@@ -119,7 +119,7 @@ export default async function Home() {
     <div>
       {/* ── HERO ── */}
       {sections.hero !== false && (
-        <section className="relative overflow-hidden bg-slate-900">
+        <section className="relative overflow-hidden bg-primary dark:bg-slate-900">
           {/* Statue is static; the scale mechanism is a separate overlay layer so only it can swing */}
           <div className="absolute inset-y-0 right-0 w-full lg:w-[62%] flex items-end justify-center pointer-events-none select-none">
             <div className="relative h-full" style={{ aspectRatio: "900 / 1371" }}>

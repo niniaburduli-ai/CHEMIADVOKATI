@@ -1,4 +1,5 @@
 import { PricingSection } from "@/components/site/PricingSection";
+import { PageHero } from "@/components/site/PageHero";
 import { getVisiblePlans } from "@/lib/plans-db";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
@@ -22,12 +23,7 @@ export default async function PricingPage() {
 
   return (
     <div className="animate-fade-up">
-      <div className="container mx-auto px-4 pt-16">
-        <div className="text-center max-w-2xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold leading-tight">{d.pricing.title}</h1>
-          <p className="mt-4 text-muted-foreground">{d.pricing.subtitle}</p>
-        </div>
-      </div>
+      <PageHero title={d.pricing.title} subtitle={d.pricing.subtitle} />
 
       <PricingSection
         initialPlans={plans}
