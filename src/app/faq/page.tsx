@@ -28,7 +28,10 @@ export default async function FaqPage() {
 
   return (
     <div>
-      <PageHero title={heading} />
+      <PageHero
+        title={heading}
+        subtitle="მოძებნეთ თქვენთვის საჭირო კითხვაზე პასუხი ან მოგვწერეთ უკუკავშირის ღილაკით"
+      />
 
       {faqData.items.length > 0 && (
         <section className="bg-background overflow-hidden">
