@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { signIn, signOut } from "@/auth";
@@ -95,6 +96,7 @@ export async function registerAction(
     throw err;
   }
 
+  revalidatePath("/", "layout");
   redirect(callbackUrl);
 }
 
@@ -140,10 +142,12 @@ export async function loginAction(
     throw err;
   }
 
+  revalidatePath("/", "layout");
   redirect(callbackUrl);
 }
 
 export async function logoutAction() {
+  revalidatePath("/", "layout");
   await signOut({ redirectTo: "/" });
 }
 
