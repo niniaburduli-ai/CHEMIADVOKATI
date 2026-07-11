@@ -2,10 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
-import { signIn, signOut } from "@/auth";
+import { signIn } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { RegisterSchema, LoginSchema } from "@/lib/validators";
@@ -145,28 +144,6 @@ export async function loginAction(
 
   revalidatePath("/", "layout");
   redirect(callbackUrl);
-}
-
-export async function logoutAction() {
-  // Sessions created before the cookie-domain fix left a host-only copy of
-  // these cookies in browsers, which now coexists with the domain-scoped
-  // one from the same name and makes login state ambiguous. Clear every
-  // variant explicitly so old sessions don't linger after logout.
-  const store = await cookies();
-  const rootDomain =
-    process.env.VERCEL_ENV === "production" ? ".chemiiuristi.com" : undefined;
-  for (const name of [
-    "authjs.session-token",
-    "__Secure-authjs.session-token",
-    "authjs.callback-url",
-    "__Secure-authjs.callback-url",
-  ]) {
-    store.delete({ name, path: "/" });
-    if (rootDomain) store.delete({ name, path: "/", domain: rootDomain });
-  }
-
-  revalidatePath("/", "layout");
-  await signOut({ redirectTo: "/" });
 }
 
 export async function googleSignInAction(formData: FormData) {
