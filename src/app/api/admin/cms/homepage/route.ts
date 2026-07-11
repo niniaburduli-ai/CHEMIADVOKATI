@@ -25,6 +25,11 @@ export async function GET() {
   const data = {
     ...raw,
     sections: { ...HOME_SEED.sections, ...(raw.sections as object | undefined) },
+    howItWorksHeading: (raw.howItWorksHeading as string | undefined) || HOME_SEED.howItWorksHeading,
+    howItWorksHeadingEn: (raw.howItWorksHeadingEn as string | undefined) || HOME_SEED.howItWorksHeadingEn,
+    howItWorks: (raw.howItWorks as unknown[] | undefined)?.length
+      ? raw.howItWorks
+      : HOME_SEED.howItWorks,
     serviceCards: (raw.serviceCards as unknown[] | undefined)?.length
       ? raw.serviceCards
       : HOME_SEED.serviceCards,

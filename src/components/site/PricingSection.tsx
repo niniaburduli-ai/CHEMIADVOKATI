@@ -107,9 +107,10 @@ export function PricingSection({
   return (
     <section className="container mx-auto px-4 py-16 max-w-5xl">
       {heading && (
-        <h2 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-12">
-          {heading}
-        </h2>
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">{heading}</h2>
+          <div className="h-1.5 w-16 bg-gradient-to-r from-primary to-gold mx-auto mt-4 rounded-full" />
+        </div>
       )}
       <div className={`grid gap-6 ${gridCols(plans.length)} items-start`}>
         {plans.map((p, idx) => (
@@ -125,7 +126,7 @@ export function PricingSection({
               {p.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <span
-                    className="text-gold bg-slate-900 text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap"
+                    className="text-slate-900 bg-gold text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap"
                   >
                     {p.badge}
                   </span>

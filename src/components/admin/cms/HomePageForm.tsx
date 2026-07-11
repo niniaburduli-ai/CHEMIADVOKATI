@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils"
 import type {
   HomePageData, HomePageServiceCard, HomePageStatCard, HomePageFeature, HomePagePlan,
+  HomePageHowItWorksItem,
 } from "@/types/cms"
 
 // Generates a valid MongoDB ObjectId-compatible hex string (24 chars)
@@ -29,10 +30,17 @@ function moveItem<T extends { order: number }>(arr: T[], i: number, dir: -1 | 1)
 }
 
 const EMPTY: HomePageData = {
-  sections: { hero: true, stats: true, features: true, pricing: true, faq: true },
+  sections: { hero: true, stats: true, features: true, pricing: true, faq: true, howItWorks: true },
   hero: { title: "", titleEn: "", subtitle: "", subtitleEn: "", ctaText: "", ctaHref: "", imageUrl: "", imagePubId: "" },
   serviceCards: [],
   cardsHeading: "", cardsHeadingEn: "",
+  howItWorksHeading: "", howItWorksHeadingEn: "",
+  howItWorks: [
+    { key: "chat", title: "", titleEn: "", steps: [], ctaText: "", ctaTextEn: "" },
+    { key: "review", title: "", titleEn: "", steps: [], ctaText: "", ctaTextEn: "" },
+    { key: "templates", title: "", titleEn: "", steps: [], ctaText: "", ctaTextEn: "" },
+    { key: "generate", title: "", titleEn: "", steps: [], ctaText: "", ctaTextEn: "" },
+  ],
   statsHeading: "", statsHeadingEn: "",
   stats: [],
   featuresHeading: "", featuresHeadingEn: "",
@@ -252,6 +260,42 @@ export function HomePageForm() {
       ...p,
       features: p.features.filter((_, j) => j !== i).map((f, idx) => ({ ...f, order: idx })),
     }))
+  }
+
+  // ── How It Works helpers ───────────────────────────────────────────────────
+
+  function updHowItWorksItem(i: number, patch: Partial<HomePageHowItWorksItem>) {
+    setData((p) => {
+      const howItWorks = [...p.howItWorks]
+      howItWorks[i] = { ...howItWorks[i], ...patch }
+      return { ...p, howItWorks }
+    })
+  }
+
+  function addHowItWorksStep(i: number) {
+    setData((p) => {
+      const howItWorks = [...p.howItWorks]
+      howItWorks[i] = { ...howItWorks[i], steps: [...howItWorks[i].steps, { text: "", textEn: "" }] }
+      return { ...p, howItWorks }
+    })
+  }
+
+  function updHowItWorksStep(i: number, si: number, patch: Partial<{ text: string; textEn: string }>) {
+    setData((p) => {
+      const howItWorks = [...p.howItWorks]
+      const steps = [...howItWorks[i].steps]
+      steps[si] = { ...steps[si], ...patch }
+      howItWorks[i] = { ...howItWorks[i], steps }
+      return { ...p, howItWorks }
+    })
+  }
+
+  function delHowItWorksStep(i: number, si: number) {
+    setData((p) => {
+      const howItWorks = [...p.howItWorks]
+      howItWorks[i] = { ...howItWorks[i], steps: howItWorks[i].steps.filter((_, j) => j !== si) }
+      return { ...p, howItWorks }
+    })
   }
 
   // ── Plan helpers ──────────────────────────────────────────────────────────────
@@ -580,6 +624,69 @@ export function HomePageForm() {
           <Button type="button" size="sm" variant="outline" onClick={addFeature}>
             <Plus className="mr-1 h-3 w-3" /> Add Feature
           </Button>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section className="space-y-3 rounded-lg border p-4">
+        <SectionHeader
+          title='როგორ მუშაობს ("How it Works")'
+          visible={sec.howItWorks}
+          onToggle={() => setData((p) => ({ ...p, sections: { ...p.sections, howItWorks: !p.sections.howItWorks } }))}
+        />
+
+        <BiInput
+          label="სექციის სათაური"
+          kaValue={data.howItWorksHeading}
+          enValue={data.howItWorksHeadingEn ?? ""}
+          onKa={(v) => upd("howItWorksHeading", v)}
+          onEn={(v) => upd("howItWorksHeadingEn", v)}
+        />
+
+        <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          თითოეული ჩანართი შეესაბამება არსებულ სერვისს — ჩანართის დამატება/წაშლა შეუძლებელია, მხოლოდ ტექსტისა და ნაბიჯების რედაქტირება. ჩანართი ავტომატურად იმალება, თუ შესაბამისი სერვისი გამორთულია (Features ტაბი).
+        </p>
+
+        <div className="space-y-3">
+          {data.howItWorks.map((item, i) => (
+            <div key={item.key} className="rounded border p-3 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.key}</p>
+              <BiInput
+                label="Title"
+                kaValue={item.title}
+                enValue={item.titleEn ?? ""}
+                onKa={(v) => updHowItWorksItem(i, { title: v })}
+                onEn={(v) => updHowItWorksItem(i, { titleEn: v })}
+              />
+              <div className="space-y-1.5 pl-3 border-l-2">
+                <Label className="text-xs">Steps</Label>
+                {item.steps.map((step, si) => (
+                  <div key={si} className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <BiInput
+                        label={`Step ${si + 1}`}
+                        kaValue={step.text}
+                        enValue={step.textEn ?? ""}
+                        onKa={(v) => updHowItWorksStep(i, si, { text: v })}
+                        onEn={(v) => updHowItWorksStep(i, si, { textEn: v })}
+                      />
+                    </div>
+                    <DeleteBtn onClick={() => delHowItWorksStep(i, si)} />
+                  </div>
+                ))}
+                <Button type="button" size="sm" variant="ghost" onClick={() => addHowItWorksStep(i)}>
+                  <Plus className="mr-1 h-3 w-3" /> Add step
+                </Button>
+              </div>
+              <BiInput
+                label="CTA Text"
+                kaValue={item.ctaText}
+                enValue={item.ctaTextEn ?? ""}
+                onKa={(v) => updHowItWorksItem(i, { ctaText: v })}
+                onEn={(v) => updHowItWorksItem(i, { ctaTextEn: v })}
+              />
+            </div>
+          ))}
         </div>
       </section>
 

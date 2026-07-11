@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, ChevronDown, HelpCircle, ArrowLeft, List } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronDown, ArrowLeft, List } from "lucide-react"
 
 type FaqItem = { _id: string; question: string; answer: string }
 
@@ -14,7 +14,7 @@ function cardStateClass(idx: number, current: number, total: number) {
 }
 
 const VIEW_ALL_CLASS =
-  "inline-flex items-center gap-2 text-sm font-semibold text-primary border border-border rounded-xl px-5 py-2.5 hover:bg-primary/5 transition-colors btn-hover"
+  "inline-flex items-center gap-2 text-sm font-semibold bg-primary text-primary-foreground rounded-xl px-5 py-2.5 hover:bg-primary/90 transition-colors btn-hover"
 
 export function FaqCarousel({
   items,
@@ -82,7 +82,7 @@ export function FaqCarousel({
 
   return (
     <div>
-      <div className="flex justify-center mb-6">
+      <div className="flex justify-center mb-4">
         {viewAllHref ? (
           <Link href={viewAllHref} className={VIEW_ALL_CLASS}>
             <List className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function FaqCarousel({
       </div>
 
       {items.length > 1 && (
-        <div className="flex justify-center items-center gap-2 mb-8">
+        <div className="flex justify-center items-center gap-2 mb-4">
           {items.map((f, idx) => (
             <button
               key={f._id}
@@ -129,24 +129,21 @@ export function FaqCarousel({
                   onClick={() => isActive && setExpanded((e) => !e)}
                   role={isActive ? "button" : undefined}
                   aria-expanded={isActive ? isExpanded : undefined}
-                  className={`faq-card bg-card border border-border rounded-2xl p-6 md:p-8 text-center flex flex-col gap-3 shadow-sm ${cardStateClass(idx, current, items.length)} ${
+                  className={`faq-card bg-card border border-border rounded-2xl p-4 md:p-5 text-center flex flex-col gap-1.5 shadow-sm ${cardStateClass(idx, current, items.length)} ${
                     expanded && !isActive ? "faq-card-dim" : ""
                   } ${isActive ? "cursor-pointer" : ""}`}
                 >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <HelpCircle className="h-5 w-5 text-primary" />
-                  </div>
                   <p className="font-bold text-base text-foreground">{f.question}</p>
                   <p
                     className={`text-sm text-muted-foreground leading-relaxed ${
-                      isExpanded ? "" : "line-clamp-4"
+                      isExpanded ? "" : "line-clamp-3"
                     }`}
                   >
                     {f.answer}
                   </p>
                   {isActive && (
                     <ChevronDown
-                      className={`h-4 w-4 text-muted-foreground mx-auto mt-1 transition-transform duration-300 ${
+                      className={`h-4 w-4 text-muted-foreground mx-auto transition-transform duration-300 ${
                         isExpanded ? "rotate-180" : ""
                       }`}
                     />

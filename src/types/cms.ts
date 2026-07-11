@@ -76,6 +76,20 @@ export interface HomePagePlan {
   items: string[]
 }
 
+export interface HomePageHowItWorksStep {
+  text: string
+  textEn?: string
+}
+
+export interface HomePageHowItWorksItem {
+  key: "chat" | "review" | "templates" | "generate"
+  title: string
+  titleEn?: string
+  steps: HomePageHowItWorksStep[]
+  ctaText: string
+  ctaTextEn?: string
+}
+
 export interface HomePageData {
   sections: {
     hero: boolean
@@ -83,6 +97,7 @@ export interface HomePageData {
     features: boolean
     pricing: boolean
     faq: boolean
+    howItWorks: boolean
   }
   hero: {
     title: string
@@ -97,6 +112,9 @@ export interface HomePageData {
   serviceCards: HomePageServiceCard[]
   cardsHeading: string
   cardsHeadingEn?: string
+  howItWorksHeading: string
+  howItWorksHeadingEn?: string
+  howItWorks: HomePageHowItWorksItem[]
   statsHeading: string
   statsHeadingEn?: string
   stats: HomePageStatCard[]

@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, Star } from "lucide-react"
 import { AnimateIn } from "@/components/site/AnimateIn"
 import { PricingSection } from "@/components/site/PricingSection"
 import { ServiceCards } from "@/components/site/service-cards"
+import { HowItWorks } from "@/components/site/how-it-works"
 import { FaqCarousel } from "@/components/site/FaqCarousel"
 import { getHomePage, getFAQ } from "@/lib/cms"
 import { getVisiblePlans } from "@/lib/plans-db"
@@ -79,6 +80,19 @@ export default async function Home() {
     locale,
   )
 
+  const howItWorksHeading = pick(
+    cmsData?.howItWorksHeading   || seed.howItWorksHeading,
+    cmsData?.howItWorksHeadingEn || seed.howItWorksHeadingEn,
+    locale,
+  )
+
+  const howItWorksItems = (cmsData?.howItWorks?.length ? cmsData.howItWorks : seed.howItWorks).map((item) => ({
+    key: item.key,
+    title: pick(item.title, item.titleEn, locale),
+    steps: item.steps.map((s) => pick(s.text, s.textEn, locale)),
+    ctaText: pick(item.ctaText, item.ctaTextEn, locale),
+  }))
+
   const statsHeading = pick(
     cmsData?.statsHeading    || seed.statsHeading,
     cmsData?.statsHeadingEn  || seed.statsHeadingEn,
@@ -119,8 +133,8 @@ export default async function Home() {
     <div>
       {/* ── HERO ── */}
       {sections.hero !== false && (
-        <section className="relative overflow-hidden bg-primary dark:bg-slate-900">
-          {/* Statue is static; the scale mechanism is a separate overlay layer so only it can swing */}
+        <section className="relative overflow-hidden bg-slate-900">
+          {/* Statue is static; the scale mechanism is a separate overlay layer so only it can swing. */}
           <div className="absolute inset-y-0 right-0 w-full lg:w-[62%] flex items-end justify-center pointer-events-none select-none">
             <div className="relative h-full" style={{ aspectRatio: "900 / 1371" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -128,7 +142,7 @@ export default async function Home() {
                 src="/kartlis_deda_5.png"
                 alt=""
                 aria-hidden="true"
-                className="absolute inset-0 h-full w-full object-contain"
+                className="absolute inset-0 h-full w-full object-contain drop-shadow-[0_10px_50px_rgba(0,0,0,0.45)]"
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -141,26 +155,33 @@ export default async function Home() {
             </div>
           </div>
 
+          {/* Directional scrim — protects text legibility on the left without dimming the statue where it needs to pop (right/lower) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/85 to-transparent lg:via-slate-900/35 lg:to-transparent pointer-events-none" />
+
           <div className="relative container mx-auto px-4">
-            <div className="flex flex-col justify-center min-h-[560px] py-12 lg:py-16 max-w-[620px] gap-5">
+            <div className="flex flex-col justify-center min-h-[420px] lg:min-h-[500px] py-10 lg:py-14 max-w-[640px] gap-4">
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full backdrop-blur-sm w-fit animate-fade-up">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-gold opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-gold" />
+                </span>
                 <BadgeCheck className="h-4 w-4 text-gold" />
                 <span className="text-xs font-semibold text-gold uppercase tracking-wider">
                   {d.home.heroBadge}
                 </span>
               </div>
-              <h1 className="text-6xl md:text-7xl font-bold text-white leading-tight animate-fade-up delay-150">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight animate-fade-up delay-150">
                 {heroTitle}
               </h1>
-              <p className="text-2xl font-semibold text-gold leading-snug animate-fade-up delay-300">
+              <p className="text-lg md:text-xl font-semibold text-gold leading-snug animate-fade-up delay-300 max-w-lg [text-shadow:0_2px_12px_rgba(0,0,0,0.5)]">
                 {heroSubtitle}
               </p>
               <Link
                 href={ctaButtonHref}
-                className="mt-3 inline-flex items-center gap-2 w-fit bg-gold text-slate-900 px-8 py-4 rounded-xl text-sm font-semibold hover:brightness-95 btn-hover animate-fade-up delay-400"
+                className="group mt-2 inline-flex items-center gap-2 w-fit bg-gold text-slate-900 px-8 py-4 rounded-xl text-sm font-semibold hover:brightness-95 btn-hover animate-fade-up delay-400"
               >
                 {ctaButtonText}
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
           </div>
@@ -173,14 +194,24 @@ export default async function Home() {
           cardsHeading={cardsHeading}
           d={d}
           flags={flags}
+          locale={locale}
+        />
+      )}
+
+      {/* ── HOW IT WORKS ── */}
+      {sections.howItWorks !== false && (
+        <HowItWorks
+          heading={howItWorksHeading}
+          items={howItWorksItems}
+          flags={flags}
         />
       )}
 
       {/* ── FEATURES + STATS ── */}
       {((sections.features !== false && features.length > 0) ||
         (sections.stats !== false && stats.length > 0)) && (
-        <section className="bg-background">
-          <div className="container mx-auto px-4 py-16">
+        <section className="bg-gradient-to-b from-muted/40 via-background to-background">
+          <div className="container mx-auto px-4 py-20">
             <div
               className={`grid gap-10 items-start ${
                 sections.features !== false &&
@@ -193,9 +224,10 @@ export default async function Home() {
             >
               {sections.features !== false && features.length > 0 && (
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8">
+                  <h2 className="text-2xl md:text-3xl font-bold text-foreground">
                     {featuresHeading}
                   </h2>
+                  <div className="h-1.5 w-16 rounded-full bg-gradient-to-r from-primary to-gold mt-4 mb-8" />
                   <div className="flex flex-col gap-6">
                     {features.map((f, idx) => {
                       const FIcon = resolveIcon(f.icon)
@@ -205,7 +237,7 @@ export default async function Home() {
                       return (
                         <AnimateIn key={f._id} delay={idx * 60}>
                           <div className="flex gap-4 group">
-                            <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary">
+                            <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/10 flex items-center justify-center transition-all group-hover:bg-primary group-hover:ring-primary">
                               <FIcon className="h-5 w-5 text-primary transition-colors group-hover:text-primary-foreground" />
                             </div>
                             <div>
@@ -222,9 +254,10 @@ export default async function Home() {
 
               {sections.stats !== false && (stats.length > 0 || feedbackCard) && (
                 <div className={sections.features !== false && features.length > 0 ? "" : "max-w-3xl mx-auto w-full"}>
-                  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8 text-center">
+                  <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
                     {statsHeading}
                   </h2>
+                  <div className="h-1.5 w-16 rounded-full bg-gradient-to-r from-primary to-gold mx-auto mt-4 mb-8" />
                   <div
                     className={`grid gap-3 mx-auto ${
                       sections.features !== false && features.length > 0
@@ -239,7 +272,8 @@ export default async function Home() {
                       const statLabel = pick(s.label, s.labelEn || seedStat?.labelEn, locale)
                       return (
                         <AnimateIn key={s._id} delay={idx * 100} className="h-full">
-                          <div className="h-full bg-card border border-border rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-1 card-hover">
+                          <div className="relative h-full overflow-hidden bg-card border border-border rounded-2xl p-4 pt-5 flex flex-col items-center justify-center text-center space-y-1 card-hover">
+                            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
                             <p className="text-2xl font-bold text-primary leading-none tabular-nums">{display}</p>
                             <p className="text-xs text-muted-foreground leading-snug">{statLabel}</p>
                           </div>
@@ -248,7 +282,8 @@ export default async function Home() {
                     })}
                     {feedbackCard && (
                       <AnimateIn delay={stats.length * 100} className="h-full">
-                        <div className="h-full bg-card border border-border rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-1 card-hover">
+                        <div className="relative h-full overflow-hidden bg-card border border-border rounded-2xl p-4 pt-5 flex flex-col items-center justify-center text-center space-y-1 card-hover">
+                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
                           <Star className="h-4 w-4 mx-auto text-gold fill-gold" />
                           <div className="flex items-center justify-center gap-3">
                             <div>
@@ -291,10 +326,10 @@ export default async function Home() {
       {sections.faq !== false && faqData.items.length > 0 && (
         <section className="bg-background overflow-hidden">
           <JsonLd data={faqJsonLd(faqData.items.map((i) => ({ q: i.question, a: i.answer })))} />
-          <div className="container mx-auto px-4 py-16">
+          <div className="container mx-auto px-4 py-10">
             <div className="text-center mb-4">
               <h2 className="text-2xl md:text-3xl font-bold text-foreground">{faqHeading}</h2>
-              <div className="h-1 w-24 bg-primary mx-auto mt-4 rounded-full" />
+              <div className="h-1.5 w-16 bg-gradient-to-r from-primary to-gold mx-auto mt-4 rounded-full" />
             </div>
             <FaqCarousel items={faqData.items} labels={d.faq} viewAllHref="/faq" />
           </div>

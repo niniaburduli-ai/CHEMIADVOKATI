@@ -30,7 +30,7 @@ const DEFAULT_NAV: NavMenuData = {
   items: [
     { _id: "1", label: "მთავარი", href: "/", order: 0, isExternal: false },
     { _id: "2", label: "ჩვენ შესახებ", href: "/about", order: 1, isExternal: false },
-    { _id: "3", label: "მომსახურებები", href: "/services", order: 2, isExternal: false },
+    { _id: "3", label: "სერვისები", href: "/services", order: 2, isExternal: false },
     { _id: "4", label: "კანონმდებლობა", href: "/legislation", order: 3, isExternal: false },
     { _id: "5", label: "ფასები", href: "/pricing", order: 4, isExternal: false },
     { _id: "6", label: "კითხვები", href: "/faq", order: 5, isExternal: false },

@@ -3,7 +3,7 @@ import type { HomePageData } from "@/types/cms"
 // Single seed with both KA and EN text. Structure fields (visible, order, etc.) are shared.
 // Used by: route.ts (DB seed on first GET) + page.tsx (fallback when cms is null/draft)
 export const HOME_SEED: Omit<HomePageData, "status"> = {
-  sections: { hero: true, stats: true, features: true, pricing: true, faq: true },
+  sections: { hero: true, stats: true, features: true, pricing: true, faq: true, howItWorks: true },
   hero: {
     title: "ჩემი იურისტი",
     titleEn: "My Lawyer",
@@ -37,8 +37,51 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
       href: "/review", icon: "FolderOpen", comingSoon: false, visible: true, order: 2,
     },
   ],
-  cardsHeading: "მომსახურებები",
+  cardsHeading: "ჩვენი სერვისები",
   cardsHeadingEn: "Services",
+  howItWorksHeading: "როგორ მუშაობს",
+  howItWorksHeadingEn: "How it works",
+  howItWorks: [
+    {
+      key: "chat",
+      title: "AI კონსულტაცია", titleEn: "AI consultation",
+      steps: [
+        { text: "გახსენი ჩატი", textEn: "Open the chat" },
+        { text: "დაწერე შენი იურიდიული საკითხი მარტივი ენით", textEn: "Describe your legal question in plain language" },
+        { text: "მიიღე მყისიერი პასუხი მოქმედი კანონმდებლობის მითითებით", textEn: "Get an instant answer citing current legislation" },
+      ],
+      ctaText: "კითხვის დასმა", ctaTextEn: "Ask a question",
+    },
+    {
+      key: "review",
+      title: "დოკუმენტის ანალიზი", titleEn: "Document review",
+      steps: [
+        { text: "აირჩიე დოკუმენტის ან ფოტოს რეჟიმი", textEn: "Choose document or photo mode" },
+        { text: "ატვირთე ფაილი (PDF, DOCX, TXT ან სურათები)", textEn: "Upload your file (PDF, DOCX, TXT, or images)" },
+        { text: "ნახე გამოვლენილი რისკები კატეგორიების მიხედვით და რეკომენდაციები", textEn: "Review the categorized risks and recommendations" },
+      ],
+      ctaText: "დოკუმენტის შემოწმება", ctaTextEn: "Check a document",
+    },
+    {
+      key: "templates",
+      title: "მზა შაბლონები", titleEn: "Ready-made templates",
+      steps: [
+        { text: "მოძებნე ან დაათვალიერე შაბლონების ბიბლიოთეკა", textEn: "Search or browse the template library" },
+        { text: "შეავსე შენი მონაცემები და ჩამოტვირთე დოკუმენტი", textEn: "Fill in your details and download the document" },
+      ],
+      ctaText: "შაბლონის არჩევა", ctaTextEn: "Choose a template",
+    },
+    {
+      key: "generate",
+      title: "დოკუმენტის მომზადება", titleEn: "Document generation",
+      steps: [
+        { text: "აღწერე შენი სიტუაცია", textEn: "Describe your situation" },
+        { text: "AI ადგენს საჩივარს ან მოთხოვნას შენს მონაცემებზე დაყრდნობით", textEn: "AI drafts the complaint or demand based on your details" },
+        { text: "გადახედე, მოითხოვე შესწორება ან ჩამოტვირთე", textEn: "Review it, request a revision, or download" },
+      ],
+      ctaText: "დოკუმენტის შექმნა", ctaTextEn: "Create a document",
+    },
+  ],
   statsHeading: "ჩვენი შედეგები ციფრებში",
   statsHeadingEn: "Our results in numbers",
   stats: [

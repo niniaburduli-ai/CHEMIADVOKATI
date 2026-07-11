@@ -50,7 +50,7 @@
 }
 
 :root {
-  /* Trust & Authority palette — navy primary, slate background */
+  /* Trust & Authority palette — primary matches hero (slate-900), gold accent */
   --gold: oklch(0.83 0.19 87);
   --background: oklch(0.984 0.003 247.858);
   --foreground: oklch(0.148 0.026 265);
@@ -60,20 +60,20 @@
   --popover: oklch(0.936 0.068 252);
   --color-popover: oklch(0.936 0.068 252);
   --popover-foreground: oklch(0.148 0.026 265);
-  --primary: oklch(0.366 0.165 264);
+  --primary: oklch(0.208 0.042 265.755);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.966 0.022 216);
-  --secondary-foreground: oklch(0.366 0.165 264);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.922 0.078 252);
   --color-muted: oklch(0.922 0.078 252);
   --muted-foreground: oklch(0.513 0.030 256);
   --accent: oklch(0.921 0.036 216);
-  --accent-foreground: oklch(0.366 0.165 264);
+  --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.845 0.014 252);
   --input: oklch(0.845 0.014 252);
-  --ring: oklch(0.366 0.165 264);
-  --chart-1: oklch(0.366 0.165 264);
+  --ring: oklch(0.208 0.042 265.755);
+  --chart-1: oklch(0.208 0.042 265.755);
   --chart-2: oklch(0.513 0.030 256);
   --chart-3: oklch(0.695 0.100 214);
   --chart-4: oklch(0.845 0.014 252);
@@ -81,12 +81,12 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.148 0.026 265);
-  --sidebar-primary: oklch(0.366 0.165 264);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.921 0.036 216);
-  --sidebar-accent-foreground: oklch(0.366 0.165 264);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.845 0.014 252);
-  --sidebar-ring: oklch(0.366 0.165 264);
+  --sidebar-ring: oklch(0.208 0.042 265.755);
 }
 
 .dark {
@@ -97,31 +97,31 @@
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.217 0.024 252);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.695 0.135 214);
-  --primary-foreground: oklch(0.148 0.026 265);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.217 0.024 252);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.217 0.024 252);
   --muted-foreground: oklch(0.669 0.021 252);
   --accent: oklch(0.217 0.024 252);
-  --accent-foreground: oklch(0.695 0.135 214);
+  --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.331 0.024 252);
   --input: oklch(0.331 0.024 252);
-  --ring: oklch(0.695 0.135 214);
-  --chart-1: oklch(0.695 0.135 214);
+  --ring: oklch(0.208 0.042 265.755);
+  --chart-1: oklch(0.208 0.042 265.755);
   --chart-2: oklch(0.669 0.021 252);
   --chart-3: oklch(0.484 0.090 214);
   --chart-4: oklch(0.331 0.024 252);
   --chart-5: oklch(0.984 0.003 247.858);
   --sidebar: oklch(0.217 0.024 252);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.695 0.135 214);
-  --sidebar-primary-foreground: oklch(0.148 0.026 265);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.217 0.024 252);
-  --sidebar-accent-foreground: oklch(0.695 0.135 214);
+  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(0.331 0.024 252);
-  --sidebar-ring: oklch(0.695 0.135 214);
+  --sidebar-ring: oklch(0.208 0.042 265.755);
 }
 
 @layer base {
@@ -170,7 +170,8 @@
 .animate-scale-sway {
   animation: scale-sway 4s ease-in-out infinite;
   transform-box: fill-box;
-  transform-origin: 20% 24%;
+  /* Pivot sits on the ring the hand actually grips — measured directly off kartlis_deda_scale.png, not guessed. */
+  transform-origin: 52% 11%;
 }
 
 /* ── Animation delays ────────────────────────────────────────────────────── */
@@ -195,8 +196,8 @@
 }
 .card-hover:hover {
   transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 8px 32px oklch(0.366 0.165 264 / 0.12);
-  border-color: oklch(0.366 0.165 264 / 0.35);
+  box-shadow: 0 8px 32px oklch(0.208 0.042 265.755 / 0.12);
+  border-color: oklch(0.208 0.042 265.755 / 0.35);
 }
 
 /* ── Button hover micro-interaction ─────────────────────────────────────── */
@@ -205,7 +206,7 @@
 }
 .btn-hover:hover {
   transform: scale(1.02);
-  box-shadow: 0 4px 16px oklch(0.366 0.165 264 / 0.22);
+  box-shadow: 0 4px 16px oklch(0.208 0.042 265.755 / 0.22);
 }
 
 /* ── Footer link underline slide-in ─────────────────────────────────────── */
@@ -237,7 +238,7 @@
   left: 0;
   width: 0;
   height: 1.5px;
-  background: oklch(0.366 0.165 264);
+  background: oklch(0.208 0.042 265.755);
   transition: width 200ms ease-out;
 }
 .header-link:hover::after {
@@ -257,16 +258,16 @@
 .faq-carousel-wrapper {
   perspective: 1200px;
   overflow: hidden;
-  padding: 24px 0;
+  padding: 10px 0;
 }
 .faq-carousel-inner {
   position: relative;
-  min-height: 340px;
+  min-height: 230px;
   transition: height 0.4s ease;
 }
 @media (min-width: 768px) {
   .faq-carousel-inner {
-    min-height: 380px;
+    min-height: 220px;
   }
 }
 .faq-card {
@@ -286,7 +287,7 @@
   pointer-events: auto;
 }
 .faq-card-active:hover {
-  box-shadow: 0 12px 40px oklch(0.366 0.165 264 / 0.15);
+  box-shadow: 0 12px 40px oklch(0.208 0.042 265.755 / 0.15);
 }
 .faq-card-dim {
   opacity: 0 !important;

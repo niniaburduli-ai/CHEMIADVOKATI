@@ -47,6 +47,26 @@ const featureSchema = new Schema(
   { _id: false }
 )
 
+const howItWorksStepSchema = new Schema(
+  {
+    text: { type: String, default: "" },
+    textEn: { type: String, default: "" },
+  },
+  { _id: false }
+)
+
+const howItWorksItemSchema = new Schema(
+  {
+    key: { type: String, enum: ["chat", "review", "templates", "generate"], required: true },
+    title: { type: String, default: "" },
+    titleEn: { type: String, default: "" },
+    steps: [howItWorksStepSchema],
+    ctaText: { type: String, default: "" },
+    ctaTextEn: { type: String, default: "" },
+  },
+  { _id: false }
+)
+
 const planSchema = new Schema(
   {
     _id: { type: String, required: true },
@@ -72,6 +92,7 @@ const HomePageSchema = new Schema(
       features: { type: Boolean, default: true },
       pricing: { type: Boolean, default: true },
       faq: { type: Boolean, default: true },
+      howItWorks: { type: Boolean, default: true },
     },
     hero: {
       title: { type: String, default: "" },
@@ -86,6 +107,9 @@ const HomePageSchema = new Schema(
     serviceCards: [serviceCardSchema],
     cardsHeading: { type: String, default: "" },
     cardsHeadingEn: { type: String, default: "" },
+    howItWorksHeading: { type: String, default: "" },
+    howItWorksHeadingEn: { type: String, default: "" },
+    howItWorks: [howItWorksItemSchema],
     statsHeading: { type: String, default: "" },
     statsHeadingEn: { type: String, default: "" },
     stats: [statCardSchema],
