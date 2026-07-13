@@ -13,6 +13,7 @@ import {
   PERIOD_MS,
 } from "@/lib/flitt";
 import { getPlanLimits } from "@/lib/plans-db";
+import { STEP_QUANTITIES } from "@/lib/custom-plan-rates-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,11 @@ type CustomQuantities = {
   docReview: number;
 };
 
+/** A valid purchased quantity is either 0 (not purchased) or one of the defined steps. */
+function isValidStepQuantity(n: number): boolean {
+  return n === 0 || (STEP_QUANTITIES as readonly number[]).includes(n);
+}
+
 /** Resolve the target user + purchased quantities for a `custom_` order. */
 async function resolveCustomOrder(data: {
   order_id?: string;
@@ -56,12 +62,19 @@ async function resolveCustomOrder(data: {
     try {
       const md = JSON.parse(data.merchant_data) as { userId?: string } & Partial<CustomQuantities>;
       userId = md.userId ?? null;
-      quantities = {
+      const parsed: CustomQuantities = {
         consultations: Number(md.consultations) || 0,
         docTemplates: Number(md.docTemplates) || 0,
         docGeneration: Number(md.docGeneration) || 0,
         docReview: Number(md.docReview) || 0,
       };
+      // Defense-in-depth: merchant_data is client-influenced. Each quantity
+      // must be 0 or one of the defined purchase steps — anything else (e.g.
+      // a tampered or corrupted value) is treated the same as unparseable
+      // merchant_data so it flows into the audit/no-grant branch instead of
+      // silently granting an arbitrary amount.
+      const allValid = Object.values(parsed).every(isValidStepQuantity);
+      quantities = allValid ? parsed : null;
     } catch {
       /* ignore malformed merchant_data */
     }
@@ -95,20 +108,22 @@ async function handleCustomOrder(data: {
   const amount = Number(data.amount) || 0;
   const paymentId = String(data.payment_id ?? data.order_id ?? "");
 
-  // Idempotency guard: Flitt (and payment gateways in general) can redeliver
-  // a callback after a timeout even though a 200 was eventually returned.
-  // The subscription flow is naturally idempotent because it `$set`s fixed
-  // fields, but this branch `$inc`s quota, so a retry must be short-circuited
-  // before it touches `User` again.
-  const existingPayment = await Payment.findOne({ paymentId }).lean();
-  if (existingPayment) {
-    return NextResponse.json({ status: "ok" });
-  }
+  // Idempotency: Flitt (and payment gateways in general) can redeliver a
+  // callback after a timeout even though a 200 was eventually returned. The
+  // subscription flow is naturally idempotent because it `$set`s fixed
+  // fields, but this branch `$inc`s quota, so a retry must never reach the
+  // `User` grant twice. Rather than check-then-act (findOne, then later
+  // insert), the `Payment` upsert itself is the atomic claim: `paymentId` is
+  // now `unique` at the DB level, and `findOneAndUpdate({upsert:true, new:
+  // false})` returns the pre-existing doc (non-null) if one already existed,
+  // or `null` if THIS call performed the insert. Concurrent callbacks for the
+  // same paymentId are serialized by Mongo at the unique-index level, so at
+  // most one caller ever observes `claim === null`.
 
   // Same sandbox guard as the subscription flow: a sandbox-signed "approved"
   // callback must never grant real quota, in any environment.
   if (approved && isSandboxCredentials()) {
-    await Payment.updateOne(
+    const claim = await Payment.findOneAndUpdate(
       { paymentId },
       {
         $setOnInsert: {
@@ -123,15 +138,40 @@ async function handleCustomOrder(data: {
           paidAt: new Date(),
         },
       },
-      { upsert: true }
+      { upsert: true, new: false }
     );
-    console.warn(
-      `[flitt/callback] Sandbox-signed "approved" callback for custom order ${data.order_id} (user ${user._id}) — recorded, real grant blocked.`
-    );
+    if (claim === null) {
+      console.warn(
+        `[flitt/callback] Sandbox-signed "approved" callback for custom order ${data.order_id} (user ${user._id}) — recorded, real grant blocked.`
+      );
+    }
     return NextResponse.json({ status: "ignored_sandbox" });
   }
 
   if (approved && quantities) {
+    const claim = await Payment.findOneAndUpdate(
+      { paymentId },
+      {
+        $setOnInsert: {
+          userId: user._id,
+          orderId: data.order_id ?? "",
+          paymentId,
+          plan: "custom",
+          amount,
+          currency: "GEL",
+          status: "approved",
+          paidAt: new Date(),
+        },
+      },
+      { upsert: true, new: false }
+    );
+    if (claim !== null) {
+      // A Payment already existed for this paymentId — retried/duplicate
+      // webhook delivery for an already-processed payment. Do not grant
+      // quota again.
+      return NextResponse.json({ status: "ok" });
+    }
+
     const inc: Record<string, number> = {};
     if (quantities.consultations > 0) inc.customConsultationsRemaining = quantities.consultations;
     if (quantities.docTemplates > 0) inc.customDocTemplatesRemaining = quantities.docTemplates;
@@ -146,32 +186,13 @@ async function handleCustomOrder(data: {
       },
       ...(Object.keys(inc).length > 0 ? { $inc: inc } : {}),
     });
-
-    await Payment.updateOne(
-      { paymentId },
-      {
-        $setOnInsert: {
-          userId: user._id,
-          orderId: data.order_id ?? "",
-          paymentId,
-          plan: "custom",
-          amount,
-          currency: "GEL",
-          status: "approved",
-          paidAt: new Date(),
-        },
-      },
-      { upsert: true }
-    );
   } else if (approved && !quantities) {
-    // A real charge was confirmed by Flitt but merchant_data was missing or
-    // failed to parse, so we have no quantities to grant. Silently returning
-    // "ok" here would eat a real payment with nothing left to reconcile
-    // against — log loudly and leave an audit record for manual follow-up.
-    console.error(
-      `[flitt/callback] Approved custom order ${data.order_id} (user ${user._id}) has missing/unparseable merchant_data — no quota granted, needs manual reconciliation.`
-    );
-    await Payment.updateOne(
+    // A real charge was confirmed by Flitt but merchant_data was missing,
+    // failed to parse, or contained an invalid quantity, so we have no
+    // trustworthy quantities to grant. Silently returning "ok" here would eat
+    // a real payment with nothing left to reconcile against — log loudly and
+    // leave an audit record for manual follow-up.
+    const claim = await Payment.findOneAndUpdate(
       { paymentId },
       {
         $setOnInsert: {
@@ -185,8 +206,13 @@ async function handleCustomOrder(data: {
           paidAt: new Date(),
         },
       },
-      { upsert: true }
+      { upsert: true, new: false }
     );
+    if (claim === null) {
+      console.error(
+        `[flitt/callback] Approved custom order ${data.order_id} (user ${user._id}) has missing/unparseable merchant_data — no quota granted, needs manual reconciliation.`
+      );
+    }
   }
   // Declined/expired/reversed/other: nothing was granted yet, so there is
   // nothing to roll back — no field changes.

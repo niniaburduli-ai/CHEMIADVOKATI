@@ -249,7 +249,7 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
           )}
-          {hasCustomPlan && customMetrics.length > 0 && (
+          {hasCustomPlan && (
             <Card className="mb-8 border-t-[3px] border-t-gold card-hover">
               <CardContent className="py-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
@@ -258,17 +258,21 @@ export default async function DashboardPage() {
                     {dp.customPackageExpiresPrefix} {customExpiresLabel}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {customMetrics.map((m) => (
-                    <div key={m.key} className="flex items-center gap-2 text-sm">
-                      {m.icon}
-                      <div>
-                        <div className="font-semibold tabular-nums">{m.remaining}</div>
-                        <div className="text-xs text-muted-foreground">{m.label}</div>
+                {customMetrics.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {customMetrics.map((m) => (
+                      <div key={m.key} className="flex items-center gap-2 text-sm">
+                        {m.icon}
+                        <div>
+                          <div className="font-semibold tabular-nums">{m.remaining}</div>
+                          <div className="text-xs text-muted-foreground">{m.label}</div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{dp.customPackageDepleted}</p>
+                )}
               </CardContent>
             </Card>
           )}

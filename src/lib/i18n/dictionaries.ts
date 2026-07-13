@@ -287,6 +287,7 @@ const ka = {
     servicesSubtitle: "დაათვალიერეთ ყველა ხელმისაწვდომი სერვისი",
     customPackageTitle: "ინდივიდუალური პაკეტი",
     customPackageExpiresPrefix: "მოქმედებს",
+    customPackageDepleted: "ამ პაკეტის ყველა სერვისი უკვე გამოყენებულია.",
   },
   documentAnalysis: {
     title: "დოკუმენტის ანალიზი",
@@ -669,6 +670,7 @@ const en: Dict = {
     servicesSubtitle: "Browse all available services",
     customPackageTitle: "Custom package",
     customPackageExpiresPrefix: "Valid until",
+    customPackageDepleted: "All services in this package have been used.",
   },
   documentAnalysis: {
     title: "Document Analysis",
