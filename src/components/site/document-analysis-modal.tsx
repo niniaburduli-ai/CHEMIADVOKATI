@@ -317,7 +317,8 @@ export function DocumentAnalysisPanel({
   const analyzeDisabled = mode === "document" ? !file : images.length === 0;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full">
+    <div className="flex-1 overflow-y-auto p-6 space-y-4">
       <div>
         <h3 className="text-lg font-bold text-foreground">{t.title}</h3>
         <p className="text-sm text-muted-foreground">{t.subtitle}</p>
@@ -357,9 +358,9 @@ export function DocumentAnalysisPanel({
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-8 flex flex-col items-center gap-2 text-center"
+                  className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-4 flex flex-col items-center gap-1.5 text-center"
                 >
-                  <FileUp className="h-8 w-8 text-primary" />
+                  <FileUp className="h-5 w-5 text-primary" />
                   <p className="text-sm font-medium text-foreground">
                     {file ? file.name : t.dropzoneHint}
                   </p>
@@ -416,9 +417,9 @@ export function DocumentAnalysisPanel({
                   <button
                     type="button"
                     onClick={() => imagesRef.current?.click()}
-                    className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-8 flex flex-col items-center gap-2 text-center"
+                    className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-primary/5 transition-colors p-4 flex flex-col items-center gap-1.5 text-center"
                   >
-                    <ImageIcon className="h-8 w-8 text-primary" />
+                    <ImageIcon className="h-5 w-5 text-primary" />
                     <p className="text-sm font-medium text-foreground">{t.dropzoneHintPhotos}</p>
                     <span className="text-xs text-muted-foreground">{t.chooseFile}</span>
                   </button>
@@ -707,7 +708,11 @@ export function DocumentAnalysisPanel({
             </Button>
           </div>
         )}
-      </div>
+    </div>
+      <footer className="p-3 border-t border-border shrink-0">
+        <p className="text-[10px] text-center text-muted-foreground">{t.disclaimer}</p>
+      </footer>
+    </div>
   );
 }
 

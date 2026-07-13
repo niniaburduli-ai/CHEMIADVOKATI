@@ -27,6 +27,7 @@ import { DocumentAnalysisPanel } from "@/components/site/document-analysis-modal
 import { PreviousCorrespondenceButton } from "@/components/site/previous-correspondence-panel";
 import { PageHero } from "@/components/site/PageHero";
 import { DOC_TYPES } from "@/app/generate/generate-client";
+import { TEMPLATE_DOC_TYPES } from "@/app/templates/templates-client";
 import { getDict } from "@/lib/i18n/dictionaries";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
 import { groupItemsByArticle } from "@/lib/legal/citations";
@@ -256,7 +257,7 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+      <header className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>
           <h3 className="text-lg font-bold text-primary">{sm.customDocsTab}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{sm.customDocsHint}</p>
@@ -272,8 +273,8 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {filtered.map((t) => {
             const meta = TEMPLATE_META[t.value];
             const Icon = meta?.icon ?? FileText;
@@ -281,16 +282,16 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
               <Link
                 key={t.value}
                 href={`/generate?type=${t.value}`}
-                className="p-5 border border-border rounded-xl hover:shadow-md transition-shadow group bg-card"
+                className="p-3 border border-border rounded-xl hover:shadow-md transition-shadow group bg-card"
               >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                  <Icon className="h-5 w-5" />
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
+                  <Icon className="h-4 w-4" />
                 </div>
-                <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">
+                <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                   {t.label}
                 </h4>
-                {meta && <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>}
-                <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-primary">
+                {meta && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{meta.description}</p>}
+                <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary">
                   {sm.generateCta}
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </div>
@@ -304,26 +305,51 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
           )}
         </div>
       </div>
+      <footer className="p-3 border-t border-border shrink-0">
+        <p className="text-[10px] text-center text-muted-foreground">{sm.docGenDisclaimer}</p>
+      </footer>
     </div>
   );
 }
 
 function TemplatesLinkPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"] }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full p-10 text-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-        <LayoutTemplate className="h-7 w-7" />
+    <div className="flex flex-col h-full">
+      <header className="p-4 border-b border-border shrink-0">
+        <h3 className="text-lg font-bold text-primary">{sm.templatesTab}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{sm.templatesHint}</p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {TEMPLATE_DOC_TYPES.map((t) => {
+            const meta = TEMPLATE_META[t.value];
+            const Icon = meta?.icon ?? LayoutTemplate;
+            return (
+              <Link
+                key={t.value}
+                href={`/templates?type=${t.value}`}
+                className="p-3 border border-border rounded-xl hover:shadow-md transition-shadow group bg-card"
+              >
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                  {t.label}
+                </h4>
+                {meta && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{meta.description}</p>}
+                <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary">
+                  {sm.generateCta}
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-      <div>
-        <h3 className="text-lg font-bold text-foreground">{sm.templatesTab}</h3>
-        <p className="text-sm text-muted-foreground mt-1 max-w-sm">{sm.templatesHint}</p>
-      </div>
-      <Link href="/templates">
-        <Button>
-          {sm.generateCta}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </Link>
+      <footer className="p-3 border-t border-border shrink-0">
+        <p className="text-[10px] text-center text-muted-foreground">{sm.templatesGenDisclaimer}</p>
+      </footer>
     </div>
   );
 }
@@ -412,25 +438,19 @@ export function ServicesPageClient({
                 ))}
 
                 <div className="pt-4 mt-4 border-t border-border space-y-3">
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-xs font-semibold text-destructive mb-1">{sm.warningLabel}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{d.chat.disclaimer}</p>
-                  </div>
                   <UpgradeCard plan={upgradePlan} locale={locale} d={d} />
                 </div>
               </div>
             </aside>
 
             {/* Canvas */}
-            <section className="flex-1 min-w-0 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[650px]">
+            <section className="flex-1 min-w-0 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
               <div className={activeTab === "ai" ? "contents" : "hidden"}>
                 {flags.chat && <AiConsultPanel locale={locale} />}
               </div>
               <div className={activeTab === "docs" ? "contents" : "hidden"}>
                 {flags.review && (
-                  <div className="p-6 overflow-y-auto">
-                    <DocumentAnalysisPanel locale={locale} initialReviewId={initialReviewId} />
-                  </div>
+                  <DocumentAnalysisPanel locale={locale} initialReviewId={initialReviewId} />
                 )}
               </div>
               <div className={activeTab === "templates" ? "contents" : "hidden"}>
