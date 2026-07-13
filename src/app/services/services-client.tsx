@@ -357,11 +357,13 @@ export function ServicesPageClient({
   flags,
   upgradePlan,
   initialTab,
+  initialReviewId,
 }: {
   locale: Locale;
   flags: FeatureFlagsData;
   upgradePlan: PlanData | null;
   initialTab?: string;
+  initialReviewId?: string;
 }) {
   const d = getDict(locale);
   const sm = d.servicesModal;
@@ -427,7 +429,7 @@ export function ServicesPageClient({
               <div className={activeTab === "docs" ? "contents" : "hidden"}>
                 {flags.review && (
                   <div className="p-6 overflow-y-auto">
-                    <DocumentAnalysisPanel locale={locale} />
+                    <DocumentAnalysisPanel locale={locale} initialReviewId={initialReviewId} />
                   </div>
                 )}
               </div>

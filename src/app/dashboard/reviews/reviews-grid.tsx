@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, FileSearch, AlertCircle, CheckCircle2, ChevronDown, Wand2 } from "lucide-react";
+import Link from "next/link";
+import { Clock, FileSearch, AlertCircle, CheckCircle2, ChevronDown, Wand2, Play } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RiskFindingCard, isStructuredFinding } from "@/components/site/risk-finding-card";
@@ -76,15 +77,23 @@ export function ReviewsGrid({ items }: { items: ReviewItem[] }) {
                     </CardDescription>
                   )}
                 </div>
-                {review.revisions.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setExpandedId(isOpen ? null : review.id)}
+                <div className="flex items-center gap-1">
+                  <Link
+                    href={`/services?tab=docs&reviewId=${review.id}`}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline px-2 py-1.5"
                   >
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                  </Button>
-                )}
+                    <Play className="h-3 w-3" /> განაგრძეთ
+                  </Link>
+                  {review.revisions.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpandedId(isOpen ? null : review.id)}
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

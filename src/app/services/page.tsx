@@ -27,9 +27,9 @@ export const metadata: Metadata = buildMetadata({
 export default async function ServicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; reviewId?: string }>
 }) {
-  const [locale, flags, plans, { tab }] = await Promise.all([
+  const [locale, flags, plans, { tab, reviewId }] = await Promise.all([
     getLocale(),
     getFeatureFlags(),
     getVisiblePlans(),
@@ -45,7 +45,13 @@ export default async function ServicesPage({
           { name: "მომსახურებები", path: "/services" },
         ])}
       />
-      <ServicesPageClient locale={locale} flags={flags} upgradePlan={upgradePlan} initialTab={tab} />
+      <ServicesPageClient
+        locale={locale}
+        flags={flags}
+        upgradePlan={upgradePlan}
+        initialTab={tab}
+        initialReviewId={reviewId}
+      />
     </>
   )
 }
