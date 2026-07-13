@@ -7,7 +7,8 @@ import { GenerateDocSchema, DOC_TYPES } from "@/lib/validators";
 import { callOpenRouterChat } from "@/lib/ai-call";
 import { verifyLegalCitations, STRICT_BREVITY_RULE } from "@/lib/legal/openrouter";
 import { getCachedCitations, setCachedCitations } from "@/lib/legal/doc-citation-cache";
-import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { splitQuota, applyQuotaSplit } from "@/lib/quota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,8 +71,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
   user = await applyPlanExpiryIfDue(user);
+  user = await applyCustomPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
-  if (!isAdmin && (user.docGenerationRemaining ?? 0) <= 0) {
+  const quotaSplit = isAdmin ? null : splitQuota(user, "docGeneration", 1);
+  if (!isAdmin && !quotaSplit) {
     return NextResponse.json(
       { error: "Document generation quota exceeded. Please upgrade your plan." },
       { status: 403 }
@@ -138,8 +141,8 @@ export async function POST(req: Request) {
     legalBasis,
   });
   const saveOps: Promise<unknown>[] = [docCreate];
-  if (!isAdmin) {
-    saveOps.push(User.findByIdAndUpdate(session.user.id, { $inc: { docGenerationRemaining: -1 } }));
+  if (!isAdmin && quotaSplit) {
+    saveOps.push(applyQuotaSplit(session.user.id, "docGeneration", quotaSplit));
   }
   const [doc] = await Promise.all(saveOps);
 
