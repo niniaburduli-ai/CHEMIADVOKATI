@@ -24,8 +24,17 @@ export const metadata: Metadata = buildMetadata({
   ],
 })
 
-export default async function ServicesPage() {
-  const [locale, flags, plans] = await Promise.all([getLocale(), getFeatureFlags(), getVisiblePlans()])
+export default async function ServicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const [locale, flags, plans, { tab }] = await Promise.all([
+    getLocale(),
+    getFeatureFlags(),
+    getVisiblePlans(),
+    searchParams,
+  ])
   const upgradePlan =
     plans.find((p) => p.highlighted && p.active) ?? plans.find((p) => !p.isFree && p.active) ?? null
   return (
@@ -36,7 +45,7 @@ export default async function ServicesPage() {
           { name: "მომსახურებები", path: "/services" },
         ])}
       />
-      <ServicesPageClient locale={locale} flags={flags} upgradePlan={upgradePlan} />
+      <ServicesPageClient locale={locale} flags={flags} upgradePlan={upgradePlan} initialTab={tab} />
     </>
   )
 }

@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { MessageCircle, FileText, FolderSearch, LayoutTemplate } from "lucide-react";
 import { AnimateIn } from "@/components/site/AnimateIn";
-import { DocumentAnalysisModal } from "@/components/site/document-analysis-modal";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import type { FeatureFlagsData } from "@/lib/features";
-import type { Locale } from "@/lib/i18n/config";
 
 const CARD_CLASSES =
   "group flex gap-3.5 items-start bg-card border border-border rounded-2xl p-3 text-left transition-colors hover:bg-primary/10 hover:border-primary/50 w-full";
@@ -16,22 +13,18 @@ export function ServiceCards({
   cardsHeading,
   d,
   flags,
-  locale,
 }: {
   cardsHeading: string;
   d: Dict;
   flags: FeatureFlagsData;
-  locale: Locale;
 }) {
-  const [reviewOpen, setReviewOpen] = useState(false);
-
-  // "review" has no standalone page — that flow lives in DocumentAnalysisModal (see src/app/review/page.tsx),
-  // so its card opens the modal instead of navigating (a plain Link there just bounces to /dashboard).
+  // Every card opens the /services hub on its matching tab, so the card preview
+  // (icon + title + subtitle) always matches what the tab shows.
   const items = [
-    { key: "chat", href: "/chat", icon: MessageCircle, label: d.servicesModal.aiTab, desc: d.servicesModal.aiSubtitle, enabled: flags.chat },
-    { key: "review", href: null, icon: FolderSearch, label: d.documentAnalysis.title, desc: d.documentAnalysis.subtitle, enabled: flags.review },
-    { key: "templates", href: "/templates", icon: LayoutTemplate, label: d.servicesModal.templatesTab, desc: d.servicesModal.templatesHint, enabled: flags.templates },
-    { key: "generate", href: "/generate", icon: FileText, label: d.servicesModal.customDocsTab, desc: d.servicesModal.customDocsHint, enabled: flags.generate },
+    { key: "chat", href: "/services?tab=ai", icon: MessageCircle, label: d.servicesModal.aiTab, desc: d.servicesModal.aiSubtitle, enabled: flags.chat },
+    { key: "review", href: "/services?tab=docs", icon: FolderSearch, label: d.documentAnalysis.title, desc: d.documentAnalysis.subtitle, enabled: flags.review },
+    { key: "templates", href: "/services?tab=templatesFill", icon: LayoutTemplate, label: d.servicesModal.templatesTab, desc: d.servicesModal.templatesHint, enabled: flags.templates },
+    { key: "generate", href: "/services?tab=templates", icon: FileText, label: d.servicesModal.customDocsTab, desc: d.servicesModal.customDocsHint, enabled: flags.generate },
   ].filter((i) => i.enabled);
 
   if (items.length === 0) return null;
@@ -75,23 +68,15 @@ export function ServiceCards({
                   delay={idx * 100}
                   className={`w-full sm:w-[calc(50%-2rem)] ${onRight ? "sm:ml-auto" : "sm:mr-auto"}`}
                 >
-                  {item.href ? (
-                    <Link href={item.href} className={CARD_CLASSES}>
-                      {content}
-                    </Link>
-                  ) : (
-                    <button type="button" onClick={() => setReviewOpen(true)} className={CARD_CLASSES}>
-                      {content}
-                    </button>
-                  )}
+                  <Link href={item.href} className={CARD_CLASSES}>
+                    {content}
+                  </Link>
                 </AnimateIn>
               </div>
             );
           })}
         </div>
       </div>
-
-      <DocumentAnalysisModal open={reviewOpen} onOpenChange={setReviewOpen} locale={locale} />
     </section>
   );
 }
