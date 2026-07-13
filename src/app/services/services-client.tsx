@@ -421,14 +421,22 @@ export function ServicesPageClient({
 
             {/* Canvas */}
             <section className="flex-1 min-w-0 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[650px]">
-              {activeTab === "ai" && flags.chat && <AiConsultPanel locale={locale} />}
-              {activeTab === "docs" && flags.review && (
-                <div className="p-6 overflow-y-auto">
-                  <DocumentAnalysisPanel locale={locale} />
-                </div>
-              )}
-              {activeTab === "templates" && flags.generate && <TemplatesPanel sm={sm} />}
-              {activeTab === "templatesFill" && flags.templates && <TemplatesLinkPanel sm={sm} />}
+              <div className={activeTab === "ai" ? "contents" : "hidden"}>
+                {flags.chat && <AiConsultPanel locale={locale} />}
+              </div>
+              <div className={activeTab === "docs" ? "contents" : "hidden"}>
+                {flags.review && (
+                  <div className="p-6 overflow-y-auto">
+                    <DocumentAnalysisPanel locale={locale} />
+                  </div>
+                )}
+              </div>
+              <div className={activeTab === "templates" ? "contents" : "hidden"}>
+                {flags.generate && <TemplatesPanel sm={sm} />}
+              </div>
+              <div className={activeTab === "templatesFill" ? "contents" : "hidden"}>
+                {flags.templates && <TemplatesLinkPanel sm={sm} />}
+              </div>
             </section>
           </div>
         )}
