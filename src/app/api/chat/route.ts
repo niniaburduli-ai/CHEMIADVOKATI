@@ -9,7 +9,8 @@ import { fetchApprovedSource } from "@/lib/legal/fetch-source";
 import { searchSources, type SearchQuery } from "@/lib/legal/search";
 import { expandQuery } from "@/lib/legal/query-understanding";
 import { isCircuitOpen, recordFetchFailure, recordFetchSuccess } from "@/lib/legal/fetch-circuit";
-import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { splitQuota, applyQuotaSplit, type QuotaSplit } from "@/lib/quota";
 import { getCachedAnswer, setCachedAnswer } from "@/lib/legal/answer-cache";
 import {
   buildLegalBasis,
@@ -37,12 +38,13 @@ export const dynamic = "force-dynamic";
 async function finalizeAnswer(params: {
   userId: string;
   isAdmin: boolean;
+  quotaSplit: QuotaSplit | null;
   question: string;
   answer: string;
   legalBasis: LegalBasisGroup[];
   webSources?: WebSource[];
 }): Promise<Response> {
-  const { userId, isAdmin, question, answer, legalBasis, webSources } = params;
+  const { userId, isAdmin, quotaSplit, question, answer, legalBasis, webSources } = params;
 
   // Grounded-source citations when we have them; otherwise fall back to the
   // web-search sources so a web-fallback answer still records where it came
@@ -64,10 +66,8 @@ async function finalizeAnswer(params: {
   const saveOps: Promise<unknown>[] = [
     Consultation.create({ userId, question, answer, sources }),
   ];
-  if (!isAdmin) {
-    saveOps.push(
-      User.findByIdAndUpdate(userId, { $inc: { consultationsRemaining: -1 } })
-    );
+  if (!isAdmin && quotaSplit) {
+    saveOps.push(applyQuotaSplit(userId, "consultations", quotaSplit));
   }
   await Promise.all(saveOps);
 
@@ -93,6 +93,7 @@ async function finalizeAnswer(params: {
 async function tryWebFallback(
   userId: string,
   isAdmin: boolean,
+  quotaSplit: QuotaSplit | null,
   question: string,
   keywords?: string[]
 ): Promise<Response> {
@@ -103,6 +104,7 @@ async function tryWebFallback(
     return finalizeAnswer({
       userId,
       isAdmin,
+      quotaSplit,
       question,
       answer: prose,
       legalBasis: [],
@@ -143,8 +145,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
   user = await applyPlanExpiryIfDue(user);
+  user = await applyCustomPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
-  if (!isAdmin && (user.consultationsRemaining ?? 0) <= 0) {
+  const quotaSplit = isAdmin ? null : splitQuota(user, "consultations", 1);
+  if (!isAdmin && !quotaSplit) {
     return NextResponse.json(
       { error: "Consultation quota exceeded. Please upgrade your plan." },
       { status: 403 }
@@ -156,6 +160,7 @@ export async function POST(req: Request) {
     return finalizeAnswer({
       userId: session.user.id,
       isAdmin,
+      quotaSplit,
       question,
       answer: cached.answer,
       legalBasis: cached.legalBasis,
@@ -183,7 +188,7 @@ export async function POST(req: Request) {
   }
 
   if (fetched.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.keywords);
   }
 
   const searchQuery: SearchQuery = {
@@ -193,7 +198,7 @@ export async function POST(req: Request) {
   };
   const matches = searchSources(fetched, searchQuery, 10);
   if (matches.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.keywords);
   }
 
   // Only pay Perplexity's per-request search fee once we know it'll actually
@@ -260,7 +265,7 @@ export async function POST(req: Request) {
   // The 8 approved sources didn't have it, per the grounded model itself —
   // last resort before refusing: search the web across all Georgian law.
   if (answer.trim() === NOT_FOUND_MSG) {
-    return tryWebFallback(session.user.id, isAdmin, question, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.keywords);
   }
 
   const legalBasis = buildLegalBasis(matches, citations);
@@ -270,6 +275,7 @@ export async function POST(req: Request) {
   return finalizeAnswer({
     userId: session.user.id,
     isAdmin,
+    quotaSplit,
     question,
     answer,
     legalBasis,
