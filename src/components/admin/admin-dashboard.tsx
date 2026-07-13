@@ -16,6 +16,7 @@ import {
   BarChart3,
   Palette,
   CreditCard,
+  SlidersHorizontal,
   Database,
   ToggleRight,
   Menu,
@@ -33,6 +34,7 @@ import { CMSPanel } from "@/components/admin/cms/CMSPanel";
 import { OverviewPanel } from "@/components/admin/OverviewPanel";
 import { ThemePanel } from "@/components/admin/ThemePanel";
 import { PlansPanel } from "@/components/admin/PlansPanel";
+import { CustomPlanRatesPanel } from "@/components/admin/CustomPlanRatesPanel";
 import { DatabasePanel } from "@/components/admin/DatabasePanel";
 import { FeaturesPanel } from "@/components/admin/FeaturesPanel";
 import { Button } from "@/components/ui/button";
@@ -116,7 +118,7 @@ function formatDate(iso: string | null): string {
 
 type AdminSection =
   | "overview" | "users" | "consultations" | "documents" | "reviews"
-  | "files" | "cms" | "theme" | "plans" | "features" | "database";
+  | "files" | "cms" | "theme" | "plans" | "custom-plan-rates" | "features" | "database";
 
 export function AdminDashboard({
   initialUploads,
@@ -154,6 +156,7 @@ export function AdminDashboard({
         { id: "cms", label: "შინაარსი (CMS)", icon: LayoutDashboard },
         { id: "theme", label: "თემა", icon: Palette },
         { id: "plans", label: "გეგმები", icon: CreditCard },
+        { id: "custom-plan-rates", label: "ინდ. პაკეტის ფასები", icon: SlidersHorizontal },
         { id: "features", label: "ფუნქციები", icon: ToggleRight },
         { id: "database", label: "ბაზა", icon: Database },
       ],
@@ -230,6 +233,7 @@ export function AdminDashboard({
     case "cms": content = <CMSPanel />; break;
     case "theme": content = <ThemePanel />; break;
     case "plans": content = <PlansPanel />; break;
+    case "custom-plan-rates": content = <CustomPlanRatesPanel />; break;
     case "features": content = <FeaturesPanel />; break;
     case "database": content = <DatabasePanel />; break;
   }
