@@ -48,6 +48,7 @@ export default async function BillingPage() {
   const planMap = new Map(plans.map((p) => [p.key, p]));
 
   const planLabel = (key: string) => {
+    if (key === "custom") return d.billing.customPackageLabel;
     const p = planMap.get(key);
     return p ? pick(p.name, p.nameEn, locale) : key;
   };
