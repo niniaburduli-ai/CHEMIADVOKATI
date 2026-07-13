@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DocumentAnalysisPanel } from "@/components/site/document-analysis-modal";
+import { PreviousCorrespondenceButton } from "@/components/site/previous-correspondence-panel";
 import { PageHero } from "@/components/site/PageHero";
 import { DOC_TYPES } from "@/app/generate/generate-client";
 import { getDict } from "@/lib/i18n/dictionaries";
@@ -140,14 +141,17 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-5 border-b border-border bg-muted/30 flex items-center gap-3 shrink-0">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
-          <Sparkles className="h-5 w-5" />
+      <header className="p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-primary">{sm.aiTab}</h3>
+            <p className="text-xs text-muted-foreground">{sm.aiSubtitle}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-bold text-primary">{sm.aiTab}</h3>
-          <p className="text-xs text-muted-foreground">{sm.aiSubtitle}</p>
-        </div>
+        <PreviousCorrespondenceButton locale={locale} />
       </header>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -346,14 +350,18 @@ function UpgradeCard({ plan, locale, d }: { plan: PlanData | null; locale: Local
   );
 }
 
+const TAB_KEYS: Tab[] = ["ai", "docs", "templates", "templatesFill"];
+
 export function ServicesPageClient({
   locale,
   flags,
   upgradePlan,
+  initialTab,
 }: {
   locale: Locale;
   flags: FeatureFlagsData;
   upgradePlan: PlanData | null;
+  initialTab?: string;
 }) {
   const d = getDict(locale);
   const sm = d.servicesModal;
@@ -365,7 +373,9 @@ export function ServicesPageClient({
     { key: "templatesFill", label: sm.templatesTab, icon: LayoutTemplate, enabled: flags.templates },
   ];
   const enabledTabs = tabs.filter((t) => t.enabled);
-  const [activeTab, setActiveTab] = useState<Tab>(enabledTabs[0]?.key ?? "ai");
+  const requestedTab = TAB_KEYS.includes(initialTab as Tab) ? (initialTab as Tab) : undefined;
+  const defaultTab = enabledTabs.find((t) => t.key === requestedTab)?.key ?? enabledTabs[0]?.key ?? "ai";
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
 
   return (
     <div>

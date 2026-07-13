@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/site/file-upload";
 import { UpgradeRequiredDialog } from "@/components/site/upgrade-required-dialog";
+import { PreviousCorrespondenceButton } from "@/components/site/previous-correspondence-panel";
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { groupItemsByArticle } from "@/lib/legal/citations";
@@ -158,6 +159,9 @@ export function ChatClient({ locale }: { locale: Locale }) {
     <>
       <section className="bg-slate-900">
         <div className="container mx-auto px-4 py-16 max-w-3xl">
+          <div className="flex justify-end mb-4">
+            <PreviousCorrespondenceButton locale={locale} />
+          </div>
           <p className="animate-fade-up leading-tight">
             <span className="block text-5xl md:text-6xl font-bold text-white leading-tight mb-3">{d.chat.greeting.split(" — ")[0]}</span>
             <br />
