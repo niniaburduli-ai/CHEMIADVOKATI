@@ -95,6 +95,16 @@ async function handleCustomOrder(data: {
   const amount = Number(data.amount) || 0;
   const paymentId = String(data.payment_id ?? data.order_id ?? "");
 
+  // Idempotency guard: Flitt (and payment gateways in general) can redeliver
+  // a callback after a timeout even though a 200 was eventually returned.
+  // The subscription flow is naturally idempotent because it `$set`s fixed
+  // fields, but this branch `$inc`s quota, so a retry must be short-circuited
+  // before it touches `User` again.
+  const existingPayment = await Payment.findOne({ paymentId }).lean();
+  if (existingPayment) {
+    return NextResponse.json({ status: "ok" });
+  }
+
   // Same sandbox guard as the subscription flow: a sandbox-signed "approved"
   // callback must never grant real quota, in any environment.
   if (approved && isSandboxCredentials()) {
@@ -148,6 +158,30 @@ async function handleCustomOrder(data: {
           amount,
           currency: "GEL",
           status: "approved",
+          paidAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+  } else if (approved && !quantities) {
+    // A real charge was confirmed by Flitt but merchant_data was missing or
+    // failed to parse, so we have no quantities to grant. Silently returning
+    // "ok" here would eat a real payment with nothing left to reconcile
+    // against — log loudly and leave an audit record for manual follow-up.
+    console.error(
+      `[flitt/callback] Approved custom order ${data.order_id} (user ${user._id}) has missing/unparseable merchant_data — no quota granted, needs manual reconciliation.`
+    );
+    await Payment.updateOne(
+      { paymentId },
+      {
+        $setOnInsert: {
+          userId: user._id,
+          orderId: data.order_id ?? "",
+          paymentId,
+          plan: "custom",
+          amount,
+          currency: "GEL",
+          status: "approved_needs_review",
           paidAt: new Date(),
         },
       },
