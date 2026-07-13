@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getPlanByKey } from "@/lib/plans-db";
-import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { getFeatureFlags } from "@/lib/features";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
@@ -57,7 +57,7 @@ export default async function DashboardPage() {
       GeneratedDocument.countDocuments({ userId: session.user.id, source: "template" }),
     ]);
   if (!userRaw) redirect("/login");
-  const user = await applyPlanExpiryIfDue(userRaw);
+  const user = await applyCustomPlanExpiryIfDue(await applyPlanExpiryIfDue(userRaw));
 
   const isAdmin = user.role === "admin";
   const plan = user.plan ?? "free";
@@ -75,6 +75,21 @@ export default async function DashboardPage() {
   const docGenRemaining = user.docGenerationRemaining ?? 0;
   const docReviewRemaining = user.docReviewRemaining ?? 0;
   const docTemplatesRemaining = user.docTemplatesRemaining ?? 0;
+
+  const hasCustomPlan = !!user.customPlanExpiresAt && new Date(user.customPlanExpiresAt) > new Date();
+  const customExpiresLabel = hasCustomPlan
+    ? new Date(user.customPlanExpiresAt as Date).toLocaleDateString(dateLocale)
+    : null;
+  const customMetrics = hasCustomPlan
+    ? (
+        [
+          { key: "consultations", label: dp.questionsAsked, icon: <MessagesSquare className="h-4 w-4 text-primary" />, remaining: user.customConsultationsRemaining ?? 0 },
+          { key: "generate", label: dp.documentsGenerated, icon: <FileText className="h-4 w-4 text-primary" />, remaining: user.customDocGenerationRemaining ?? 0 },
+          { key: "review", label: dp.documentsAnalyzed, icon: <FileSearch className="h-4 w-4 text-primary" />, remaining: user.customDocReviewRemaining ?? 0 },
+          { key: "templates", label: dp.templatesFilled, icon: <FileText className="h-4 w-4 text-primary" />, remaining: user.customDocTemplatesRemaining ?? 0 },
+        ] as { key: string; label: string; icon: React.ReactNode; remaining: number }[]
+      ).filter((m) => m.remaining > 0)
+    : [];
 
   const subStatus = user.subscriptionStatus || (sub as { status?: string } | null)?.status || null;
   const periodEnd = (sub as { currentPeriodEnd?: Date } | null)?.currentPeriodEnd
@@ -231,6 +246,29 @@ export default async function DashboardPage() {
                   {dp.upgradeCta}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
+              </CardContent>
+            </Card>
+          )}
+          {hasCustomPlan && customMetrics.length > 0 && (
+            <Card className="mb-8 border-t-[3px] border-t-gold card-hover">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
+                  <p className="font-semibold text-sm">{dp.customPackageTitle}</p>
+                  <span className="text-xs text-muted-foreground">
+                    {dp.customPackageExpiresPrefix} {customExpiresLabel}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {customMetrics.map((m) => (
+                    <div key={m.key} className="flex items-center gap-2 text-sm">
+                      {m.icon}
+                      <div>
+                        <div className="font-semibold tabular-nums">{m.remaining}</div>
+                        <div className="text-xs text-muted-foreground">{m.label}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
