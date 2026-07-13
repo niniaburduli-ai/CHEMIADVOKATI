@@ -5,7 +5,8 @@ import { User } from "@/lib/models/user";
 import { GeneratedDocument } from "@/lib/models/generated-document";
 import { GenerateTemplateSchema, DOC_TYPES } from "@/lib/validators";
 import { renderTemplate } from "@/lib/legal/templates";
-import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { splitQuota, applyQuotaSplit } from "@/lib/quota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,8 +38,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
   user = await applyPlanExpiryIfDue(user);
+  user = await applyCustomPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
-  if (!isAdmin && (user.docTemplatesRemaining ?? 0) <= 0) {
+  const quotaSplit = isAdmin ? null : splitQuota(user, "docTemplates", 1);
+  if (!isAdmin && !quotaSplit) {
     return NextResponse.json(
       { error: "Template quota exceeded. Please upgrade your plan." },
       { status: 403 }
@@ -59,10 +62,8 @@ export async function POST(req: Request) {
     source: "template",
   });
   const saveOps: Promise<unknown>[] = [docCreate];
-  if (!isAdmin) {
-    saveOps.push(
-      User.findByIdAndUpdate(session.user.id, { $inc: { docTemplatesRemaining: -1 } })
-    );
+  if (!isAdmin && quotaSplit) {
+    saveOps.push(applyQuotaSplit(session.user.id, "docTemplates", quotaSplit));
   }
   const [doc] = await Promise.all(saveOps);
 
