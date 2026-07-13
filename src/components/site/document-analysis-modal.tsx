@@ -455,179 +455,212 @@ export function DocumentAnalysisPanel({ locale }: { locale: Locale }) {
               </p>
             )}
 
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-1">{t.summaryLabel}</p>
-              <p className="text-sm leading-relaxed">{result.summary}</p>
-            </div>
-
-            {result.findings.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">
-                  {t.findingsLabel} ({result.findings.length})
-                </p>
-                <div className="space-y-3">
-                  {result.findings.map((f, i) => (
-                    <RiskFindingCard key={i} finding={f} locale={locale} />
-                  ))}
+            {uiStep === 2 && (
+              <>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">{t.summaryLabel}</p>
+                  <p className="text-sm leading-relaxed">{result.summary}</p>
                 </div>
-              </div>
-            )}
 
-            {result.recommendations.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">
-                  {t.recommendationsLabel}
-                </p>
-                <ul className="space-y-1.5">
-                  {result.recommendations.map((r, i) => (
-                    <li key={i} className="text-sm flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <p className="text-xs text-muted-foreground pt-2 border-t">{t.resultsSavedNote}</p>
-
-            <div className="space-y-3 border-t pt-4">
-              <p className="text-xs font-semibold text-muted-foreground">{t.improveTitle}</p>
-              <Textarea
-                value={instructionText}
-                onChange={(e) => setInstructionText(e.target.value)}
-                placeholder={t.improveInstructionPlaceholder}
-                rows={3}
-              />
-              <Button
-                onClick={() => improve()}
-                disabled={improveStatus === "loading"}
-                variant="outline"
-                className="w-full"
-              >
-                {improveStatus === "loading" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Wand2 className="mr-2 h-4 w-4" />
-                )}
-                {improveStatus === "loading" ? t.improving : t.improveCta}
-              </Button>
-
-              {improveStatus === "error" && (
-                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>
-                    {improveErrorKind === "unauthorized" && t.loginRequired}
-                    {improveErrorKind === "quota" && t.quotaExceeded}
-                    {improveErrorKind === "generic" && t.genericError}
-                  </span>
-                </div>
-              )}
-
-              {revision && (
-                <div className="space-y-4 rounded-lg border border-border p-3">
+                {result.findings.length > 0 && (
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        {t.improveRevisedTitle}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={copyRevisedText}>
-                          {t.improveCopyButton}
-                        </Button>
-                        <DocumentDownloadButton
-                          content={revision.text}
-                          filename={`${result.fileName || "document"}-corrected`}
-                        />
-                      </div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">
+                      {t.findingsLabel} ({result.findings.length})
+                    </p>
+                    <div className="space-y-3">
+                      {result.findings.map((f, i) => (
+                        <RiskFindingCard key={i} finding={f} locale={locale} />
+                      ))}
                     </div>
-                    <div className="flex items-center gap-3 mb-2 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-500/40" />
-                        {t.improveDiffLegendAdded}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-500/30" />
-                        {t.improveDiffLegendRemoved}
-                      </span>
-                    </div>
-                    <TextDiff segments={revision.diff} />
                   </div>
+                )}
 
-                  {revision.findings.length > 0 && (
+                {result.recommendations.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">
+                      {t.recommendationsLabel}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {result.recommendations.map((r, i) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                          {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground pt-2 border-t">{t.resultsSavedNote}</p>
+
+                <Button onClick={() => setUiStep(3)} className="w-full">
+                  {t.stepContinueToFixCta}
+                </Button>
+              </>
+            )}
+
+            {uiStep === 3 && (
+              <div className="space-y-3 pt-2">
+                <p className="text-xs font-semibold text-muted-foreground">{t.improveTitle}</p>
+                <Textarea
+                  value={instructionText}
+                  onChange={(e) => setInstructionText(e.target.value)}
+                  placeholder={t.improveInstructionPlaceholder}
+                  rows={3}
+                />
+                <Button
+                  onClick={() => improve()}
+                  disabled={improveStatus === "loading"}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {improveStatus === "loading" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-4 w-4" />
+                  )}
+                  {improveStatus === "loading" ? t.improving : t.improveCta}
+                </Button>
+
+                {improveStatus === "error" && (
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>
+                      {improveErrorKind === "unauthorized" && t.loginRequired}
+                      {improveErrorKind === "quota" && t.quotaExceeded}
+                      {improveErrorKind === "generic" && t.genericError}
+                    </span>
+                  </div>
+                )}
+
+                {revision && (
+                  <div className="space-y-4 rounded-lg border border-border p-3">
                     <div>
-                      <p className="text-xs font-semibold text-muted-foreground mb-2">
-                        {t.improveFindingsLabel} ({revision.findings.length})
-                      </p>
-                      <div className="space-y-3">
-                        {revision.findings.map((f, i) => (
-                          <RiskFindingCard key={i} finding={f} locale={locale} />
-                        ))}
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          {t.improveRevisedTitle}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={copyRevisedText}>
+                            {t.improveCopyButton}
+                          </Button>
+                          <DocumentDownloadButton
+                            content={revision.text}
+                            filename={`${result.fileName || "document"}-corrected`}
+                          />
+                        </div>
                       </div>
+                      <div className="flex items-center gap-3 mb-2 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-500/40" />
+                          {t.improveDiffLegendAdded}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-500/30" />
+                          {t.improveDiffLegendRemoved}
+                        </span>
+                      </div>
+                      <TextDiff segments={revision.diff} />
                     </div>
-                  )}
 
-                  {revision.recommendations.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground mb-2">
-                        {t.improveRecommendationsLabel}
-                      </p>
-                      <ul className="space-y-1.5">
-                        {revision.recommendations.map((r, i) => (
-                          <li key={i} className="text-sm flex items-start gap-2">
-                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                            {r}
-                          </li>
+                    {revision.findings.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">
+                          {t.improveFindingsLabel} ({revision.findings.length})
+                        </p>
+                        <div className="space-y-3">
+                          {revision.findings.map((f, i) => (
+                            <RiskFindingCard key={i} finding={f} locale={locale} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {revision.recommendations.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">
+                          {t.improveRecommendationsLabel}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {revision.recommendations.map((r, i) => (
+                            <li key={i} className="text-sm flex items-start gap-2">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {revision.questions.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          {t.improveQuestionsTitle}
+                        </p>
+                        {revision.questions.map((q, i) => (
+                          <div key={i} className="space-y-1">
+                            <p className="text-sm">{q}</p>
+                            <Textarea
+                              value={answersDraft[q] ?? ""}
+                              onChange={(e) =>
+                                setAnswersDraft((prev) => ({ ...prev, [q]: e.target.value }))
+                              }
+                              placeholder={t.improveAnswerPlaceholder}
+                              rows={2}
+                            />
+                          </div>
                         ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {revision.questions.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        {t.improveQuestionsTitle}
-                      </p>
-                      {revision.questions.map((q, i) => (
-                        <div key={i} className="space-y-1">
-                          <p className="text-sm">{q}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold text-muted-foreground">
+                            {t.improveFollowUpCommentLabel}
+                          </p>
                           <Textarea
-                            value={answersDraft[q] ?? ""}
-                            onChange={(e) =>
-                              setAnswersDraft((prev) => ({ ...prev, [q]: e.target.value }))
-                            }
-                            placeholder={t.improveAnswerPlaceholder}
+                            value={followUpComment}
+                            onChange={(e) => setFollowUpComment(e.target.value)}
+                            placeholder={t.improveFollowUpCommentPlaceholder}
                             rows={2}
                           />
                         </div>
-                      ))}
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          {t.improveFollowUpCommentLabel}
-                        </p>
-                        <Textarea
-                          value={followUpComment}
-                          onChange={(e) => setFollowUpComment(e.target.value)}
-                          placeholder={t.improveFollowUpCommentPlaceholder}
-                          rows={2}
-                        />
+                        <Button
+                          onClick={applyAnswers}
+                          disabled={
+                            improveStatus === "loading" ||
+                            (revision.questions.every((q) => !answersDraft[q]?.trim()) &&
+                              !followUpComment.trim())
+                          }
+                          className="w-full"
+                        >
+                          {t.improveApplyAnswersCta}
+                        </Button>
                       </div>
-                      <Button
-                        onClick={applyAnswers}
-                        disabled={
-                          improveStatus === "loading" ||
-                          (revision.questions.every((q) => !answersDraft[q]?.trim()) &&
-                            !followUpComment.trim())
-                        }
-                        className="w-full"
-                      >
-                        {t.improveApplyAnswersCta}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
+
+                    <Button
+                      onClick={() => setUiStep(4)}
+                      className="w-full bg-green-600 hover:bg-green-600/90 text-white"
+                    >
+                      {t.stepFinishCta}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {uiStep === 4 && revision && (
+              <div className="space-y-3 pt-2">
+                <h4 className="text-sm font-bold text-foreground">{t.stepDoneTitle}</h4>
+                <pre className="whitespace-pre-wrap text-sm bg-muted/50 rounded-lg p-3 max-h-96 overflow-y-auto">
+                  {revision.text}
+                </pre>
+                <DocumentDownloadButton
+                  content={revision.text}
+                  filename={`${result.fileName || "document"}-corrected`}
+                />
+                <Button variant="ghost" className="w-full" onClick={() => setUiStep(3)}>
+                  {t.stepKeepFixingCta}
+                </Button>
+              </div>
+            )}
 
             <Button variant="outline" className="w-full" onClick={reset}>
               {t.chooseFile}
