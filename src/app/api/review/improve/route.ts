@@ -13,6 +13,7 @@ import {
   buildImprovementUserMessage,
   parseImprovementResponse,
 } from "@/lib/legal/document-analysis";
+import { computeWordDiff } from "@/lib/diff-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,6 +128,7 @@ export async function POST(req: Request) {
     answers,
     createdAt: new Date(),
   };
+  const diff = computeWordDiff(baseText, improvement.text);
   review.revisions.push(revision);
   await review.save();
 
@@ -134,5 +136,5 @@ export async function POST(req: Request) {
     await User.findByIdAndUpdate(session.user.id, { $inc: { docReviewRemaining: -1 } });
   }
 
-  return NextResponse.json({ id: String(review._id), revision }, { status: 201 });
+  return NextResponse.json({ id: String(review._id), revision, diff }, { status: 201 });
 }
