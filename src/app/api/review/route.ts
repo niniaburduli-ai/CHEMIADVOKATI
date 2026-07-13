@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { DocumentReview } from "@/lib/models/document-review";
-import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
+import { splitQuota, applyQuotaSplit, totalRemaining } from "@/lib/quota";
 import { callOpenRouterChat } from "@/lib/ai-call";
 import { ReviewDocTextSchema } from "@/lib/validators";
 import {
@@ -39,8 +40,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
   user = await applyPlanExpiryIfDue(user);
+  user = await applyCustomPlanExpiryIfDue(user);
   const isAdmin = user.role === "admin";
-  if (!isAdmin && (user.docReviewRemaining ?? 0) <= 0) {
+  if (!isAdmin && totalRemaining(user, "docReview") <= 0) {
     return NextResponse.json(
       { error: "Document review quota exceeded. Please upgrade your plan." },
       { status: 403 }
@@ -180,10 +182,11 @@ export async function POST(req: Request) {
   // documents are analyzed in full (never truncated) but cost proportionally
   // more credits instead — see reviewCreditCost.
   const creditsRequired = reviewCreditCost(pages);
-  if (!isAdmin && (user.docReviewRemaining ?? 0) < creditsRequired) {
+  const quotaSplit = isAdmin ? null : splitQuota(user, "docReview", creditsRequired);
+  if (!isAdmin && !quotaSplit) {
     return NextResponse.json(
       {
-        error: `This document (${pages} pages) requires ${creditsRequired} review credits; you have ${user.docReviewRemaining ?? 0} remaining.`,
+        error: `This document (${pages} pages) requires ${creditsRequired} review credits; you have ${totalRemaining(user, "docReview")} remaining.`,
       },
       { status: 403 }
     );
@@ -234,10 +237,8 @@ export async function POST(req: Request) {
     pages,
     creditsUsed,
   });
-  if (!isAdmin) {
-    await User.findByIdAndUpdate(session.user.id, {
-      $inc: { docReviewRemaining: -creditsRequired },
-    });
+  if (!isAdmin && quotaSplit) {
+    await applyQuotaSplit(session.user.id, "docReview", quotaSplit);
   }
 
   return NextResponse.json(
