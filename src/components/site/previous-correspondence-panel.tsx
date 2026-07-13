@@ -13,6 +13,7 @@ import {
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
+import { formatDate } from "@/lib/utils";
 
 type ConsultationItem = {
   id: string;
@@ -22,10 +23,6 @@ type ConsultationItem = {
 };
 
 type LoadState = "idle" | "loading" | "loaded" | "error" | "unauthorized";
-
-function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString("ka-GE") : "";
-}
 
 export function PreviousCorrespondenceButton({ locale }: { locale: Locale }) {
   const t = getDict(locale).chat;

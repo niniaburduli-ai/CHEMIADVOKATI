@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { groupItemsByArticle, type LegalBasisItem } from "@/lib/legal/citations";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
+import { formatDate } from "@/lib/utils";
 
 export type RawSource = {
   title?: string;
@@ -72,9 +73,6 @@ function groupSources(sources: RawSource[]): SourceGroup[] {
   }));
 }
 
-function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString("ka-GE") : "";
-}
 
 export function ConsultationsGrid({ items }: { items: ConsultationItem[] }) {
   const [openId, setOpenId] = useState<string | null>(null);

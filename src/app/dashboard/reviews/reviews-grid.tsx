@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RiskFindingCard, isStructuredFinding } from "@/components/site/risk-finding-card";
 import { TextDiff } from "@/components/site/text-diff";
 import { DocumentDownloadButton } from "@/components/site/document-download-button";
+import { formatDate } from "@/lib/utils";
 import type { RiskFinding } from "@/lib/legal/document-analysis";
 import type { DiffSegment } from "@/lib/diff-text";
 
@@ -30,10 +31,6 @@ export type ReviewItem = {
   recommendations: unknown[];
   revisions: ReviewRevisionItem[];
 };
-
-function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString("ka-GE") : "";
-}
 
 function RecommendationList({ recommendations }: { recommendations: unknown[] }) {
   return (
