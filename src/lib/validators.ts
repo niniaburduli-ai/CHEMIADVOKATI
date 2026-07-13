@@ -44,6 +44,29 @@ export const CheckoutSchema = z.object({
 });
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 
+// Matches CustomSelection (@/lib/custom-plan-rates-config) exactly — every
+// service key present, each either 0 (excluded) or one of the 5 fixed steps.
+const customStepEnum = z.union([
+  z.literal(0),
+  z.literal(10),
+  z.literal(50),
+  z.literal(100),
+  z.literal(200),
+  z.literal(300),
+]);
+export const CustomCheckoutSchema = z
+  .object({
+    consultations: customStepEnum.default(0),
+    docTemplates: customStepEnum.default(0),
+    docGeneration: customStepEnum.default(0),
+    docReview: customStepEnum.default(0),
+  })
+  .refine(
+    (d) => d.consultations + d.docTemplates + d.docGeneration + d.docReview > 0,
+    { message: "Select at least one service" }
+  );
+export type CustomCheckoutInput = z.infer<typeof CustomCheckoutSchema>;
+
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024; // 2MB
 export const ALLOWED_UPLOAD_TYPES = [
   "image/jpeg",
