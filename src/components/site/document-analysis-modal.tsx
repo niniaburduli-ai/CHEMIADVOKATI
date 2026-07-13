@@ -70,7 +70,13 @@ function WizardProgress({ step }: { step: 1 | 2 | 3 | 4 }) {
   );
 }
 
-export function DocumentAnalysisPanel({ locale }: { locale: Locale }) {
+export function DocumentAnalysisPanel({
+  locale,
+  initialReviewId,
+}: {
+  locale: Locale;
+  initialReviewId?: string;
+}) {
   const t = getDict(locale).documentAnalysis;
   const [mode, setMode] = useState<Mode>("document");
   const [status, setStatus] = useState<Status>("idle");
@@ -91,6 +97,40 @@ export function DocumentAnalysisPanel({ locale }: { locale: Locale }) {
   >(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!initialReviewId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/review/${initialReviewId}`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setResult({
+          id: data.id,
+          fileName: data.fileName,
+          summary: data.summary,
+          findings: data.findings,
+          recommendations: data.recommendations,
+        });
+        const revisions = data.revisions as RevisionResult[];
+        if (revisions.length > 0) {
+          setRevision(revisions[revisions.length - 1]);
+          setUiStep(3);
+        } else {
+          setUiStep(2);
+        }
+        setStatus("results");
+      } catch {
+        // Resume is best-effort — on failure the panel just stays at step 1 (fresh upload).
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialReviewId]);
 
   function clearImages() {
     setImages((prev) => {
