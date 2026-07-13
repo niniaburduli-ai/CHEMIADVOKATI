@@ -8,6 +8,9 @@ import {
   planActivationFields,
   planDeactivationFields,
   isSandboxCredentials,
+  isCustomOrderId,
+  parseCustomOrderId,
+  PERIOD_MS,
 } from "@/lib/flitt";
 import { getPlanLimits } from "@/lib/plans-db";
 
@@ -34,6 +37,129 @@ async function resolveUser(data: { order_id?: string; merchant_data?: string }) 
   return { user, plan: resolvedPlan };
 }
 
+type CustomQuantities = {
+  consultations: number;
+  docTemplates: number;
+  docGeneration: number;
+  docReview: number;
+};
+
+/** Resolve the target user + purchased quantities for a `custom_` order. */
+async function resolveCustomOrder(data: {
+  order_id?: string;
+  merchant_data?: string;
+}): Promise<{ userId: string | null; quantities: CustomQuantities | null }> {
+  let userId: string | null = null;
+  let quantities: CustomQuantities | null = null;
+
+  if (data.merchant_data) {
+    try {
+      const md = JSON.parse(data.merchant_data) as { userId?: string } & Partial<CustomQuantities>;
+      userId = md.userId ?? null;
+      quantities = {
+        consultations: Number(md.consultations) || 0,
+        docTemplates: Number(md.docTemplates) || 0,
+        docGeneration: Number(md.docGeneration) || 0,
+        docReview: Number(md.docReview) || 0,
+      };
+    } catch {
+      /* ignore malformed merchant_data */
+    }
+  }
+  if (!userId) userId = parseCustomOrderId(data.order_id ?? "").userId;
+  return { userId, quantities };
+}
+
+/**
+ * Handle a `custom_` order end-to-end and return the response — completely
+ * separate code path from the subscription flow below. Never sets `plan`,
+ * `planExpiresAt`, `subscriptionStatus`, or the primary `*Remaining` fields;
+ * only ever touches the `custom*` fields, so an active subscription (or the
+ * free tier) is left exactly as it was.
+ */
+async function handleCustomOrder(data: {
+  order_id?: string;
+  merchant_data?: string;
+  order_status?: string;
+  response_status?: string;
+  amount?: unknown;
+  payment_id?: unknown;
+}): Promise<Response> {
+  const { userId, quantities } = await resolveCustomOrder(data);
+  if (!userId) return NextResponse.json({ status: "ignored" });
+
+  const user = await User.findById(userId).lean();
+  if (!user) return NextResponse.json({ status: "ignored" });
+
+  const approved = data.order_status === "approved" && data.response_status !== "failure";
+  const amount = Number(data.amount) || 0;
+  const paymentId = String(data.payment_id ?? data.order_id ?? "");
+
+  // Same sandbox guard as the subscription flow: a sandbox-signed "approved"
+  // callback must never grant real quota, in any environment.
+  if (approved && isSandboxCredentials()) {
+    await Payment.updateOne(
+      { paymentId },
+      {
+        $setOnInsert: {
+          userId: user._id,
+          orderId: data.order_id ?? "",
+          paymentId,
+          plan: "custom",
+          amount,
+          currency: "GEL",
+          status: "sandbox_test",
+          sandbox: true,
+          paidAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+    console.warn(
+      `[flitt/callback] Sandbox-signed "approved" callback for custom order ${data.order_id} (user ${user._id}) — recorded, real grant blocked.`
+    );
+    return NextResponse.json({ status: "ignored_sandbox" });
+  }
+
+  if (approved && quantities) {
+    const inc: Record<string, number> = {};
+    if (quantities.consultations > 0) inc.customConsultationsRemaining = quantities.consultations;
+    if (quantities.docTemplates > 0) inc.customDocTemplatesRemaining = quantities.docTemplates;
+    if (quantities.docGeneration > 0) inc.customDocGenerationRemaining = quantities.docGeneration;
+    if (quantities.docReview > 0) inc.customDocReviewRemaining = quantities.docReview;
+
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        customPlanExpiresAt: new Date(Date.now() + PERIOD_MS),
+        customFlittOrderId: data.order_id ?? "",
+        customFlittPaymentId: paymentId,
+      },
+      ...(Object.keys(inc).length > 0 ? { $inc: inc } : {}),
+    });
+
+    await Payment.updateOne(
+      { paymentId },
+      {
+        $setOnInsert: {
+          userId: user._id,
+          orderId: data.order_id ?? "",
+          paymentId,
+          plan: "custom",
+          amount,
+          currency: "GEL",
+          status: "approved",
+          paidAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+  }
+  // Declined/expired/reversed/other: nothing was granted yet, so there is
+  // nothing to roll back — no field changes.
+
+  return NextResponse.json({ status: "ok" });
+}
+
 export async function POST(req: Request) {
   let raw: unknown;
   try {
@@ -54,6 +180,11 @@ export async function POST(req: Request) {
   }
 
   await dbConnect();
+
+  if (isCustomOrderId(data.order_id ?? "")) {
+    return handleCustomOrder(data);
+  }
+
   const { user, plan } = await resolveUser(data);
   // Always 200 so Flitt stops retrying; nothing to update if no user matched.
   if (!user) return NextResponse.json({ status: "ignored" });
