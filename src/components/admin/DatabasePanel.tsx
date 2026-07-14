@@ -19,15 +19,28 @@ type Doc = Record<string, unknown>
 
 const LIMIT = 25
 
+const DATE_KEYS = ["createdAt", "updatedAt"]
+
+function addField(parts: string[], k: string, v: unknown): void {
+  if (v === null || ["string", "number", "boolean"].includes(typeof v)) {
+    const s = String(v).replace(/\s+/g, " ").trim()
+    parts.push(`${k}: ${s.length > 60 ? s.slice(0, 60) + "…" : s}`)
+  }
+}
+
+/** Timestamp first (if present), then up to 5 more scalar fields in schema order. */
 function preview(doc: Doc): string {
   const parts: string[] = []
-  for (const [k, v] of Object.entries(doc)) {
-    if (k === "_id" || k === "__v") continue
-    if (v === null || ["string", "number", "boolean"].includes(typeof v)) {
-      const s = String(v)
-      parts.push(`${k}: ${s.length > 40 ? s.slice(0, 40) + "…" : s}`)
+  for (const k of DATE_KEYS) {
+    if (k in doc) {
+      addField(parts, k, doc[k])
+      break
     }
-    if (parts.length >= 4) break
+  }
+  for (const [k, v] of Object.entries(doc)) {
+    if (k === "_id" || k === "__v" || DATE_KEYS.includes(k)) continue
+    addField(parts, k, v)
+    if (parts.length >= 6) break
   }
   return parts.join("  ·  ") || "—"
 }
@@ -77,7 +90,7 @@ export function DatabasePanel() {
 
   async function remove(doc: Doc) {
     const id = String(doc._id)
-    if (!confirm("ჩანაწერის წაშლა შეუქცევადია. გავაგრძელო?")) return
+    if (!confirm("ჩანაწერი წაიშლება (ან დაარქივდება, თუ აუდიტისთვის მუდმივი ტიპია). გავაგრძელო?")) return
     setBusyId(id)
     try {
       const res = await fetch(`/api/admin/db/${active}/${id}`, { method: "DELETE" })
@@ -86,7 +99,7 @@ export function DatabasePanel() {
         toast.error(data?.error ?? "წაშლა ვერ მოხერხდა")
         return
       }
-      toast.success("წაიშალა")
+      toast.success(data?.archived ? "დაარქივდა" : "წაიშალა")
       loadRows(active, skip)
     } catch {
       toast.error("ქსელის შეცდომა")
@@ -153,7 +166,7 @@ export function DatabasePanel() {
                 return (
                   <tr key={id} className="border-b last:border-0 [&>td]:px-4 [&>td]:py-3 align-top">
                     <td className="font-mono text-xs text-muted-foreground">{id}</td>
-                    <td className="max-w-[520px] truncate text-xs">{preview(d)}</td>
+                    <td className="max-w-[640px] truncate text-xs" title={preview(d)}>{preview(d)}</td>
                     <td>
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" onClick={() => setEditing({ doc: d, isNew: false })} aria-label="რედაქტირება">

@@ -15,7 +15,12 @@ export async function GET() {
     ADMIN_COLLECTIONS.map(async (c) => ({
       slug: c.slug,
       label: c.label,
-      count: await c.model.estimatedDocumentCount(),
+      // Matches the list route's default filter so the sidebar count doesn't
+      // include correspondence rows an admin already archived.
+      count:
+        c.slug === "email-log"
+          ? await c.model.countDocuments({ archivedAt: null })
+          : await c.model.estimatedDocumentCount(),
     }))
   )
   return NextResponse.json({ data })

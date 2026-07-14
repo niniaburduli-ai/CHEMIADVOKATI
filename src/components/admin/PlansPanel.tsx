@@ -62,12 +62,12 @@ const BLANK: Plan = {
 
 // Default feature texts per plan key — used to auto-populate empty fields when enabling a service.
 const DEFAULT_GEN_KA: Record<string, string> = {
-  standard: "19 შაბლონის გენერირება",
-  premium: "შეუზღუდავი შაბლონის გენერირება",
+  standard: "9 დოკუმენტის გენერირება",
+  premium: "99 დოკუმენტის გენერირება",
 }
 const DEFAULT_GEN_EN: Record<string, string> = {
-  standard: "19 template generations",
-  premium: "Unlimited template generations",
+  standard: "9 document generations",
+  premium: "99 document generations",
 }
 const DEFAULT_REV_KA: Record<string, string> = {
   standard: "9 დოკუმენტის შემოწმება",
@@ -180,7 +180,7 @@ export function PlansPanel() {
                   <div className="text-muted-foreground text-xs">{p.consultations} კონს.</div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${p.includeDocGeneration ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>
-                      მოთხ: {p.includeDocGeneration ? "✓" : "✗"}
+                      გენ: {p.includeDocGeneration ? "✓" : "✗"}
                     </span>
                     <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${p.includeDocReview ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>
                       დოკ: {p.includeDocReview ? "✓" : "✗"}
@@ -380,7 +380,7 @@ function PlanDialog({
                     }
                   }}
                 />
-                შაბლ. გენ. (ჩართული)
+                დოკ. გენ. (ჩართული)
               </label>
               <Input type="number" min={0} value={form.docGeneration} disabled={!form.includeDocGeneration} onChange={(e) => set("docGeneration", Number(e.target.value))} className={!form.includeDocGeneration ? "opacity-40" : ""} />
             </div>
@@ -433,12 +433,12 @@ function PlanDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label className={!form.includeDocGeneration ? "text-muted-foreground" : ""}>შაბლ. გენ. KA {!form.includeDocGeneration && "(გამორთ.)"}</Label>
-              <Textarea rows={2} value={featuresGenText} onChange={(e) => setFeaturesGenText(e.target.value)} disabled={!form.includeDocGeneration} className={!form.includeDocGeneration ? "opacity-40" : ""} placeholder={"19 შაბლონის გენერირება"} />
+              <Label className={!form.includeDocGeneration ? "text-muted-foreground" : ""}>დოკ. გენ. KA {!form.includeDocGeneration && "(გამორთ.)"}</Label>
+              <Textarea rows={2} value={featuresGenText} onChange={(e) => setFeaturesGenText(e.target.value)} disabled={!form.includeDocGeneration} className={!form.includeDocGeneration ? "opacity-40" : ""} placeholder={"9 დოკუმენტის გენერირება"} />
             </div>
             <div className="grid gap-2">
-              <Label className={!form.includeDocGeneration ? "text-muted-foreground" : ""}>Template Gen. EN {!form.includeDocGeneration && "(disabled)"}</Label>
-              <Textarea rows={2} value={featuresGenEnText} onChange={(e) => setFeaturesGenEnText(e.target.value)} disabled={!form.includeDocGeneration} className={!form.includeDocGeneration ? "opacity-40" : ""} placeholder={"19 template generations"} />
+              <Label className={!form.includeDocGeneration ? "text-muted-foreground" : ""}>Document Gen. EN {!form.includeDocGeneration && "(disabled)"}</Label>
+              <Textarea rows={2} value={featuresGenEnText} onChange={(e) => setFeaturesGenEnText(e.target.value)} disabled={!form.includeDocGeneration} className={!form.includeDocGeneration ? "opacity-40" : ""} placeholder={"9 document generations"} />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

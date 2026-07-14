@@ -113,6 +113,9 @@ export function CustomPlanRatesPanel() {
                       onChange={(e) => setCell(service, idx, e.target.value)}
                       className="w-24 text-right"
                     />
+                    <div className="mt-1 text-right text-xs text-muted-foreground">
+                      ₾{(rates[service][idx] / 100 / q).toFixed(2)} / ერთეული
+                    </div>
                   </td>
                 ))}
               </tr>

@@ -12,8 +12,9 @@ import {
   parseCustomOrderId,
   PERIOD_MS,
 } from "@/lib/flitt";
-import { getPlanLimits } from "@/lib/plans-db";
+import { getPlanByKey, getPlanLimits } from "@/lib/plans-db";
 import { STEP_QUANTITIES } from "@/lib/custom-plan-rates-config";
+import { sendPaymentConfirmationEmail, sendPaymentFailedEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -186,6 +187,22 @@ async function handleCustomOrder(data: {
       },
       ...(Object.keys(inc).length > 0 ? { $inc: inc } : {}),
     });
+
+    try {
+      await sendPaymentConfirmationEmail(user.email, {
+        name: user.name,
+        planNameKa: "საკუთარი პაკეტი",
+        planNameEn: "Custom package",
+        amount,
+        currency: "GEL",
+        consultations: quantities.consultations,
+        docGeneration: quantities.docGeneration,
+        docReview: quantities.docReview,
+        docTemplates: quantities.docTemplates,
+      });
+    } catch {
+      // Email delivery failure shouldn't block quota grant — it's already applied.
+    }
   } else if (approved && !quantities) {
     // A real charge was confirmed by Flitt but merchant_data was missing,
     // failed to parse, or contained an invalid quantity, so we have no
@@ -312,13 +329,41 @@ export async function POST(req: Request) {
       },
       { upsert: true }
     );
+
+    try {
+      const planData = await getPlanByKey(plan);
+      await sendPaymentConfirmationEmail(user.email, {
+        name: user.name,
+        planNameKa: planData?.name ?? plan,
+        planNameEn: planData?.nameEn ?? plan,
+        amount,
+        currency: "GEL",
+        consultations: limits.consultations,
+        docGeneration: limits.docGeneration,
+        docReview: limits.docReview,
+        docTemplates: limits.docTemplates,
+      });
+    } catch {
+      // Email delivery failure shouldn't block plan activation — quota is already granted.
+    }
   } else if (
     !isSandboxCredentials() &&
     (data.order_status === "declined" ||
       data.order_status === "expired" ||
       data.order_status === "reversed")
   ) {
+    // Only notify on an actual transition — Flitt can redeliver the same
+    // decline callback, and the status would already be set from the first
+    // delivery in that case.
+    const statusChanged = user.subscriptionStatus !== data.order_status;
     user.set(planDeactivationFields(data.order_status));
+    if (statusChanged) {
+      try {
+        await sendPaymentFailedEmail(user.email, { name: user.name, reason: data.order_status });
+      } catch {
+        // Email delivery failure shouldn't block the deactivation — status is already updated.
+      }
+    }
   } else {
     // processing / other intermediate states — acknowledge without change.
     return NextResponse.json({ status: "ok" });

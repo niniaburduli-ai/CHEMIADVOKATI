@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { RegisterSchema } from "@/lib/validators";
+import { sendWelcomeEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,12 @@ export async function POST(req: Request) {
     passwordHash,
     plan: "free",
   });
+
+  try {
+    await sendWelcomeEmail(user.email, user.name);
+  } catch {
+    // Email delivery failure shouldn't fail registration — account is already created.
+  }
 
   return NextResponse.json(
     {

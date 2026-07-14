@@ -116,6 +116,279 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   await logEmail("password-reset", to, subject, "sent");
 }
 
+/** Bilingual (Georgian-first) welcome email sent right after account creation. */
+export async function sendWelcomeEmail(to: string, name: string): Promise<void> {
+  const transport = getTransport();
+
+  const subject = "კეთილი იყოს თქვენი მობრძანება · Welcome to Chemiiuristi";
+
+  const text = [
+    `გამარჯობა, ${name}!`,
+    "მადლობთ, რომ დარეგისტრირდით „ჩემი იურისტი“-ზე.",
+    "შეგიძლიათ დაუყოვნებლივ დაუსვათ კითხვა AI იურისტს, დააგენერიროთ დოკუმენტის შაბლონი ან შეამოწმოთ არსებული დოკუმენტი.",
+    "",
+    "—",
+    "",
+    `Hi, ${name}!`,
+    "Thanks for registering with Chemiiuristi.",
+    "You can start asking the AI lawyer questions, generate a document template, or review an existing document right away.",
+  ].join("\n");
+
+  const html = `
+  <div style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e4e4e7;overflow:hidden">
+      <tr><td style="height:4px;background:#4338ca"></td></tr>
+      <tr><td style="padding:32px">
+        <h1 style="margin:0 0 8px;font-size:20px;font-weight:700">კეთილი იყოს თქვენი მობრძანება, ${name}!</h1>
+        <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#52525b">
+          მადლობთ, რომ დარეგისტრირდით „ჩემი იურისტი“-ზე. შეგიძლიათ დაუყოვნებლივ დაუსვათ კითხვა AI იურისტს, დააგენერიროთ დოკუმენტის შაბლონი ან შეამოწმოთ არსებული დოკუმენტი.
+        </p>
+        <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#a1a1aa">
+          Welcome, ${name}!<br>
+          Thanks for registering with Chemiiuristi. You can start asking the AI lawyer questions, generate a document template, or review an existing document right away.
+        </p>
+      </td></tr>
+    </table>
+  </div>`;
+
+  try {
+    await transport.sendMail({ from: fromAddress(), to, subject, text, html });
+  } catch (err) {
+    await logEmail("welcome", to, subject, "failed", err);
+    throw err;
+  }
+  await logEmail("welcome", to, subject, "sent");
+}
+
+/** Bilingual quota line, e.g. "5 კონსულტაცია · 5 consultations" — omitted entirely when 0. */
+function quotaLines(quotas: { labelKa: string; labelEn: string; amount: number }[]): string {
+  return quotas
+    .filter((q) => q.amount > 0)
+    .map((q) => `${q.amount} ${q.labelKa} · ${q.amount} ${q.labelEn}`)
+    .join("\n");
+}
+
+/** Bilingual payment-confirmation email for both subscription activations and custom-package purchases. */
+export async function sendPaymentConfirmationEmail(
+  to: string,
+  opts: {
+    name: string;
+    planNameKa: string;
+    planNameEn: string;
+    amount: number; // minor units (tetri)
+    currency: string;
+    consultations: number;
+    docGeneration: number;
+    docReview: number;
+    docTemplates: number;
+  }
+): Promise<void> {
+  const transport = getTransport();
+
+  const majorAmount = (opts.amount / 100).toFixed(2);
+  const subject = "გადახდა დადასტურებულია · Payment confirmed";
+
+  const quotas = quotaLines([
+    { labelKa: "კონსულტაცია", labelEn: "consultations", amount: opts.consultations },
+    { labelKa: "დოკუმენტის გენერირება", labelEn: "document generations", amount: opts.docGeneration },
+    { labelKa: "დოკუმენტის შემოწმება", labelEn: "document reviews", amount: opts.docReview },
+    { labelKa: "შაბლონი", labelEn: "templates", amount: opts.docTemplates },
+  ]);
+
+  const text = [
+    `გამარჯობა, ${opts.name}!`,
+    `თქვენი გადახდა (${majorAmount} ${opts.currency}) წარმატებით დადასტურდა — ${opts.planNameKa}.`,
+    quotas ? "დაემატა:" : "",
+    quotas,
+    "",
+    "—",
+    "",
+    `Hi, ${opts.name}!`,
+    `Your payment (${majorAmount} ${opts.currency}) was confirmed — ${opts.planNameEn}.`,
+    quotas ? "Added:" : "",
+    quotas,
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+
+  const html = `
+  <div style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e4e4e7;overflow:hidden">
+      <tr><td style="height:4px;background:#16a34a"></td></tr>
+      <tr><td style="padding:32px">
+        <h1 style="margin:0 0 8px;font-size:20px;font-weight:700">გადახდა დადასტურებულია</h1>
+        <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#52525b">
+          თქვენი გადახდა <strong>${majorAmount} ${opts.currency}</strong> წარმატებით დადასტურდა — ${opts.planNameKa}.
+        </p>
+        ${quotas ? `<pre style="margin:0 0 20px;font:inherit;white-space:pre-wrap;font-size:13px;color:#3f3f46">${quotas}</pre>` : ""}
+        <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#a1a1aa">
+          Your payment (${majorAmount} ${opts.currency}) was confirmed — ${opts.planNameEn}.
+        </p>
+      </td></tr>
+    </table>
+  </div>`;
+
+  try {
+    await transport.sendMail({ from: fromAddress(), to, subject, text, html });
+  } catch (err) {
+    await logEmail("payment-confirmation", to, subject, "failed", err);
+    throw err;
+  }
+  await logEmail("payment-confirmation", to, subject, "sent");
+}
+
+const DECLINE_REASON_KA: Record<string, string> = {
+  declined: "თანხის ჩამოჭრა ვერ მოხერხდა",
+  expired: "ბარათის ვადა ამოიწურა",
+  reversed: "გადახდა გაუქმდა",
+};
+const DECLINE_REASON_EN: Record<string, string> = {
+  declined: "the charge could not be completed",
+  expired: "your card has expired",
+  reversed: "the payment was reversed",
+};
+
+/** Bilingual real-time notice sent when a Flitt subscription charge is declined/expired/reversed. */
+export async function sendPaymentFailedEmail(
+  to: string,
+  opts: { name: string; reason: string }
+): Promise<void> {
+  const transport = getTransport();
+
+  const reasonKa = DECLINE_REASON_KA[opts.reason] ?? "გადახდა ვერ დადასტურდა";
+  const reasonEn = DECLINE_REASON_EN[opts.reason] ?? "the payment could not be confirmed";
+  const subject = "გადახდა ვერ შესრულდა · Payment failed";
+
+  const text = [
+    `გამარჯობა, ${opts.name}!`,
+    `თქვენი გამოწერის განახლება ვერ მოხერხდა: ${reasonKa}. თქვენი გეგმა დაბრუნდა უფასო პაკეტზე.`,
+    "გთხოვთ, განაახლოთ გადახდის მეთოდი ბილინგის გვერდზე, რომ განაგრძოთ სრული წვდომა.",
+    "",
+    "—",
+    "",
+    `Hi, ${opts.name}!`,
+    `Your subscription renewal failed: ${reasonEn}. Your plan has been reverted to the free tier.`,
+    "Please update your payment method on the billing page to restore full access.",
+  ].join("\n");
+
+  const html = `
+  <div style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e4e4e7;overflow:hidden">
+      <tr><td style="height:4px;background:#dc2626"></td></tr>
+      <tr><td style="padding:32px">
+        <h1 style="margin:0 0 8px;font-size:20px;font-weight:700">გადახდა ვერ შესრულდა</h1>
+        <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#52525b">
+          თქვენი გამოწერის განახლება ვერ მოხერხდა: <strong>${reasonKa}</strong>. თქვენი გეგმა დაბრუნდა უფასო პაკეტზე. გთხოვთ, განაახლოთ გადახდის მეთოდი ბილინგის გვერდზე.
+        </p>
+        <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#a1a1aa">
+          Your subscription renewal failed: ${reasonEn}. Your plan has been reverted to the free tier. Please update your payment method on the billing page.
+        </p>
+      </td></tr>
+    </table>
+  </div>`;
+
+  try {
+    await transport.sendMail({ from: fromAddress(), to, subject, text, html });
+  } catch (err) {
+    await logEmail("payment-failed", to, subject, "failed", err);
+    throw err;
+  }
+  await logEmail("payment-failed", to, subject, "sent");
+}
+
+/** Bilingual "renews tomorrow" reminder — sent by the reminders cron ~24h before resetAt. */
+export async function sendRenewalReminderEmail(
+  to: string,
+  opts: { name: string; planNameKa: string; planNameEn: string; amount: number; currency: string }
+): Promise<void> {
+  const transport = getTransport();
+
+  const majorAmount = (opts.amount / 100).toFixed(2);
+  const subject = "გადახდა ხვალ განხორციელდება · Payment due tomorrow";
+
+  const text = [
+    `გამარჯობა, ${opts.name}!`,
+    `შეგახსენებთ, რომ ხვალ განახლდება თქვენი გამოწერა (${opts.planNameKa}) და ჩამოგეჭრებათ ${majorAmount} ${opts.currency}.`,
+    "",
+    "—",
+    "",
+    `Hi, ${opts.name}!`,
+    `Just a heads-up: your ${opts.planNameEn} subscription renews tomorrow and ${majorAmount} ${opts.currency} will be charged.`,
+  ].join("\n");
+
+  const html = `
+  <div style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e4e4e7;overflow:hidden">
+      <tr><td style="height:4px;background:#d97706"></td></tr>
+      <tr><td style="padding:32px">
+        <h1 style="margin:0 0 8px;font-size:20px;font-weight:700">გადახდა ხვალ განხორციელდება</h1>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#52525b">
+          შეგახსენებთ, რომ ხვალ განახლდება თქვენი გამოწერა (<strong>${opts.planNameKa}</strong>) და ჩამოგეჭრებათ <strong>${majorAmount} ${opts.currency}</strong>.
+        </p>
+        <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#a1a1aa">
+          Just a heads-up: your ${opts.planNameEn} subscription renews tomorrow and ${majorAmount} ${opts.currency} will be charged.
+        </p>
+      </td></tr>
+    </table>
+  </div>`;
+
+  try {
+    await transport.sendMail({ from: fromAddress(), to, subject, text, html });
+  } catch (err) {
+    await logEmail("payment-reminder", to, subject, "failed", err);
+    throw err;
+  }
+  await logEmail("payment-reminder", to, subject, "sent");
+}
+
+/** Bilingual next-day nudge — sent by the reminders cron ~24h after a decline, to retry payment. */
+export async function sendPaymentRetryReminderEmail(to: string, name: string): Promise<void> {
+  const transport = getTransport();
+
+  const subject = "გადახდა ჯერ არ შესრულებულა · Payment still pending";
+
+  const text = [
+    `გამარჯობა, ${name}!`,
+    "თანხის უკმარისობის გამო თქვენი გადახდა ვერ შესრულდა და გეგმა დაბრუნდა უფასო პაკეტზე.",
+    "გთხოვთ, განაახლოთ გადახდის მეთოდი ბილინგის გვერდზე, რომ განაგრძოთ სრული წვდომა.",
+    "",
+    "—",
+    "",
+    `Hi, ${name}!`,
+    "Your payment couldn't go through due to insufficient funds, and your plan reverted to the free tier.",
+    "Please update your payment method on the billing page to restore full access.",
+  ].join("\n");
+
+  const html = `
+  <div style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e4e4e7;overflow:hidden">
+      <tr><td style="height:4px;background:#d97706"></td></tr>
+      <tr><td style="padding:32px">
+        <h1 style="margin:0 0 8px;font-size:20px;font-weight:700">გადახდა ჯერ არ შესრულებულა</h1>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#52525b">
+          თანხის უკმარისობის გამო თქვენი გადახდა ვერ შესრულდა და გეგმა დაბრუნდა უფასო პაკეტზე. გთხოვთ, განაახლოთ გადახდის მეთოდი ბილინგის გვერდზე.
+        </p>
+        <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#a1a1aa">
+          Your payment couldn't go through due to insufficient funds, and your plan reverted to the free tier. Please update your payment method on the billing page.
+        </p>
+      </td></tr>
+    </table>
+  </div>`;
+
+  try {
+    await transport.sendMail({ from: fromAddress(), to, subject, text, html });
+  } catch (err) {
+    await logEmail("payment-reminder", to, subject, "failed", err);
+    throw err;
+  }
+  await logEmail("payment-reminder", to, subject, "sent");
+}
+
 /** Notifies the configured contact address when a visitor submits site feedback. */
 export async function sendFeedbackEmail(
   to: string,

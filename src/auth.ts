@@ -6,6 +6,7 @@ import { authConfig } from "./auth.config";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { LoginSchema } from "@/lib/validators";
+import { sendWelcomeEmail } from "@/lib/mailer";
 
 class InvalidCredentials extends CredentialsSignin {
   code = "credentials";
@@ -76,6 +77,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           consentAcceptedAt: new Date(),
           consentVersion: "1.0",
         });
+        try {
+          await sendWelcomeEmail(created.email, created.name);
+        } catch {
+          // Email delivery failure shouldn't block sign-in — account is already created.
+        }
         user.id = String(created._id);
         user.role = created.role ?? "user";
       }

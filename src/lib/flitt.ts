@@ -250,6 +250,7 @@ export function planActivationFields(plan: PlanKey, limits: PlanLimits) {
     // A real payment always wins over a prior admin comp grant — this
     // account should count as real revenue going forward.
     planGrantedByAdmin: false,
+    subscriptionStatusChangedAt: new Date(),
   };
 }
 
@@ -264,6 +265,7 @@ export function planDeactivationFields(status: string) {
     plan: "free" as const,
     subscriptionStatus: status,
     planGrantedByAdmin: false,
+    subscriptionStatusChangedAt: new Date(),
   };
 }
 

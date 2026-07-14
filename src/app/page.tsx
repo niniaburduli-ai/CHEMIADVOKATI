@@ -2,11 +2,14 @@ import Link from "next/link"
 import { ArrowRight, BadgeCheck, Star } from "lucide-react"
 import { AnimateIn } from "@/components/site/AnimateIn"
 import { PricingSection } from "@/components/site/PricingSection"
+import { CustomPlanBuilder } from "@/components/site/CustomPlanBuilder"
 import { ServiceCards } from "@/components/site/service-cards"
 import { HowItWorks } from "@/components/site/how-it-works"
 import { FaqCarousel } from "@/components/site/FaqCarousel"
 import { getHomePage, getFAQ } from "@/lib/cms"
 import { getVisiblePlans } from "@/lib/plans-db"
+import { getCustomPlanRates } from "@/lib/custom-plan-rates"
+import { STEP_QUANTITIES } from "@/lib/custom-plan-rates-config"
 import { getFeatureFlags } from "@/lib/features"
 import { getPublicStats, resolveMetric } from "@/lib/stats"
 import { getFeedbackSummary } from "@/lib/feedback"
@@ -38,7 +41,7 @@ export default async function Home() {
     getFAQ(locale),
     getFeedbackSummary(),
   ])
-  const dbPlans = await getVisiblePlans()
+  const [dbPlans, customRates] = await Promise.all([getVisiblePlans(), getCustomPlanRates()])
 
   // Seed lookup maps for En fallback when CMS doc predates bilingual fields
   const seedStatById = new Map(seed.stats.map((s) => [s._id, s]))
@@ -319,6 +322,30 @@ export default async function Home() {
           }}
           heading={pricingHeading}
         />
+      )}
+
+      {/* ── CUSTOM PLAN BUILDER ── */}
+      {sections.pricing !== false && (
+        <section className="container mx-auto px-4 pb-16 max-w-md">
+          <CustomPlanBuilder
+            rates={customRates}
+            steps={STEP_QUANTITIES}
+            services={[
+              { key: "consultations", label: d.pricing.customConsultations },
+              { key: "docTemplates", label: d.pricing.customTemplates },
+              { key: "docGeneration", label: d.pricing.customDocGeneration },
+              { key: "docReview", label: d.pricing.customDocAnalysis },
+            ]}
+            strings={{
+              heading: d.pricing.customTitle,
+              subtitle: d.pricing.customSubtitle,
+              buildAndPay: d.pricing.customBuildAndPay,
+              selectAtLeastOne: d.pricing.customSelectOne,
+              checkoutError: d.pricing.customCheckoutError,
+              networkError: d.pricing.customNetworkError,
+            }}
+          />
+        </section>
       )}
 
       {/* ── FAQ ── */}

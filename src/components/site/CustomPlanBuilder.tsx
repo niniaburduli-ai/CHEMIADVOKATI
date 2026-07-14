@@ -101,7 +101,7 @@ export function CustomPlanBuilder({
                 onClick={() => setEnabled((p) => ({ ...p, [s.key]: !p[s.key] }))}
                 className={[
                   "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-                  enabled[s.key] ? "bg-primary" : "bg-sky-200 dark:bg-sky-900/50",
+                  enabled[s.key] ? "bg-primary" : "bg-gray-300 dark:bg-gray-700",
                 ].join(" ")}
               >
                 <span

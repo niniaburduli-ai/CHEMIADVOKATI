@@ -44,6 +44,9 @@ function buildDisplayPlans(
     const rev = p.includeDocReview
       ? pickArr(p.featuresDocReview, p.featuresDocReviewEn, locale)
       : []
+    const tpl = p.includeDocTemplates
+      ? pickArr(p.featuresDocTemplates, p.featuresDocTemplatesEn, locale)
+      : []
     return {
       id: p.id,
       name: pick(p.name, p.nameEn, locale),
@@ -53,7 +56,7 @@ function buildDisplayPlans(
       ctaHref: paid ? "/billing" : "/register",
       planKey: paid ? p.key : "",
       highlighted: p.highlighted,
-      items: [base[0], ...gen, ...rev, ...base.slice(1)],
+      items: [base[0], ...tpl, ...gen, ...rev, ...base.slice(1)],
       isFree: p.isFree,
     }
   })
@@ -118,9 +121,7 @@ export function PricingSection({
             <div
               className={[
                 "relative rounded-2xl border bg-card flex flex-col p-7 card-hover h-full",
-                p.highlighted
-                  ? "border-2 border-primary shadow-xl shadow-primary/10 md:scale-105 z-10"
-                  : "border-border",
+                p.highlighted ? "border-2 border-gray-400 shadow-xl shadow-gray-400/10 z-10" : "border-border",
               ].join(" ")}
             >
               {p.badge && (

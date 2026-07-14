@@ -5,6 +5,8 @@ const RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const EMAIL_TYPES = [
   "password-reset",
   "welcome",
+  "payment-confirmation",
+  "payment-failed",
   "payment-reminder",
   "feedback",
   "balance-deduction",
@@ -12,7 +14,12 @@ export const EMAIL_TYPES = [
 export type EmailType = (typeof EMAIL_TYPES)[number];
 
 /** Audit-grade types kept forever — archived (soft-deleted) instead of TTL-purged or hard-deleted. */
-const PERMANENT_TYPES = new Set<EmailType>(["feedback", "balance-deduction"]);
+const PERMANENT_TYPES = new Set<EmailType>([
+  "feedback",
+  "balance-deduction",
+  "payment-confirmation",
+  "payment-failed",
+]);
 
 export function isPermanentEmailType(type: string): boolean {
   return PERMANENT_TYPES.has(type as EmailType);

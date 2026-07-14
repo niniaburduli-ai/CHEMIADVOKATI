@@ -47,6 +47,18 @@ const UserSchema = new Schema(
     flittOrderId: { type: String, index: true },
     flittPaymentId: { type: String },
     subscriptionStatus: { type: String, default: "" }, // pending | active | declined | expired | reversed
+    // Set whenever subscriptionStatus changes (see planActivationFields/
+    // planDeactivationFields in lib/flitt.ts) — anchors the cron reminder
+    // job's dedupe checks (renewalReminderSentFor / retryReminderSentFor
+    // below) to a specific status transition instead of wall-clock time.
+    subscriptionStatusChangedAt: { type: Date, default: null },
+    // Dedupe for the "payment due tomorrow" cron reminder: stores the
+    // `resetAt` value a reminder was already sent for, so a daily cron run
+    // doesn't re-send until the next renewal cycle.
+    renewalReminderSentFor: { type: Date, default: null },
+    // Dedupe for the next-day "payment failed, please retry" cron reminder:
+    // stores the `subscriptionStatusChangedAt` value already reminded for.
+    retryReminderSentFor: { type: Date, default: null },
     // True when a non-free `plan` was set directly by an admin (support/comp
     // account), not by a real Flitt payment — kept out of "active
     // subscriptions"/revenue stats (see api/admin/stats) so comp accounts
