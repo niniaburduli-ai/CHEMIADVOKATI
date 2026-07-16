@@ -4,7 +4,7 @@ import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { CustomCheckoutSchema } from "@/lib/validators";
 import { createOneTimeCheckout, buildCustomOrderId } from "@/lib/flitt";
-import { getCustomPlanRates, computeCustomTotal } from "@/lib/custom-plan-rates";
+import { getCustomPlanRatesFull, computeCustomTotal, effectiveCustomRates } from "@/lib/custom-plan-rates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,10 +32,11 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
-  const rates = await getCustomPlanRates();
+  const { rates, discountRates } = await getCustomPlanRatesFull();
   // Always recompute the price server-side — the client-submitted selection
   // is never trusted for the amount, only for which services/quantities.
-  const total = computeCustomTotal(rates, parsed.data);
+  // Charges the discounted price when one is set, same as the displayed total.
+  const total = computeCustomTotal(effectiveCustomRates(rates, discountRates), parsed.data);
   if (total === null) {
     return NextResponse.json({ error: "Invalid selection" }, { status: 400 });
   }

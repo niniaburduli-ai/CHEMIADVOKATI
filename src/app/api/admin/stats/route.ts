@@ -6,7 +6,7 @@ import { Consultation } from "@/lib/models/consultation"
 import { GeneratedDocument } from "@/lib/models/generated-document"
 import { DocumentReview } from "@/lib/models/document-review"
 import { Upload } from "@/lib/models/upload"
-import { getPlans } from "@/lib/plans-db"
+import { getPlans, effectivePriceMinor } from "@/lib/plans-db"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -84,7 +84,7 @@ export async function GET() {
     getPlans(),
   ])
 
-  const priceByKey = new Map(plans.map((p) => [p.key, p.priceMinor]))
+  const priceByKey = new Map(plans.map((p) => [p.key, effectivePriceMinor(p)]))
   const nameByKey = new Map(plans.map((p) => [p.key, p.name]))
 
   const planDistribution = planAgg

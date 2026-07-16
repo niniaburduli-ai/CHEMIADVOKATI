@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
-import { getPlanByKey } from "@/lib/plans-db";
+import { getPlanByKey, effectivePriceMinor } from "@/lib/plans-db";
 import { sendRenewalReminderEmail, sendPaymentRetryReminderEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
         name: user.name,
         planNameKa: planData?.name ?? user.plan,
         planNameEn: planData?.nameEn ?? user.plan,
-        amount: planData?.priceMinor ?? 0,
+        amount: planData ? effectivePriceMinor(planData) : 0,
         currency: "GEL",
       });
       user.renewalReminderSentFor = user.resetAt;

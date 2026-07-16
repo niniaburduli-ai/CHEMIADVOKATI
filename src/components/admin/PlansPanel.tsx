@@ -24,6 +24,7 @@ type Plan = {
   description: string
   descriptionEn: string
   priceMinor: number
+  discountPriceMinor: number
   currency: string
   period: string
   consultations: number
@@ -50,7 +51,7 @@ type Plan = {
 
 const BLANK: Plan = {
   id: "", key: "", name: "", nameEn: "", description: "", descriptionEn: "",
-  priceMinor: 0, currency: "GEL", period: "month",
+  priceMinor: 0, discountPriceMinor: 0, currency: "GEL", period: "month",
   consultations: 0, includeDocGeneration: true, docGeneration: 0, includeDocReview: true, docReview: 0,
   includeDocTemplates: true, docTemplates: 0,
   features: [], featuresEn: [],
@@ -175,7 +176,21 @@ export function PlansPanel() {
                   <div className="text-xs text-muted-foreground">{p.description}</div>
                 </td>
                 <td className="font-mono text-xs">{p.key}</td>
-                <td>{p.isFree || p.priceMinor === 0 ? "უფასო" : `${gel(p.priceMinor)} ${p.currency}/${p.period === "month" ? "თვე" : p.period}`}</td>
+                <td>
+                  {p.isFree || p.priceMinor === 0 ? (
+                    "უფასო"
+                  ) : p.discountPriceMinor > 0 && p.discountPriceMinor < p.priceMinor ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground line-through text-xs">{gel(p.priceMinor)}₾</span>
+                      <span className="text-red-600 font-semibold">{gel(p.discountPriceMinor)}₾</span>
+                      <Badge className="bg-red-600 text-white hover:bg-red-600">
+                        -{Math.round((1 - p.discountPriceMinor / p.priceMinor) * 100)}%
+                      </Badge>
+                    </div>
+                  ) : (
+                    `${gel(p.priceMinor)} ${p.currency}/${p.period === "month" ? "თვე" : p.period}`
+                  )}
+                </td>
                 <td>
                   <div className="text-muted-foreground text-xs">{p.consultations} კონს.</div>
                   <div className="flex flex-wrap gap-1 mt-1">
@@ -249,6 +264,7 @@ function PlanDialog({
 }) {
   const [form, setForm] = useState<Plan>(BLANK)
   const [priceGel, setPriceGel] = useState("0")
+  const [discountGel, setDiscountGel] = useState("")
   const [featuresText, setFeaturesText] = useState("")
   const [featuresEnText, setFeaturesEnText] = useState("")
   const [featuresGenText, setFeaturesGenText] = useState("")
@@ -265,6 +281,7 @@ function PlanDialog({
     setSyncedId(plan.id)
     setForm({ ...plan })
     setPriceGel((plan.priceMinor / 100).toString())
+    setDiscountGel(plan.discountPriceMinor > 0 ? (plan.discountPriceMinor / 100).toString() : "")
     setFeaturesText((plan.features ?? []).join("\n"))
     setFeaturesEnText((plan.featuresEn ?? []).join("\n"))
     setFeaturesGenText((plan.featuresDocGeneration ?? []).join("\n"))
@@ -281,11 +298,18 @@ function PlanDialog({
   }
 
   async function save() {
+    const priceNum = parseFloat(priceGel) || 0
+    const discountNum = discountGel.trim() ? parseFloat(discountGel) || 0 : 0
+    if (discountNum > 0 && discountNum >= priceNum) {
+      toast.error("ფასდაკლების ფასი უნდა იყოს რეგულარულ ფასზე ნაკლები")
+      return
+    }
     setSaving(true)
     const split = (t: string) => t.split("\n").map((s) => s.trim()).filter(Boolean)
     const payload = {
       ...form,
       priceMinor: Math.round((parseFloat(priceGel) || 0) * 100),
+      discountPriceMinor: discountGel.trim() ? Math.round((parseFloat(discountGel) || 0) * 100) : 0,
       features: split(featuresText),
       featuresEn: split(featuresEnText),
       featuresDocGeneration: split(featuresGenText),
@@ -359,6 +383,24 @@ function PlanDialog({
             <div className="grid gap-2">
               <Label>ვალუტა</Label>
               <Input value={form.currency} onChange={(e) => set("currency", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>ფასდაკლების ფასი (₾) — ცარიელი = ფასდაკლების გარეშე</Label>
+            <div className="flex items-center gap-3">
+              <Input type="number" min={0} step="0.01" value={discountGel} onChange={(e) => setDiscountGel(e.target.value)} placeholder="99" className="max-w-[160px]" />
+              {discountGel.trim() && parseFloat(discountGel) > 0 && parseFloat(discountGel) < parseFloat(priceGel || "0") && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground line-through">{priceGel}₾</span>
+                  <span className="text-red-600 font-semibold">{discountGel}₾</span>
+                  <Badge className="bg-red-600 text-white hover:bg-red-600">
+                    -{Math.round((1 - parseFloat(discountGel) / parseFloat(priceGel || "1")) * 100)}%
+                  </Badge>
+                </div>
+              )}
+              {discountGel.trim() && parseFloat(discountGel) >= parseFloat(priceGel || "0") && (
+                <span className="text-xs text-destructive">ფასდაკლების ფასი უნდა იყოს რეგულარულ ფასზე ნაკლები</span>
+              )}
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

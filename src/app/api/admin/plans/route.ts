@@ -17,6 +17,8 @@ export const PlanSchema = z.object({
   description: z.string().trim().max(200).default(""),
   descriptionEn: z.string().trim().max(200).default(""),
   priceMinor: z.coerce.number().int().min(0).max(10_000_000).default(0),
+  // 0 = no discount. Validated against priceMinor in POST/PATCH, not here (PATCH allows partial updates).
+  discountPriceMinor: z.coerce.number().int().min(0).max(10_000_000).default(0),
   currency: z.string().trim().max(8).default("GEL"),
   period: z.string().trim().max(16).default("month"),
   consultations: z.coerce.number().int().min(0).max(1_000_000).default(0),
@@ -59,6 +61,9 @@ export async function POST(req: NextRequest) {
       { error: "Validation failed", fields: parsed.error.flatten().fieldErrors },
       { status: 400 }
     )
+  }
+  if (parsed.data.discountPriceMinor > 0 && parsed.data.discountPriceMinor >= parsed.data.priceMinor) {
+    return NextResponse.json({ error: "ფასდაკლების ფასი უნდა იყოს რეგულარულ ფასზე ნაკლები" }, { status: 400 })
   }
 
   try {

@@ -8,7 +8,7 @@ import { HowItWorks } from "@/components/site/how-it-works"
 import { FaqCarousel } from "@/components/site/FaqCarousel"
 import { getHomePage, getFAQ } from "@/lib/cms"
 import { getVisiblePlans } from "@/lib/plans-db"
-import { getCustomPlanRates } from "@/lib/custom-plan-rates"
+import { getCustomPlanRatesFull } from "@/lib/custom-plan-rates"
 import { STEP_QUANTITIES } from "@/lib/custom-plan-rates-config"
 import { getFeatureFlags } from "@/lib/features"
 import { getPublicStats, resolveMetric } from "@/lib/stats"
@@ -41,7 +41,7 @@ export default async function Home() {
     getFAQ(locale),
     getFeedbackSummary(),
   ])
-  const [dbPlans, customRates] = await Promise.all([getVisiblePlans(), getCustomPlanRates()])
+  const [dbPlans, customRatesFull] = await Promise.all([getVisiblePlans(), getCustomPlanRatesFull()])
 
   // Seed lookup maps for En fallback when CMS doc predates bilingual fields
   const seedStatById = new Map(seed.stats.map((s) => [s._id, s]))
@@ -328,7 +328,8 @@ export default async function Home() {
       {sections.pricing !== false && (
         <section className="container mx-auto px-4 pb-16 max-w-md">
           <CustomPlanBuilder
-            rates={customRates}
+            rates={customRatesFull.rates}
+            discountRates={customRatesFull.discountRates}
             steps={STEP_QUANTITIES}
             services={[
               { key: "consultations", label: d.pricing.customConsultations },

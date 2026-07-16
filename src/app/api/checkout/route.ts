@@ -4,7 +4,7 @@ import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { CheckoutSchema } from "@/lib/validators";
 import { createSubscriptionCheckout } from "@/lib/flitt";
-import { getPlanByKey } from "@/lib/plans-db";
+import { getPlanByKey, effectivePriceMinor } from "@/lib/plans-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
   try {
     const { checkoutUrl, orderId, paymentId } = await createSubscriptionCheckout(
-      { key: plan.key, name: plan.name, priceMinor: plan.priceMinor, period: plan.period },
+      { key: plan.key, name: plan.name, priceMinor: effectivePriceMinor(plan), period: plan.period },
       {
         id: String(user._id),
         email: user.email,

@@ -15,6 +15,8 @@ const PlanSchema = new Schema(
     descriptionEn: { type: String, default: "" },
     // Price in GEL minor units (1900 = 19.00 GEL). 0 for the free plan.
     priceMinor: { type: Number, default: 0, min: 0 },
+    // Discounted price in GEL minor units. 0 = no discount. Must be < priceMinor to take effect.
+    discountPriceMinor: { type: Number, default: 0, min: 0 },
     currency: { type: String, default: "GEL" },
     period: { type: String, default: "month" },
     // Monthly quotas granted on activation / reset.
@@ -52,6 +54,7 @@ export type PlanDoc = {
   description: string
   descriptionEn: string
   priceMinor: number
+  discountPriceMinor: number
   currency: string
   period: string
   consultations: number

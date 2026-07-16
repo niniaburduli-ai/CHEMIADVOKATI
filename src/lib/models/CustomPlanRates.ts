@@ -8,6 +8,11 @@ const CustomPlanRatesSchema = new Schema(
     docTemplates: { type: [Number], default: DEFAULT_CUSTOM_RATES.docTemplates },
     docGeneration: { type: [Number], default: DEFAULT_CUSTOM_RATES.docGeneration },
     docReview: { type: [Number], default: DEFAULT_CUSTOM_RATES.docReview },
+    // Discounted price per step, aligned with the regular arrays above. 0 = no discount for that cell.
+    discountConsultations: { type: [Number], default: [0, 0, 0, 0, 0] },
+    discountDocTemplates: { type: [Number], default: [0, 0, 0, 0, 0] },
+    discountDocGeneration: { type: [Number], default: [0, 0, 0, 0, 0] },
+    discountDocReview: { type: [Number], default: [0, 0, 0, 0, 0] },
   },
   { timestamps: true, minimize: false }
 )
@@ -18,6 +23,10 @@ export type CustomPlanRatesDoc = {
   docTemplates: number[]
   docGeneration: number[]
   docReview: number[]
+  discountConsultations: number[]
+  discountDocTemplates: number[]
+  discountDocGeneration: number[]
+  discountDocReview: number[]
   createdAt: Date
   updatedAt: Date
 }

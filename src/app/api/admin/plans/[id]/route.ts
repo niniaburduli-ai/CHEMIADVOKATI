@@ -32,6 +32,16 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       if (clash) return NextResponse.json({ error: "ასეთი key უკვე არსებობს" }, { status: 409 })
     }
 
+    if (parsed.data.discountPriceMinor !== undefined || parsed.data.priceMinor !== undefined) {
+      const existing = await Plan.findById(id).lean()
+      if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      const nextPrice = parsed.data.priceMinor ?? existing.priceMinor
+      const nextDiscount = parsed.data.discountPriceMinor ?? existing.discountPriceMinor ?? 0
+      if (nextDiscount > 0 && nextDiscount >= nextPrice) {
+        return NextResponse.json({ error: "ფასდაკლების ფასი უნდა იყოს რეგულარულ ფასზე ნაკლები" }, { status: 400 })
+      }
+    }
+
     const doc = await Plan.findByIdAndUpdate(id, { $set: parsed.data }, { returnDocument: "after" }).lean()
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 })
     revalidatePath("/pricing")

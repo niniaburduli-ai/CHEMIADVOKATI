@@ -25,6 +25,29 @@ export const DEFAULT_CUSTOM_RATES: CustomPlanRatesData = {
   docReview: [1500, 4900, 7900, 12900, 16900],
 }
 
+/** 0 per cell = no discount for that service/step. */
+export const DEFAULT_CUSTOM_DISCOUNT_RATES: CustomPlanRatesData = {
+  consultations: [0, 0, 0, 0, 0],
+  docTemplates: [0, 0, 0, 0, 0],
+  docGeneration: [0, 0, 0, 0, 0],
+  docReview: [0, 0, 0, 0, 0],
+}
+
+/** Per-cell effective price — the discount when set and lower than the regular price, else the regular price. */
+export function effectiveCustomRates(
+  rates: CustomPlanRatesData,
+  discountRates: CustomPlanRatesData
+): CustomPlanRatesData {
+  const out = {} as CustomPlanRatesData
+  for (const service of CUSTOM_SERVICES) {
+    out[service] = rates[service].map((price, i) => {
+      const discount = discountRates[service][i]
+      return discount > 0 && discount < price ? discount : price
+    })
+  }
+  return out
+}
+
 /** priceMinor for a quantity: 0 for the "not included" quantity, null if `qty` isn't a valid step. */
 export function priceForQuantity(
   rates: CustomPlanRatesData,

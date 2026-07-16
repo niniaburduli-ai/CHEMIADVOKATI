@@ -11,6 +11,7 @@ export type PlanData = {
   description: string
   descriptionEn: string
   priceMinor: number
+  discountPriceMinor: number
   currency: string
   period: string
   consultations: number
@@ -47,7 +48,7 @@ const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
   {
     key: "free", name: "საბაზისო პაკეტი", nameEn: "Basic Plan",
     description: "სცადე როგორ მუშაობს", descriptionEn: "Try how it works",
-    priceMinor: 0, currency: "GEL", period: "month",
+    priceMinor: 0, discountPriceMinor: 0, currency: "GEL", period: "month",
     consultations: PLAN_LIMITS.free.consultations,
     includeDocGeneration: true,
     docGeneration: PLAN_LIMITS.free.docGeneration,
@@ -65,7 +66,7 @@ const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
   {
     key: "standard", name: "სტანდარტული პაკეტი", nameEn: "Standard Plan",
     description: "ყველაზე პოპულარული", descriptionEn: "Most popular",
-    priceMinor: 1900, currency: "GEL", period: "month",
+    priceMinor: 1900, discountPriceMinor: 0, currency: "GEL", period: "month",
     consultations: PLAN_LIMITS.standard.consultations,
     includeDocGeneration: true,
     docGeneration: PLAN_LIMITS.standard.docGeneration,
@@ -83,7 +84,7 @@ const DEFAULT_PLANS: Omit<PlanData, "id">[] = [
   {
     key: "premium", name: "პრემიუმ (ბიზნეს) პაკეტი", nameEn: "Premium (Business) Plan",
     description: "ხშირი მომხმარებლისთვის", descriptionEn: "For frequent users",
-    priceMinor: 9900, currency: "GEL", period: "month",
+    priceMinor: 9900, discountPriceMinor: 0, currency: "GEL", period: "month",
     consultations: PLAN_LIMITS.premium.consultations,
     includeDocGeneration: true,
     docGeneration: PLAN_LIMITS.premium.docGeneration,
@@ -114,6 +115,7 @@ function toData(d: PlanDoc): PlanData {
     description: d.description ?? "",
     descriptionEn: d.descriptionEn ?? "",
     priceMinor: d.priceMinor ?? 0,
+    discountPriceMinor: d.discountPriceMinor ?? 0,
     currency: d.currency ?? "GEL",
     period: d.period ?? "month",
     consultations: d.consultations ?? 0,
@@ -204,6 +206,8 @@ export async function getPlanLimits(key: string): Promise<PlanLimits> {
   const f = PLAN_LIMITS.free
   return { consultations: f.consultations, docGeneration: f.docGeneration, docReview: f.docReview, docTemplates: f.docTemplates }
 }
+
+export { effectivePriceMinor } from "@/lib/plan-price"
 
 /** Keys of plans a user may subscribe to (paid + active). */
 export async function getPayablePlanKeys(): Promise<string[]> {

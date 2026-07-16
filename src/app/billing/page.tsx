@@ -19,7 +19,7 @@ import { CancelSubscriptionButton } from "@/components/site/cancel-subscription-
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
 import { pick } from "@/lib/i18n/loc";
-import { getPlans, type PlanData } from "@/lib/plans-db";
+import { getPlans, effectivePriceMinor, type PlanData } from "@/lib/plans-db";
 import { applyPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { PageHero } from "@/components/site/PageHero";
 
@@ -53,7 +53,7 @@ export default async function BillingPage() {
     return p ? pick(p.name, p.nameEn, locale) : key;
   };
   const planPrice = (p: PlanData) =>
-    p.priceMinor === 0 ? d.billing.freePlanLabel : `${fmtAmount(p.priceMinor, p.currency)} / ${d.pricing.perMonth}`;
+    p.priceMinor === 0 ? d.billing.freePlanLabel : `${fmtAmount(effectivePriceMinor(p), p.currency)} / ${d.pricing.perMonth}`;
 
   const currentPlanData = planMap.get(plan);
   const info = {
