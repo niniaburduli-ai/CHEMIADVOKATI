@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Check } from "lucide-react"
 import { UpgradeButton } from "@/components/site/upgrade-button"
 import { AnimateIn } from "@/components/site/AnimateIn"
+import { effectivePriceMinor } from "@/lib/plan-price"
 import type { PlanData } from "@/lib/plans-db"
 import type { Locale } from "@/lib/i18n/config"
 import { pick, pickArr } from "@/lib/i18n/loc"
@@ -20,6 +21,8 @@ type DisplayPlan = {
   id: string
   name: string
   price: string
+  originalPrice: string | null
+  discountPercent: number
   badge: string
   ctaText: string
   ctaHref: string
@@ -36,7 +39,10 @@ function buildDisplayPlans(
 ): DisplayPlan[] {
   return raw.map((p) => {
     const paid = !p.isFree && p.priceMinor > 0 && p.active
-    const gel = p.priceMinor / 100
+    const effectiveMinor = effectivePriceMinor(p)
+    const hasDiscount = effectiveMinor < p.priceMinor
+    const gel = effectiveMinor / 100
+    const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2))
     const base = pickArr(p.features, p.featuresEn, locale)
     const gen = p.includeDocGeneration
       ? pickArr(p.featuresDocGeneration, p.featuresDocGenerationEn, locale)
@@ -50,7 +56,9 @@ function buildDisplayPlans(
     return {
       id: p.id,
       name: pick(p.name, p.nameEn, locale),
-      price: Number.isInteger(gel) ? String(gel) : gel.toFixed(2),
+      price: fmt(gel),
+      originalPrice: hasDiscount ? fmt(p.priceMinor / 100) : null,
+      discountPercent: hasDiscount ? Math.round((1 - effectiveMinor / p.priceMinor) * 100) : 0,
       badge: p.highlighted ? s.popular : "",
       ctaText: paid ? s.join : s.start,
       ctaHref: paid ? "/billing" : "/register",
@@ -136,12 +144,22 @@ export function PricingSection({
 
               <p className="font-bold text-base mb-4 text-primary">{p.name}</p>
 
-              <div className="flex items-end gap-1 mb-6">
-                <span className="text-5xl font-bold text-foreground leading-none">{p.price}</span>
-                <span className="text-lg font-semibold text-foreground mb-0.5">₾</span>
-                {!p.isFree && (
-                  <span className="text-sm text-muted-foreground mb-1">{strings.perMonth}</span>
+              <div className="mb-6">
+                {p.originalPrice && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg text-muted-foreground line-through">{p.originalPrice}₾</span>
+                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white whitespace-nowrap">
+                      -{p.discountPercent}%
+                    </span>
+                  </div>
                 )}
+                <div className="flex items-end gap-1">
+                  <span className={`text-5xl font-bold leading-none ${p.originalPrice ? "text-red-600" : "text-foreground"}`}>{p.price}</span>
+                  <span className={`text-lg font-semibold mb-0.5 ${p.originalPrice ? "text-red-600" : "text-foreground"}`}>₾</span>
+                  {!p.isFree && (
+                    <span className="text-sm text-muted-foreground mb-1">{strings.perMonth}</span>
+                  )}
+                </div>
               </div>
 
               <ul className="space-y-3 text-sm flex-1 mb-8">
