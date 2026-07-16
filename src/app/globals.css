@@ -136,9 +136,19 @@
   }
   html {
     @apply font-sans;
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+    width: 0;
   }
   h1, h2, h3 {
     font-family: var(--font-noto-serif), Georgia, serif;
+  }
+  /* Icons can lose their edge against dark card/section backgrounds in dark
+     mode; a faint light halo restores a visible outline without recoloring. */
+  .dark svg.lucide {
+    filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.4));
   }
 }
 
