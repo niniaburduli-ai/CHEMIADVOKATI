@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Noto_Sans_Georgian, Noto_Serif_Georgian } from "next/font/google";
 import "./globals.css";
@@ -8,6 +8,8 @@ import { Footer } from "@/components/site/footer";
 import { FeedbackWidget } from "@/components/site/FeedbackWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getThemeConfig, buildThemeCss } from "@/lib/theme";
 import { getLocale } from "@/lib/i18n/locale";
 import { JsonLd } from "@/components/site/JsonLd";
@@ -40,6 +42,11 @@ export const metadata: Metadata = {
   description:
     "AI იურისტი — ხელმისაწვდომი იურიდიული კონსულტაცია მარტივ ენაზე. ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი და იურიდიული რჩევები საქართველოს კანონმდებლობის საფუძველზე.",
   applicationName: SITE_NAME_KA,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: SITE_NAME_KA,
+  },
   keywords: DEFAULT_KEYWORDS,
   authors: [{ name: SITE_NAME_KA }],
   creator: SITE_NAME_KA,
@@ -85,6 +92,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -109,7 +123,9 @@ export default async function RootLayout({
           <Footer />
           <FeedbackWidget locale={locale} />
           <Toaster richColors position="top-center" />
+          <InstallPrompt />
         </ThemeProvider>
+        <ServiceWorkerRegister />
         {/* WebInsights analytics */}
         <Script
           src="https://webinsights.vercel.app/js/script.js"
