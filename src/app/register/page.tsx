@@ -14,7 +14,7 @@ export default async function RegisterPage({ searchParams }: Props) {
   const d = getDict(locale);
 
   return (
-    <div className="min-h-[calc(100dvh-4rem)] flex flex-col items-center justify-center bg-muted/30 px-4 py-12">
+    <div className="min-h-[calc(100dvh-4rem)] flex flex-col items-center justify-center px-4 py-12">
       {/* Brand mark */}
       <div className="mb-6 flex flex-col items-center text-center gap-2 animate-fade-up">
         <Link href="/" className="flex flex-col items-center gap-3 group">

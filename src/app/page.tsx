@@ -212,7 +212,7 @@ export default async function Home() {
       {/* ── FEATURES + STATS ── */}
       {((sections.features !== false && features.length > 0) ||
         (sections.stats !== false && stats.length > 0)) && (
-        <section className="bg-gradient-to-b from-muted/40 via-background to-background">
+        <section className="bg-background">
           <div className="container mx-auto px-4 py-20">
             <div
               className={`grid gap-10 items-start ${
