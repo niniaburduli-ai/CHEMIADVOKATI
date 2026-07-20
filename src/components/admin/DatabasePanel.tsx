@@ -136,7 +136,12 @@ export function DatabasePanel() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="relative overflow-x-auto rounded-lg border">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40 text-muted-foreground">
             <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-left [&>th]:font-medium">
@@ -146,13 +151,6 @@ export function DatabasePanel() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={3} className="px-4 py-10 text-center text-muted-foreground">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                </td>
-              </tr>
-            )}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
@@ -160,8 +158,7 @@ export function DatabasePanel() {
                 </td>
               </tr>
             )}
-            {!loading &&
-              rows.map((d) => {
+            {rows.map((d) => {
                 const id = String(d._id)
                 return (
                   <tr key={id} className="border-b last:border-0 [&>td]:px-4 [&>td]:py-3 align-top">
