@@ -14,7 +14,7 @@ export async function TestModeBanner() {
   const d = getDict(locale);
 
   return (
-    <div className="w-full border-b border-amber-300/60 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/40">
+    <div className="w-full border-b border-border bg-background">
       <div className="container mx-auto flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400">
         <AlertTriangle className="h-4 w-4 shrink-0" />
         <span className="font-medium">{d.testModeBanner.message}</span>
