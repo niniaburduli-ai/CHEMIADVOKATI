@@ -12,6 +12,7 @@ import { getDict } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { groupItemsByArticle } from "@/lib/legal/citations";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
+import { ChatStreamReader, type ChatStreamEvent } from "@/lib/streaming/chat-protocol";
 
 type LegalBasisItem = {
   article: string;
@@ -101,40 +102,45 @@ export function ChatClient({ locale }: { locale: Locale }) {
         return;
       }
 
-      let legalBasis: LegalBasisGroup[] = [];
-      const raw = res.headers.get("X-Legal-Basis");
-      if (raw) {
-        try {
-          legalBasis = JSON.parse(decodeURIComponent(raw));
-        } catch {
-          legalBasis = [];
-        }
-      }
-
-      let webSources: WebSource[] = [];
-      const rawWeb = res.headers.get("X-Web-Sources");
-      if (rawWeb) {
-        try {
-          webSources = JSON.parse(decodeURIComponent(rawWeb));
-        } catch {
-          webSources = [];
-        }
-      }
-
       if (!res.body) {
-        patch((msg) => ({ ...msg, content: d.chat.errorNoBody, legalBasis }));
+        patch((msg) => ({ ...msg, content: d.chat.errorNoBody }));
         return;
       }
 
+      // Legal-basis/web-source citations arrive as a trailing in-band JSON
+      // payload (not response headers) — with true token-by-token streaming
+      // they aren't known until generation finishes, i.e. after the body
+      // has already started. A rare in-band reset marker can also clear
+      // `acc` mid-stream: the server discards a draft answer and restarts
+      // with a different model when the first draft fails its groundedness
+      // check (see ChatStreamReader for the full wire protocol).
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      const streamReader = new ChatStreamReader();
       let acc = "";
+      let legalBasis: LegalBasisGroup[] = [];
+      let webSources: WebSource[] = [];
+
+      const applyEvents = (events: ChatStreamEvent[]) => {
+        for (const ev of events) {
+          if (ev.type === "prose") acc += ev.text;
+          else if (ev.type === "reset") acc = "";
+          else if (ev.type === "meta" && ev.data && typeof ev.data === "object") {
+            const data = ev.data as { legalBasis?: LegalBasisGroup[]; webSources?: WebSource[] };
+            legalBasis = data.legalBasis ?? [];
+            webSources = data.webSources ?? [];
+          }
+        }
+      };
+
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        acc += decoder.decode(value, { stream: true });
+        applyEvents(streamReader.push(decoder.decode(value, { stream: true })));
         patch((msg) => ({ ...msg, content: acc }));
       }
+      applyEvents(streamReader.finish());
+
       const trimmedAcc = acc.trim();
       const isNotFound = trimmedAcc === NOT_FOUND_MSG;
       const isTechnicalError = trimmedAcc === TECHNICAL_ERROR_MSG;
@@ -220,7 +226,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
                             href={g.url}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="flex items-start gap-1.5 text-xs text-primary hover:underline"
+                            className="flex items-start gap-1.5 text-xs text-gold hover:underline"
                           >
                             <BookOpen className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                             <span>{d.chat.source}</span>
@@ -242,7 +248,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
                             href={s.url}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="text-xs text-primary hover:underline break-all"
+                            className="text-xs text-gold hover:underline break-all"
                           >
                             {s.title}
                           </a>
@@ -265,7 +271,7 @@ export function ChatClient({ locale }: { locale: Locale }) {
         }}
       >
         {messages.length === 0 && (
-          <label className="text-sm font-semibold text-primary">
+          <label className="text-sm font-semibold text-gold">
             {d.chat.howCanIHelp}
           </label>
         )}

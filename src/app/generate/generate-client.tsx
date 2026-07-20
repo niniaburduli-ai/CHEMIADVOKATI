@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { COMMON_FIELDS, QUESTION_SCHEMAS } from "@/lib/legal/document-fields";
 import { DocumentResultPanel, type DocumentResult } from "@/components/site/DocumentResultPanel";
 import { UpgradeRequiredDialog } from "@/components/site/upgrade-required-dialog";
+import { ChatStreamReader } from "@/lib/streaming/chat-protocol";
 
 const QUOTA_STRINGS = {
   title: "კრედიტები ამოწურულია",
@@ -38,6 +39,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [extra, setExtra] = useState("");
   const [loading, setLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
   const [result, setResult] = useState<DocumentResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
@@ -67,27 +69,73 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
     setLoading(true);
     setError(null);
     setResult(null);
+    setStreamingText("");
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, details }),
       });
-      const data = await res.json();
+
       if (!res.ok) {
         if (res.status === 403) {
           setQuotaExceeded(true);
           return;
         }
+        const data = await res.json().catch(() => ({}));
         setError(data.error ?? "შეცდომა");
         return;
       }
-      setResult(data);
+
+      if (!res.body) {
+        setError("სერვისთან კავშირი ვერ დამყარდა");
+        return;
+      }
+
+      // Prose streams live for immediate feedback; the trailing in-band meta
+      // payload carries the authoritative final content (id/title/legalBasis,
+      // and a server-validated copy of the text) once generation finishes —
+      // see ChatStreamReader for why headers can't carry this instead.
+      type GenerateMeta = {
+        id?: string;
+        title?: string;
+        content?: string;
+        legalBasis?: string;
+        error?: string;
+      };
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const streamReader = new ChatStreamReader();
+      let meta: GenerateMeta | null = null;
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const ev of streamReader.push(decoder.decode(value, { stream: true }))) {
+          if (ev.type === "prose") setStreamingText((t) => t + ev.text);
+          else if (ev.type === "meta") meta = ev.data as GenerateMeta;
+        }
+      }
+      for (const ev of streamReader.finish()) {
+        if (ev.type === "meta") meta = ev.data as GenerateMeta;
+      }
+
+      if (!meta || meta.error) {
+        setError(meta?.error ?? "შეცდომა");
+        return;
+      }
+      setResult({
+        id: meta.id!,
+        title: meta.title!,
+        content: meta.content!,
+        legalBasis: meta.legalBasis,
+      });
       toast.success("დოკუმენტი შეიქმნა");
     } catch {
       setError("სერვისთან კავშირი ვერ დამყარდა");
     } finally {
       setLoading(false);
+      setStreamingText("");
     }
   }
 
@@ -194,12 +242,24 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
           </CardContent>
         </Card>
 
-        <DocumentResultPanel
-          key={result?.id ?? 'empty'}
-          result={result}
-          setResult={setResult}
-          emptyHint={<>შეავსე დეტალები და დააჭირე „შექმენი დოკუმენტი”</>}
-        />
+        {loading ? (
+          <Card className="min-h-[300px]">
+            <CardContent className="py-6">
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                {streamingText || (
+                  <span className="text-muted-foreground">დოკუმენტი იქმნება...</span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <DocumentResultPanel
+            key={result?.id ?? 'empty'}
+            result={result}
+            setResult={setResult}
+            emptyHint={<>შეავსე დეტალები და დააჭირე „შექმენი დოკუმენტი”</>}
+          />
+        )}
       </div>
       <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={QUOTA_STRINGS} />
     </div>

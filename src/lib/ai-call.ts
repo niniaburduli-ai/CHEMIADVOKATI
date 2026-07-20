@@ -1,8 +1,28 @@
+import { openOpenRouterStream } from "./openrouter-stream-core";
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = () =>
   process.env.OPENROUTER_ANSWER_MODEL ||
   process.env.OPENROUTER_MODEL ||
   "google/gemini-2.5-flash";
+
+/**
+ * Streaming counterpart to `callOpenRouterChat` — opens the upstream
+ * connection and resolves once it's confirmed live (HTTP 200), so callers
+ * can still fall back to a clean error response if the connection itself
+ * fails. Rejects with `OpenRouterConnectError` in that case; once resolved,
+ * the generator yields content deltas as they arrive.
+ */
+export async function streamOpenRouterChat(
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  model?: string,
+  maxTokens = 2500
+) {
+  return openOpenRouterStream(messages, {
+    model: model ?? MODEL(),
+    maxTokens,
+  });
+}
 
 export async function callOpenRouterChat(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,

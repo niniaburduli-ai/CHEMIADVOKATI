@@ -25,6 +25,7 @@
  */
 
 import { isAllowedHost, stripCitations } from "./sources";
+import { openOpenRouterStream } from "../openrouter-stream-core";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -324,6 +325,23 @@ export async function generateLegalAnswer(
     // 0, not 0.1: identical question + identical retrieved text should always
     // cite the same articles and figures — any sampling temperature reopens
     // that drift even with rule 6e in SYSTEM_PROMPT.
+    temperature: 0,
+    maxTokens: 1200,
+    frequencyPenalty: 0.2,
+  });
+}
+
+/**
+ * Streaming counterpart to `generateLegalAnswer` — same model/params, but
+ * opens an upstream SSE connection instead of a single blocking call so the
+ * caller can forward content deltas to the browser as they arrive. Resolves
+ * once the connection is confirmed live (see `openOpenRouterStream`); the
+ * groundedness check (which needs the full text, citation block included)
+ * still runs after the caller has drained the generator to completion.
+ */
+export async function streamLegalAnswer(messages: ChatMessage[], complex = false) {
+  return openOpenRouterStream(messages, {
+    model: complex ? ANSWER_MODEL_COMPLEX : ANSWER_MODEL,
     temperature: 0,
     maxTokens: 1200,
     frequencyPenalty: 0.2,

@@ -4,11 +4,13 @@ import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { GeneratedDocument } from "@/lib/models/generated-document";
 import { GenerateDocSchema, DOC_TYPES } from "@/lib/validators";
-import { callOpenRouterChat } from "@/lib/ai-call";
+import { streamOpenRouterChat } from "@/lib/ai-call";
 import { verifyLegalCitations, STRICT_BREVITY_RULE } from "@/lib/legal/openrouter";
 import { getCachedCitations, setCachedCitations } from "@/lib/legal/doc-citation-cache";
 import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { splitQuota, applyQuotaSplit } from "@/lib/quota";
+import { DelimiterSplitter } from "@/lib/streaming/delimiter-splitter";
+import { encodeMeta } from "@/lib/streaming/chat-protocol";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,17 +86,23 @@ export async function POST(req: Request) {
   const typeName = DOC_TYPES[parsed.data.type];
   const userMsg = `დოკუმენტის ტიპი: ${typeName}\n\nდეტალები:\n${parsed.data.details}`;
 
-  let raw: string;
+  let deltas: AsyncGenerator<string, void, unknown>;
   try {
-    raw = await callOpenRouterChat(
+    deltas = await streamOpenRouterChat(
       [
         { role: "system", content: SYSTEM },
         { role: "user", content: userMsg },
       ],
       undefined,
-      16000
+      // Only 2 doc types (complaint, demand-letter) from a 2000-char detail
+      // input — realistic output is a few hundred to ~1500 words. 6000 tokens
+      // leaves ample headroom over that without paying for a 16k ceiling that
+      // was never actually reachable in practice.
+      6000
     );
   } catch (err) {
+    // Connection never opened — nothing streamed yet, safe to return a
+    // plain error response exactly like the non-streaming version did.
     return NextResponse.json(
       {
         error: "AI service unavailable",
@@ -104,50 +112,104 @@ export async function POST(req: Request) {
     );
   }
 
-  // The model is instructed to print the delimiter on its own line right
-  // after the document body — everything after it is the legal-basis block,
-  // kept out of the saved/rendered document content (see the dedicated
-  // sources panel on /generate).
-  const delimIndex = raw.indexOf(CITATIONS_DELIM);
-  const body_ = (delimIndex === -1 ? raw : raw.slice(0, delimIndex)).trim();
-  // Defense in depth: strip stray leading "#"/"##" heading markers in case the
-  // model doesn't fully comply with the no-markdown-headers instruction.
-  const content = body_.replace(/^#{1,6}\s*/gm, "");
-  const citationsSection =
-    delimIndex === -1 ? "" : raw.slice(delimIndex + CITATIONS_DELIM.length).trim();
+  const encoder = new TextEncoder();
+  const bodyStream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      // The model is instructed to print CITATIONS_DELIM on its own line
+      // right after the document body — everything after it is the
+      // legal-basis block, kept out of the streamed/rendered document text.
+      // Only the prefix (document body) is forwarded live; the citation
+      // block is buffered silently and processed after the stream ends.
+      const splitter = new DelimiterSplitter(CITATIONS_DELIM);
+      let full = "";
+      let midStreamError = false;
+      try {
+        for await (const delta of deltas) {
+          full += delta;
+          const safe = splitter.push(delta);
+          if (safe) controller.enqueue(encoder.encode(safe));
+        }
+        const { prose } = splitter.finish();
+        if (prose) controller.enqueue(encoder.encode(prose));
+      } catch {
+        midStreamError = true;
+      }
 
-  // Only two doc types exist and their typically-applicable articles barely
-  // change over time — verify live once per type, then reuse that result
-  // instead of paying a live web-search fee on every generation.
-  let legalBasis = citationsSection;
-  const cachedCitations = getCachedCitations(parsed.data.type);
-  if (cachedCitations) {
-    legalBasis = cachedCitations;
-  } else if (citationsSection) {
-    const verified = await verifyLegalCitations(typeName, citationsSection);
-    if (verified) {
-      legalBasis = verified;
-      setCachedCitations(parsed.data.type, verified);
-    }
-  }
+      if (midStreamError || !full.trim()) {
+        // Failed after some text may already have streamed to the browser —
+        // no clean status code possible at this point, so signal failure
+        // in-band. Crucially: no document saved, no quota charged.
+        controller.enqueue(
+          encoder.encode(encodeMeta({ error: "AI service unavailable" }))
+        );
+        controller.close();
+        return;
+      }
 
-  const title = `${typeName} — ${new Date().toISOString().slice(0, 10)}`;
+      const delimIndex = full.indexOf(CITATIONS_DELIM);
+      const body_ = (delimIndex === -1 ? full : full.slice(0, delimIndex)).trim();
+      // Defense in depth: strip stray leading "#"/"##" heading markers in
+      // case the model doesn't fully comply with the no-markdown-headers
+      // instruction. Applied here (once, on the full text) rather than
+      // per-chunk during streaming, since a heading marker split across a
+      // chunk boundary can't be reliably detected mid-stream — the version
+      // sent to the browser live may occasionally show a stray "#" in that
+      // rare case, but the authoritative `content` below (what's actually
+      // saved, and what the client swaps to once the stream ends) is always
+      // fully stripped either way.
+      const content = body_.replace(/^#{1,6}\s*/gm, "");
+      const citationsSection =
+        delimIndex === -1 ? "" : full.slice(delimIndex + CITATIONS_DELIM.length).trim();
 
-  const docCreate = GeneratedDocument.create({
-    userId: session.user.id,
-    title,
-    type: parsed.data.type,
-    content,
-    legalBasis,
+      // Only two doc types exist and their typically-applicable articles
+      // barely change over time — verify live once per type, then reuse
+      // that result instead of paying a live web-search fee on every
+      // generation.
+      let legalBasis = citationsSection;
+      const cachedCitations = getCachedCitations(parsed.data.type);
+      if (cachedCitations) {
+        legalBasis = cachedCitations;
+      } else if (citationsSection) {
+        const verified = await verifyLegalCitations(typeName, citationsSection);
+        if (verified) {
+          legalBasis = verified;
+          setCachedCitations(parsed.data.type, verified);
+        }
+      }
+
+      const title = `${typeName} — ${new Date().toISOString().slice(0, 10)}`;
+
+      const docCreate = GeneratedDocument.create({
+        userId: session.user.id,
+        title,
+        type: parsed.data.type,
+        content,
+        legalBasis,
+      });
+      const saveOps: Promise<unknown>[] = [docCreate];
+      if (!isAdmin && quotaSplit) {
+        saveOps.push(applyQuotaSplit(session.user.id, "docGeneration", quotaSplit));
+      }
+      const [doc] = await Promise.all(saveOps);
+
+      controller.enqueue(
+        encoder.encode(
+          encodeMeta({
+            id: String((doc as { _id: unknown })._id),
+            title,
+            content,
+            legalBasis,
+          })
+        )
+      );
+      controller.close();
+    },
   });
-  const saveOps: Promise<unknown>[] = [docCreate];
-  if (!isAdmin && quotaSplit) {
-    saveOps.push(applyQuotaSplit(session.user.id, "docGeneration", quotaSplit));
-  }
-  const [doc] = await Promise.all(saveOps);
 
-  return NextResponse.json(
-    { id: String((doc as { _id: unknown })._id), title, content, legalBasis },
-    { status: 201 }
-  );
+  return new Response(bodyStream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
 }
