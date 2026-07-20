@@ -176,7 +176,7 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-5 border-b border-border bg-muted/30 flex items-center justify-between gap-3 shrink-0">
+      <header className="p-5 border-b border-border flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
             <Sparkles className="h-5 w-5" />

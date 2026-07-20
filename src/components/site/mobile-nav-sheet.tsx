@@ -54,7 +54,7 @@ export function MobileNavSheet({
       >
         <Menu className="h-7 w-7" strokeWidth={2.5} />
       </SheetTrigger>
-      <SheetContent side="left">
+      <SheetContent side="left" className="bg-background">
         <SheetHeader>
           <SheetTitle className="text-gold">{siteName}</SheetTitle>
         </SheetHeader>

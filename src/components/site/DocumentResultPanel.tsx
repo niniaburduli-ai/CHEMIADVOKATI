@@ -196,7 +196,7 @@ export function DocumentResultPanel({
       )}
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="sm:max-w-4xl h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl h-[90vh] overflow-y-auto bg-background">
           <DialogHeader>
             <DialogTitle>{result.title}</DialogTitle>
           </DialogHeader>

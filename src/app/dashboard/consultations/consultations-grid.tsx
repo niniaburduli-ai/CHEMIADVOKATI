@@ -110,7 +110,7 @@ export function ConsultationsGrid({ items }: { items: ConsultationItem[] }) {
       </div>
 
       <Dialog open={active !== null} onOpenChange={(next) => !next && setOpenId(null)}>
-        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto bg-background">
           {active && (
             <>
               <DialogHeader>

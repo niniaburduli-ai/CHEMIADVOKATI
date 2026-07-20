@@ -56,7 +56,7 @@ export function LimitsDialog({
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-background">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{subtitle}</DialogDescription>

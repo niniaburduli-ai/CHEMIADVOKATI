@@ -23,7 +23,7 @@ export function UpgradeRequiredDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-background">
         <DialogHeader>
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
             <Sparkles className="h-5 w-5 text-gold" />
