@@ -13,9 +13,24 @@ export type GeneratedDocItem = {
   type: string;
   content: string;
   createdAt: string | null;
+  source?: string;
 };
 
-export function DocumentsList({ docs, d }: { docs: GeneratedDocItem[]; d: Dict }) {
+export function DocumentsList({
+  docs,
+  d,
+  heading,
+  emptyText,
+  emptyCta,
+  emptyHref,
+}: {
+  docs: GeneratedDocItem[];
+  d: Dict;
+  heading?: string;
+  emptyText?: string;
+  emptyCta?: string;
+  emptyHref?: string;
+}) {
   const dp = d.profile;
 
   return (
@@ -23,16 +38,16 @@ export function DocumentsList({ docs, d }: { docs: GeneratedDocItem[]; d: Dict }
       <header className="p-5 border-b border-border shrink-0">
         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
           <FileText className="h-5 w-5 text-gold" />
-          {dp.generatedDocs}
+          {heading ?? dp.generatedDocs}
         </h3>
       </header>
 
       <div className="flex-1 overflow-y-auto p-5">
         {docs.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-12">
-            {dp.noDocs}{" "}
-            <Link href="/generate" className="underline text-gold">
-              {dp.createDoc}
+            {emptyText ?? dp.noDocs}{" "}
+            <Link href={emptyHref ?? "/generate"} className="underline text-gold">
+              {emptyCta ?? dp.createDoc}
             </Link>
           </p>
         ) : (

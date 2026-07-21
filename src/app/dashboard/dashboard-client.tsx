@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3, MessagesSquare, FileText, FileSearch, Clock, ArrowRight, type LucideIcon } from "lucide-react";
+import { BarChart3, MessagesSquare, FileText, FileSearch, Clock, ArrowRight, User, LayoutList, CreditCard, type LucideIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ConsultationsGrid, type ConsultationItem } from "./consultations/consultations-grid";
 import { DocumentsList, type GeneratedDocItem } from "./documents/documents-list";
 import { ReviewsGrid, type ReviewItem } from "./reviews/reviews-grid";
 import type { LimitMetric } from "@/components/site/limits-dialog";
 import type { Dict } from "@/lib/i18n/dictionaries";
 
-type Tab = "limits" | "consultations" | "documents" | "reviews";
+type Tab = "limits" | "profile" | "consultations" | "reviews" | "documents" | "templates";
 
 type CustomMetric = { key: string; label: string; icon: React.ReactNode; remaining: number };
 
@@ -98,6 +99,66 @@ function LimitsPanel({
   );
 }
 
+function ProfilePanel({
+  d,
+  name,
+  email,
+  initials,
+  planLabel,
+  statusLabel,
+  planExpiresLabel,
+}: {
+  d: Dict;
+  name: string;
+  email: string;
+  initials: string;
+  planLabel: string;
+  statusLabel: string | null;
+  planExpiresLabel: string | null;
+}) {
+  const dp = d.profile;
+  return (
+    <div className="flex flex-col h-full">
+      <header className="p-5 border-b border-border shrink-0">
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <User className="h-5 w-5 text-gold" />
+          {dp.myProfile}
+        </h3>
+      </header>
+      <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-lg font-bold shrink-0 select-none">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-bold text-foreground truncate">{name}</p>
+            <p className="text-sm text-gold truncate">{email}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 mt-4 flex-wrap">
+          <Badge variant={planLabel === dp.planFree ? "secondary" : "default"}>{planLabel}</Badge>
+          {statusLabel && (
+            <Badge variant={statusLabel === dp.statusActive ? "default" : "destructive"} className="text-xs">
+              {statusLabel}
+            </Badge>
+          )}
+          {planExpiresLabel && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3 text-gold" />
+              {planExpiresLabel}
+              {dp.untilSuffix}
+            </span>
+          )}
+        </div>
+        <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" }) + " mt-5"}>
+          <CreditCard className="mr-2 h-4 w-4 text-gold" />
+          {dp.subscription}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function ReviewsPanel({ d, items }: { d: Dict; items: ReviewItem[] }) {
   const dp = d.profile;
   return (
@@ -134,11 +195,17 @@ export function DashboardClient({
   customExpiresLabel,
   customMetrics,
   isFreePlan,
+  profileName,
+  profileEmail,
+  profileInitials,
+  profileStatusLabel,
   consultations,
   documents,
+  templates,
   reviews,
   showGenerate,
   showReview,
+  showTemplates,
 }: {
   d: Dict;
   initialTab?: string;
@@ -149,19 +216,27 @@ export function DashboardClient({
   customExpiresLabel: string | null;
   customMetrics: CustomMetric[];
   isFreePlan: boolean;
+  profileName: string;
+  profileEmail: string;
+  profileInitials: string;
+  profileStatusLabel: string | null;
   consultations: ConsultationItem[];
   documents: GeneratedDocItem[];
+  templates: GeneratedDocItem[];
   reviews: ReviewItem[];
   showGenerate: boolean;
   showReview: boolean;
+  showTemplates: boolean;
 }) {
   const dp = d.profile;
 
   const tabs: { key: Tab; label: string; icon: LucideIcon; enabled: boolean }[] = [
     { key: "limits", label: dp.limits, icon: BarChart3, enabled: true },
+    { key: "profile", label: dp.myProfile, icon: User, enabled: true },
     { key: "consultations", label: dp.aiConsultations, icon: MessagesSquare, enabled: true },
-    { key: "documents", label: dp.generatedDocs, icon: FileText, enabled: showGenerate },
     { key: "reviews", label: dp.analysisResults, icon: FileSearch, enabled: showReview },
+    { key: "documents", label: dp.generatedDocs, icon: FileText, enabled: showGenerate },
+    { key: "templates", label: dp.usedTemplates, icon: LayoutList, enabled: showTemplates },
   ];
   const enabledTabs = tabs.filter((t) => t.enabled);
   const requested = enabledTabs.find((t) => t.key === initialTab)?.key;
@@ -218,12 +293,35 @@ export function DashboardClient({
             customMetrics={customMetrics}
           />
         </div>
+        <div className={activeTab === "profile" ? "flex flex-col h-full min-h-0" : "hidden"}>
+          <ProfilePanel
+            d={d}
+            name={profileName}
+            email={profileEmail}
+            initials={profileInitials}
+            planLabel={planLabel}
+            statusLabel={profileStatusLabel}
+            planExpiresLabel={planExpiresLabel}
+          />
+        </div>
         <div className={activeTab === "consultations" ? "flex flex-col h-full min-h-0" : "hidden"}>
           <ConsultationsGrid items={consultations} d={d} />
         </div>
         {showGenerate && (
           <div className={activeTab === "documents" ? "flex flex-col h-full min-h-0" : "hidden"}>
             <DocumentsList docs={documents} d={d} />
+          </div>
+        )}
+        {showTemplates && (
+          <div className={activeTab === "templates" ? "flex flex-col h-full min-h-0" : "hidden"}>
+            <DocumentsList
+              docs={templates}
+              d={d}
+              heading={d.profile.usedTemplates}
+              emptyText={d.profile.noTemplates}
+              emptyCta={d.profile.fillTemplate}
+              emptyHref="/services?tab=templates"
+            />
           </div>
         )}
         {showReview && (

@@ -184,16 +184,26 @@ export default async function DashboardPage({
     };
   });
 
-  const documentItems: GeneratedDocItem[] = documents.map((doc) => {
-    const item = doc as unknown as { _id: unknown; title: string; type: string; content: string; createdAt?: Date };
+  const allDocumentItems: GeneratedDocItem[] = documents.map((doc) => {
+    const item = doc as unknown as {
+      _id: unknown;
+      title: string;
+      type: string;
+      content: string;
+      createdAt?: Date;
+      source?: string;
+    };
     return {
       id: String(item._id),
       title: item.title,
       type: item.type,
       content: item.content,
       createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : null,
+      source: item.source ?? "ai",
     };
   });
+  const documentItems = allDocumentItems.filter((doc) => doc.source !== "template");
+  const templateItems = allDocumentItems.filter((doc) => doc.source === "template");
 
   const reviewItems: ReviewItem[] = reviews.map((review) => {
     const r = review as unknown as {
@@ -289,11 +299,17 @@ export default async function DashboardPage({
           customExpiresLabel={customExpiresLabel}
           customMetrics={customMetrics}
           isFreePlan={plan === "free"}
+          profileName={user.name}
+          profileEmail={user.email}
+          profileInitials={initials}
+          profileStatusLabel={subStatus ? STATUS_LABELS[subStatus] ?? subStatus : null}
           consultations={consultationItems}
           documents={documentItems}
+          templates={templateItems}
           reviews={reviewItems}
           showGenerate={showGenerate}
           showReview={showReview}
+          showTemplates={showTemplates}
         />
       </div>
     </div>
