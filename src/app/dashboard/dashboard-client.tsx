@@ -207,7 +207,7 @@ export function DashboardClient({
 
       {/* Canvas */}
       <section className="flex-1 min-w-0 h-[75vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-        <div className={activeTab === "limits" ? "contents" : "hidden"}>
+        <div className={activeTab === "limits" ? "flex flex-col h-full min-h-0" : "hidden"}>
           <LimitsPanel
             d={d}
             metrics={limitMetrics}
@@ -218,16 +218,16 @@ export function DashboardClient({
             customMetrics={customMetrics}
           />
         </div>
-        <div className={activeTab === "consultations" ? "contents" : "hidden"}>
+        <div className={activeTab === "consultations" ? "flex flex-col h-full min-h-0" : "hidden"}>
           <ConsultationsGrid items={consultations} d={d} />
         </div>
         {showGenerate && (
-          <div className={activeTab === "documents" ? "contents" : "hidden"}>
+          <div className={activeTab === "documents" ? "flex flex-col h-full min-h-0" : "hidden"}>
             <DocumentsList docs={documents} d={d} />
           </div>
         )}
         {showReview && (
-          <div className={activeTab === "reviews" ? "contents" : "hidden"}>
+          <div className={activeTab === "reviews" ? "flex flex-col h-full min-h-0" : "hidden"}>
             <ReviewsPanel d={d} items={reviews} />
           </div>
         )}

@@ -25,13 +25,13 @@ export function GuestAuthButtons({
     <>
       <Link
         href={`/login${suffix}`}
-        className={buttonVariants({ variant: "outline", size: "sm" }) + " btn-hover"}
+        className={buttonVariants({ variant: "outline", size: "sm" }) + " btn-hover max-sm:h-6 max-sm:px-2 max-sm:text-xs"}
       >
         {signInLabel}
       </Link>
       <Link
         href={`/register${suffix}`}
-        className={buttonVariants({ size: "sm" }) + " btn-hover"}
+        className={buttonVariants({ size: "sm" }) + " btn-hover max-sm:h-6 max-sm:px-2 max-sm:text-xs"}
       >
         {signUpLabel}
       </Link>

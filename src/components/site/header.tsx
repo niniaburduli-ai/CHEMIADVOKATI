@@ -43,10 +43,11 @@ export async function Header() {
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur-sm shadow-sm transition-shadow">
       <div className="container mx-auto flex min-h-16 flex-wrap md:flex-nowrap items-center justify-between gap-x-6 gap-y-2 lg:gap-x-10 px-4 py-2">
         {/* Menu trigger (mobile) + Logo — stay together on the first line */}
-        <div className="flex items-center gap-2 shrink-0 order-1">
+        <div className="flex items-center gap-2 min-w-0 order-1 md:shrink-0">
           <MobileNavSheet
             siteName={siteName}
             menuLabel={d.header.menu}
+            locale={locale}
             navItems={navItems}
             legalItems={legalItems}
             navigationLabel={d.footer.navigation}
@@ -55,11 +56,11 @@ export async function Header() {
             contactEmail={contactEmail}
             contactAddress={contactAddress}
           />
-          <Link href="/" className="flex flex-col leading-tight shrink-0 group">
-            <span className="text-lg font-bold text-gold tracking-wide [font-family:var(--font-noto-serif)] transition-opacity group-hover:opacity-80">
+          <Link href="/" className="flex flex-row items-baseline gap-1.5 md:flex-col md:items-start md:gap-0 leading-tight min-w-0 group">
+            <span className="text-lg font-bold text-gold tracking-wide [font-family:var(--font-noto-serif)] transition-opacity group-hover:opacity-80 shrink-0">
               {siteName}
             </span>
-            <span className="text-xs text-foreground font-normal">
+            <span className="text-xs text-foreground font-normal truncate min-w-0">
               {tagline}
             </span>
           </Link>
@@ -81,9 +82,11 @@ export async function Header() {
         </nav>
 
         {/* Auth — wraps onto its own line on mobile, inline on desktop */}
-        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
-          <LanguageSwitcher current={locale} />
-          <ThemeToggle />
+        <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
+          <div className="hidden md:flex items-center gap-1.5">
+            <LanguageSwitcher current={locale} />
+            <ThemeToggle />
+          </div>
           {user ? (
             <>
               {user.role === "admin" && (

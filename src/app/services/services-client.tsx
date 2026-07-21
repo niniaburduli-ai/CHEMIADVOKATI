@@ -451,8 +451,8 @@ export function ServicesPageClient({
         ) : (
           <div className="flex flex-col md:flex-row gap-6">
             {/* Sidebar */}
-            <aside className="w-full md:w-72 shrink-0 space-y-4 md:sticky md:top-24">
-              <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
+            <aside className="w-full md:w-72 shrink-0 flex flex-col gap-4 md:sticky md:top-24 md:h-[85vh] md:overflow-y-auto md:pr-1">
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-2 shrink-0">
                 <div className="px-2 pb-2">
                   <h2 className="text-lg font-bold text-foreground">{sm.sidebarHeading}</h2>
                   <p className="text-xs text-muted-foreground">{sm.sidebarSubtitle}</p>
@@ -474,21 +474,21 @@ export function ServicesPageClient({
                 ))}
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="bg-card border border-border rounded-2xl p-4 shrink-0">
                 <UpgradeCard plan={upgradePlan} locale={locale} d={d} />
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="bg-card border border-border rounded-2xl p-4 flex-1 flex flex-col md:min-h-0">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="h-5 w-5 text-gold" />
                   <h3 className="text-lg font-bold text-foreground">{sm.cabinetTitle}</h3>
                 </div>
-                <ul className="text-sm text-muted-foreground space-y-1 mb-3 list-disc list-inside">
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   <li>{sm.cabinetLimitsItem}</li>
                   <li>{sm.cabinetPlanItem}</li>
                   <li>{sm.cabinetHistoryItem}</li>
                 </ul>
-                <Link href="/dashboard" className="block">
+                <Link href="/dashboard" className="block mt-auto pt-3">
                   <Button className="w-full h-10 rounded-full">
                     {sm.cabinetCta}
                   </Button>
@@ -498,18 +498,18 @@ export function ServicesPageClient({
 
             {/* Canvas */}
             <section className="flex-1 min-w-0 h-[65vh] md:h-[85vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-              <div className={activeTab === "ai" ? "contents" : "hidden"}>
+              <div className={activeTab === "ai" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.chat && <AiConsultPanel locale={locale} />}
               </div>
-              <div className={activeTab === "docs" ? "contents" : "hidden"}>
+              <div className={activeTab === "docs" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.review && (
                   <DocumentAnalysisPanel locale={locale} initialReviewId={initialReviewId} />
                 )}
               </div>
-              <div className={activeTab === "templates" ? "contents" : "hidden"}>
+              <div className={activeTab === "templates" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.generate && <TemplatesPanel sm={sm} />}
               </div>
-              <div className={activeTab === "templatesFill" ? "contents" : "hidden"}>
+              <div className={activeTab === "templatesFill" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.templates && <TemplatesLinkPanel sm={sm} />}
               </div>
             </section>
