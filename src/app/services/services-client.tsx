@@ -496,13 +496,13 @@ export function ServicesPageClient({
     <div>
       <PageHero title={d.services.title} subtitle={d.services.subtitle} />
 
-      <div className="container mx-auto px-4 py-10">
+      <div className="container mx-auto px-4 py-10 max-w-6xl">
         {enabledTabs.length === 0 ? (
           <p className="text-center text-muted-foreground py-16">{sm.templatesNoResults}</p>
         ) : (
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col gap-6 md:grid md:grid-cols-[minmax(18rem,1fr)_3fr] md:h-[85vh]">
             {/* Sidebar */}
-            <aside className="w-full md:w-72 shrink-0 flex flex-col gap-4 md:sticky md:top-24 md:max-h-[85vh] md:min-h-0 md:overflow-y-auto md:pr-1">
+            <aside className="w-full flex flex-col gap-4 md:sticky md:top-24 md:h-full md:min-h-0 md:overflow-y-auto md:pr-1">
               <div className="bg-card border border-border rounded-2xl p-4 space-y-2 shrink-0">
                 <div className="px-2 pb-2">
                   <h2 className="text-lg font-bold text-foreground">{sm.sidebarHeading}</h2>
@@ -548,7 +548,7 @@ export function ServicesPageClient({
             </aside>
 
             {/* Canvas */}
-            <section className="flex-1 min-w-0 h-[65vh] md:h-[85vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <section className="min-w-0 h-[65vh] md:h-full md:min-h-0 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
               <div className={activeTab === "ai" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.chat && <AiConsultPanel locale={locale} />}
               </div>

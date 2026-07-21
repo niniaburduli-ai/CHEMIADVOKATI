@@ -166,14 +166,14 @@ export async function POST(req: Request) {
       // that result instead of paying a live web-search fee on every
       // generation.
       let legalBasis = citationsSection;
-      const cachedCitations = getCachedCitations(parsed.data.type);
+      const cachedCitations = await getCachedCitations(parsed.data.type);
       if (cachedCitations) {
         legalBasis = cachedCitations;
       } else if (citationsSection) {
         const verified = await verifyLegalCitations(typeName, citationsSection);
         if (verified) {
           legalBasis = verified;
-          setCachedCitations(parsed.data.type, verified);
+          await setCachedCitations(parsed.data.type, verified);
         }
       }
 

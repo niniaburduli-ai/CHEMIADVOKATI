@@ -8,10 +8,17 @@
  * from a different person, but legal answers shouldn't be served stale
  * across days.
  *
- * Same in-memory/global-survives-hot-reload pattern as fetch-source.ts. Not
- * shared across serverless instances — a best-effort cost optimization, not
- * a correctness guarantee.
+ * Persisted in Mongo (AnswerCacheModel) rather than in-memory: Vercel
+ * Functions don't share memory across instances, so an in-memory Map only
+ * caught repeats that happened to land on the same warm instance, silently
+ * re-running the full pipeline (and, for questions the 8 approved sources
+ * don't cover, re-running a live, non-deterministic web search) on every
+ * other repeat — the visible symptom being different answers/sources for
+ * the identical question asked minutes apart. A shared store fixes both the
+ * cost duplication and the inconsistency.
  */
+import { dbConnect } from "../db";
+import { AnswerCacheModel } from "../models/answer-cache";
 import type { LegalBasisGroup } from "./citations";
 import type { WebSource } from "./openrouter";
 import { embedText, cosineSimilarity } from "./embeddings";
@@ -22,8 +29,6 @@ export type CachedAnswer = {
   webSources?: WebSource[];
 };
 
-type CacheEntry = { embedding: number[]; value: CachedAnswer };
-
 /**
  * Cosine similarity above this counts as "the same question" for
  * text-embedding-3-small on short legal questions. Tuned conservatively: a
@@ -31,12 +36,6 @@ type CacheEntry = { embedding: number[]; value: CachedAnswer };
  * would serve a wrong cached answer, which is worse — so when in doubt, miss.
  */
 const SIMILARITY_THRESHOLD = 0.9;
-
-declare global {
-  var __semanticAnswerCache: Map<string, CacheEntry[]> | undefined;
-}
-const cacheByDay: Map<string, CacheEntry[]> =
-  globalThis.__semanticAnswerCache ?? (globalThis.__semanticAnswerCache = new Map());
 
 /** Georgia-local calendar day key, so the cache resets at Tbilisi midnight
  * regardless of the server's own timezone. */
@@ -49,13 +48,6 @@ function todayKey(): string {
   }).format(new Date());
 }
 
-/** Drop every day except today — this IS the daily reset. */
-function pruneOldDays(today: string): void {
-  for (const key of cacheByDay.keys()) {
-    if (key !== today) cacheByDay.delete(key);
-  }
-}
-
 export type CacheLookup = {
   value: CachedAnswer | null;
   /** The question's embedding, if one was computed — reuse it in
@@ -64,24 +56,31 @@ export type CacheLookup = {
 };
 
 export async function getCachedAnswer(question: string): Promise<CacheLookup> {
-  const today = todayKey();
-  pruneOldDays(today);
-  const bucket = cacheByDay.get(today);
-  if (!bucket || bucket.length === 0) return { value: null, embedding: null }; // nothing cached yet today — skip the embed call
+  await dbConnect();
+  const bucket = await AnswerCacheModel.find({ dayKey: todayKey() }).lean();
+  if (bucket.length === 0) return { value: null, embedding: null }; // nothing cached yet today — skip the embed call
 
   const embedding = await embedText(question);
   if (!embedding) return { value: null, embedding: null }; // embedding failed — treat as a miss, never block the real pipeline
 
-  let best: CacheEntry | null = null;
+  let best: (typeof bucket)[number] | null = null;
   let bestScore = 0;
   for (const entry of bucket) {
-    const score = cosineSimilarity(embedding, entry.embedding);
+    const score = cosineSimilarity(embedding, entry.embedding as number[]);
     if (score > bestScore) {
       bestScore = score;
       best = entry;
     }
   }
-  return { value: best && bestScore >= SIMILARITY_THRESHOLD ? best.value : null, embedding };
+  const value: CachedAnswer | null =
+    best && bestScore >= SIMILARITY_THRESHOLD
+      ? {
+          answer: best.answer,
+          legalBasis: best.legalBasis as LegalBasisGroup[],
+          webSources: best.webSources as WebSource[] | undefined,
+        }
+      : null;
+  return { value, embedding };
 }
 
 /** `embedding` may be reused from a prior getCachedAnswer call on the same
@@ -95,9 +94,12 @@ export async function setCachedAnswer(
   const emb = embedding ?? (await embedText(question));
   if (!emb) return; // no usable key to cache under — next request just misses, same as before
 
-  const today = todayKey();
-  pruneOldDays(today);
-  const bucket = cacheByDay.get(today) ?? [];
-  bucket.push({ embedding: emb, value });
-  cacheByDay.set(today, bucket);
+  await dbConnect();
+  await AnswerCacheModel.create({
+    dayKey: todayKey(),
+    embedding: emb,
+    answer: value.answer,
+    legalBasis: value.legalBasis,
+    webSources: value.webSources ?? [],
+  });
 }

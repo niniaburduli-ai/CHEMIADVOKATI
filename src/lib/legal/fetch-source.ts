@@ -1,8 +1,18 @@
 import { isAllowedHost, isApprovedUrl, stripCitations } from "./sources";
+import { dbConnect } from "../db";
+import { FetchedSourceModel } from "../models/fetched-source";
 
 /**
  * Fetches an approved Matsne source, strips it to plain text, and caches the
- * result in memory with a TTL so we don't hammer matsne.gov.ge on every query.
+ * result in Mongo with a TTL so we don't hammer matsne.gov.ge on every query.
+ *
+ * Persisted rather than in-memory: a globalThis Map is invisible to every
+ * other Vercel Function instance, so a cold/different instance re-fetched
+ * (and sometimes got WAF-blocked on) the same law text a warm instance had
+ * already cached — producing a different answer path (web-search fallback
+ * instead of the real law) for the identical question depending purely on
+ * which instance handled the request. Only the 8 APPROVED_SOURCES urls are
+ * ever stored, so this collection stays tiny.
  *
  * Guards (hard rule #1: never fetch any other website):
  *  - URL must be an approved source AND on the allowed host.
@@ -13,8 +23,6 @@ export type FetchedSource = {
   title: string;
   text: string;
 };
-
-type CacheEntry = { value: FetchedSource; expires: number };
 
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — law text changes rarely; avoid hammering matsne
 const FETCH_TIMEOUT_MS = 30_000; // matsne law pages can be 5–8 MB
@@ -37,13 +45,6 @@ function looksLikeLaw(text: string): boolean {
   }
   return true;
 }
-
-// Survives hot reload in dev; per-instance in prod (fine — it's just a cache).
-declare global {
-  var __legalSourceCache: Map<string, CacheEntry> | undefined;
-}
-const cache: Map<string, CacheEntry> =
-  globalThis.__legalSourceCache ?? (globalThis.__legalSourceCache = new Map());
 
 // Maps ASCII digit chars to their Unicode superscript equivalents.
 // Used to survive matsne's <sup>N</sup> encoding of indexed articles (153⁶, 156¹…).
@@ -127,9 +128,10 @@ export async function fetchApprovedSource(
     throw new Error(`Refused to fetch non-approved URL: ${url}`);
   }
 
-  const cached = cache.get(url);
-  if (cached && cached.expires > Date.now()) {
-    return cached.value;
+  await dbConnect();
+  const cached = await FetchedSourceModel.findOne({ url }).lean();
+  if (cached && cached.expiresAt.getTime() > Date.now()) {
+    return { url, title: cached.title, text: cached.text };
   }
 
   // Retry a couple of times — matsne's WAF intermittently denies requests.
@@ -152,7 +154,11 @@ export async function fetchApprovedSource(
         // Only cache/serve content that actually looks like a law page.
         if (looksLikeLaw(text)) {
           const value: FetchedSource = { url, title: title || fallbackTitle, text };
-          cache.set(url, { value, expires: Date.now() + TTL_MS });
+          await FetchedSourceModel.findOneAndUpdate(
+            { url },
+            { url, title: value.title, text, expiresAt: new Date(Date.now() + TTL_MS) },
+            { upsert: true }
+          );
           return value;
         }
       }
@@ -165,5 +171,5 @@ export async function fetchApprovedSource(
   }
 
   // All attempts failed or returned a non-law page: serve stale if we have it.
-  return cached?.value ?? null;
+  return cached ? { url, title: cached.title, text: cached.text } : null;
 }
