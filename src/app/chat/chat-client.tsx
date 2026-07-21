@@ -13,6 +13,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { groupItemsByArticle } from "@/lib/legal/citations";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
 import { ChatStreamReader, type ChatStreamEvent } from "@/lib/streaming/chat-protocol";
+import { randomId } from "@/lib/uuid";
 
 type LegalBasisItem = {
   article: string;
@@ -52,11 +53,11 @@ export function ChatClient({ locale }: { locale: Locale }) {
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
     const userMsg: Message = {
-      id: crypto.randomUUID(),
+      id: randomId(),
       role: "user",
       content: text,
     };
-    const assistantId = crypto.randomUUID();
+    const assistantId = randomId();
     setMessages((m) => [
       ...m,
       userMsg,

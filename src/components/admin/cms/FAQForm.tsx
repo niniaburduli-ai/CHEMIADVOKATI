@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, Save, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { FAQItem } from "@/types/cms"
+import { randomId } from "@/lib/uuid"
 
 function newItem(order: number): FAQItem {
-  return { _id: crypto.randomUUID(), question: "", answer: "", category: "", order, status: "draft" }
+  return { _id: randomId(), question: "", answer: "", category: "", order, status: "draft" }
 }
 
 export function FAQForm() {

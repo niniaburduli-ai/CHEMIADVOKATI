@@ -7,11 +7,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, Save, Trash2 } from "lucide-react"
 import type { FooterColumn, FooterData } from "@/types/cms"
 import type { Locale } from "@/lib/i18n/config"
+import { randomId } from "@/lib/uuid"
 
 const EMPTY: FooterData = { columns: [], disclaimer: "", copyright: "", status: "draft" }
 
 function newCol(order: number): FooterColumn {
-  return { _id: crypto.randomUUID(), heading: "", links: [], order }
+  return { _id: randomId(), heading: "", links: [], order }
 }
 
 export function FooterForm({ locale = "ka" }: { locale?: Locale }) {

@@ -33,6 +33,7 @@ import { getDict } from "@/lib/i18n/dictionaries";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
 import { groupItemsByArticle } from "@/lib/legal/citations";
 import { ChatStreamReader, type ChatStreamEvent } from "@/lib/streaming/chat-protocol";
+import { randomId } from "@/lib/uuid";
 import type { Locale } from "@/lib/i18n/config";
 import type { FeatureFlagsData } from "@/lib/features";
 import type { PlanData } from "@/lib/plans-db";
@@ -99,8 +100,8 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text };
-    const assistantId = crypto.randomUUID();
+    const userMsg: Message = { id: randomId(), role: "user", content: text };
+    const assistantId = randomId();
     setMessages((m) => [...m, userMsg, { id: assistantId, role: "assistant", content: "" }]);
     setInput("");
     setLoading(true);
@@ -177,12 +178,12 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-5 border-b border-border flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="p-5 border-b border-border flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
             <Sparkles className="h-5 w-5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="text-lg font-bold text-foreground">{sm.aiTab}</h3>
             <p className="text-xs text-muted-foreground">{sm.aiSubtitle}</p>
           </div>

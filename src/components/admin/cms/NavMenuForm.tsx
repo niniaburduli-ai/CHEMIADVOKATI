@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Plus, Save, Trash2, GripVertical } from "lucide-react"
 import type { NavItem, NavMenuData } from "@/types/cms"
 import type { Locale } from "@/lib/i18n/config"
+import { randomId } from "@/lib/uuid"
 
 function newItem(order: number): NavItem {
-  return { _id: crypto.randomUUID(), label: "", href: "", order, isExternal: false }
+  return { _id: randomId(), label: "", href: "", order, isExternal: false }
 }
 
 export function NavMenuForm({ locale = "ka" }: { locale?: Locale }) {

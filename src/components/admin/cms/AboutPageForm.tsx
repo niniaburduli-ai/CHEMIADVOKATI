@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ImageUpload } from "./ImageUpload"
 import { Loader2, Plus, Save, Trash2 } from "lucide-react"
 import type { AboutPageData } from "@/types/cms"
+import { randomId } from "@/lib/uuid"
 
 const EMPTY: AboutPageData = {
   title: "",
@@ -84,7 +85,7 @@ export function AboutPageForm() {
         <div className="flex items-center justify-between">
           <h3 className="font-medium">გუნდი</h3>
           <Button type="button" size="sm" variant="outline" onClick={() =>
-            setData((p) => ({ ...p, team: [...p.team, { _id: crypto.randomUUID(), name: "", role: "", imageUrl: "", imagePubId: "", order: p.team.length }] }))
+            setData((p) => ({ ...p, team: [...p.team, { _id: randomId(), name: "", role: "", imageUrl: "", imagePubId: "", order: p.team.length }] }))
           }><Plus className="mr-1 h-3 w-3" /> Add</Button>
         </div>
         {data.team.map((m, i) => (
