@@ -32,7 +32,7 @@ import { DOC_TYPES } from "@/app/generate/generate-client";
 import { TEMPLATE_DOC_TYPES } from "@/app/templates/templates-client";
 import { getDict } from "@/lib/i18n/dictionaries";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
-import { groupItemsByArticle } from "@/lib/legal/citations";
+import { groupItemsByArticle, splitRawSources, type RawSource } from "@/lib/legal/citations";
 import { ChatStreamReader, type ChatStreamEvent } from "@/lib/streaming/chat-protocol";
 import { randomId } from "@/lib/uuid";
 import type { Locale } from "@/lib/i18n/config";
@@ -47,11 +47,14 @@ type LegalBasisGroup = {
   items: { article: string; paragraph: string | null; subparagraph: string | null }[];
 };
 
+type WebSource = { url: string; title: string };
+
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
   legalBasis?: LegalBasisGroup[];
+  webSources?: WebSource[];
 };
 
 const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
@@ -73,6 +76,7 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
     { id: "greeting", role: "assistant", content: d.chat.howCanIHelp },
   ]);
   const [loading, setLoading] = useState(false);
+  const [unauthorized, setUnauthorized] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,12 +85,20 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
         const res = await fetch("/api/consultations");
         if (!res.ok) return;
         const data = await res.json();
-        const items = data.items as { id: string; question: string; answer: string }[];
+        const items = data.items as {
+          id: string;
+          question: string;
+          answer: string;
+          sources?: RawSource[];
+        }[];
         if (items.length === 0) return;
-        const history: Message[] = [...items].reverse().flatMap((item) => [
-          { id: `${item.id}-q`, role: "user", content: item.question },
-          { id: `${item.id}-a`, role: "assistant", content: item.answer },
-        ]);
+        const history: Message[] = [...items].reverse().flatMap((item) => {
+          const { legalBasis, webSources } = splitRawSources(item.sources ?? []);
+          return [
+            { id: `${item.id}-q`, role: "user" as const, content: item.question },
+            { id: `${item.id}-a`, role: "assistant" as const, content: item.answer, legalBasis, webSources },
+          ];
+        });
         setMessages(history);
       } catch {
         // keep the greeting-only state on failure
@@ -101,6 +113,7 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
+    setUnauthorized(false);
     const userMsg: Message = { id: randomId(), role: "user", content: text };
     const assistantId = randomId();
     setMessages((m) => [...m, userMsg, { id: assistantId, role: "assistant", content: "" }]);
@@ -117,16 +130,24 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
         body: JSON.stringify({ question: text }),
       });
 
+      if (res.status === 401) {
+        setMessages((m) => m.filter((msg) => msg.id !== assistantId && msg.id !== userMsg.id));
+        setUnauthorized(true);
+        return;
+      }
+
       const ct = res.headers.get("content-type") ?? "";
 
       if (ct.includes("application/json")) {
         const data = await res.json();
         const rawContent = data.answer ?? data.error ?? d.chat.errorGeneric;
-        const content = rawContent.trim() === NOT_FOUND_MSG ? d.chat.notFound : rawContent;
+        const isTerminal = rawContent.trim() === NOT_FOUND_MSG;
+        const content = isTerminal ? d.chat.notFound : rawContent;
         patch((msg) => ({
           ...msg,
           content,
-          legalBasis: rawContent.trim() === NOT_FOUND_MSG ? [] : data.legalBasis ?? [],
+          legalBasis: isTerminal ? [] : data.legalBasis ?? [],
+          webSources: isTerminal ? [] : data.webSources ?? [],
         }));
         return;
       }
@@ -144,14 +165,16 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
       const streamReader = new ChatStreamReader();
       let acc = "";
       let legalBasis: LegalBasisGroup[] = [];
+      let webSources: WebSource[] = [];
 
       const applyEvents = (events: ChatStreamEvent[]) => {
         for (const ev of events) {
           if (ev.type === "prose") acc += ev.text;
           else if (ev.type === "reset") acc = "";
           else if (ev.type === "meta" && ev.data && typeof ev.data === "object") {
-            const data = ev.data as { legalBasis?: LegalBasisGroup[] };
+            const data = ev.data as { legalBasis?: LegalBasisGroup[]; webSources?: WebSource[] };
             legalBasis = data.legalBasis ?? [];
+            webSources = data.webSources ?? [];
           }
         }
       };
@@ -169,6 +192,7 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
         ...msg,
         content: isNotFound ? d.chat.notFound : acc,
         legalBasis: isNotFound ? [] : legalBasis,
+        webSources: isNotFound ? [] : webSources,
       }));
     } catch {
       patch((msg) => ({ ...msg, content: d.chat.errorNetwork }));
@@ -253,6 +277,25 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
                   })}
                 </div>
               )}
+              {m.webSources && m.webSources.length > 0 && (
+                <div className="mt-3 space-y-1 border-t border-border/60 pt-2">
+                  <p className="text-xs font-semibold text-muted-foreground">{d.chat.webSources}</p>
+                  <ul className="space-y-0.5">
+                    {m.webSources.map((s) => (
+                      <li key={s.url}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="text-xs text-gold hover:underline break-all"
+                        >
+                          {s.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -260,6 +303,14 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
       </ScrollArea>
 
       <footer className="p-4 border-t border-border shrink-0">
+        {unauthorized && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            <span>{d.documentAnalysis.loginRequired}</span>
+            <Link href="/login?callbackUrl=/services" className="shrink-0">
+              <Button size="sm">{d.documentAnalysis.loginCta}</Button>
+            </Link>
+          </div>
+        )}
         <div className="relative">
           <Textarea
             value={input}
@@ -451,7 +502,7 @@ export function ServicesPageClient({
         ) : (
           <div className="flex flex-col md:flex-row gap-6">
             {/* Sidebar */}
-            <aside className="w-full md:w-72 shrink-0 flex flex-col gap-4 md:sticky md:top-24 md:h-[85vh] md:overflow-y-auto md:pr-1">
+            <aside className="w-full md:w-72 shrink-0 flex flex-col gap-4 md:sticky md:top-24 md:max-h-[85vh] md:min-h-0 md:overflow-y-auto md:pr-1">
               <div className="bg-card border border-border rounded-2xl p-4 space-y-2 shrink-0">
                 <div className="px-2 pb-2">
                   <h2 className="text-lg font-bold text-foreground">{sm.sidebarHeading}</h2>

@@ -12,7 +12,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { LanguageSwitcher } from "@/components/site/language-switcher";
-import { ThemeToggle } from "@/components/site/theme-toggle";
 import type { Locale } from "@/lib/i18n/config";
 
 type NavItem = {
@@ -64,9 +63,8 @@ export function MobileNavSheet({
           <SheetTitle className="text-gold">{siteName}</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-4 overflow-y-auto">
-          <div className="flex items-center gap-2 px-3 md:hidden">
+          <div className="px-3">
             <LanguageSwitcher current={locale} />
-            <ThemeToggle />
           </div>
 
           <div>

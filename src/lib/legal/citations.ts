@@ -90,6 +90,54 @@ export function buildLegalBasis(
   return [...groups.values()];
 }
 
+/** Shape of a persisted Consultation's `sources` array (matsne citations and/or web-search results). */
+export type RawSource = {
+  title?: string;
+  url?: string;
+  article?: string;
+  paragraph?: string;
+  subparagraph?: string;
+  /** Legacy: consultations saved before article/paragraph/subparagraph existed. */
+  articleNumber?: string;
+};
+
+export type RawWebSource = { url: string; title: string };
+
+/**
+ * Reconstruct a saved consultation's citations for display: entries with an
+ * article number are grounded matsne law citations (grouped by law, same
+ * shape the live streaming answer produces); entries with only a title/url
+ * came from the web-search fallback and have no article to group by.
+ */
+export function splitRawSources(sources: RawSource[]): {
+  legalBasis: LegalBasisGroup[];
+  webSources: RawWebSource[];
+} {
+  const groups = new Map<string, LegalBasisGroup>();
+  const webSources: RawWebSource[] = [];
+
+  for (const s of sources) {
+    const article = s.article ?? s.articleNumber;
+    if (article) {
+      const key = `${s.title ?? ""}|${s.url ?? ""}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { lawName: s.title ?? "", url: s.url ?? "", items: [] };
+        groups.set(key, g);
+      }
+      g.items.push({
+        article,
+        paragraph: s.paragraph ?? null,
+        subparagraph: s.subparagraph ?? null,
+      });
+    } else if (s.url && s.title) {
+      webSources.push({ url: s.url, title: s.title });
+    }
+  }
+
+  return { legalBasis: [...groups.values()], webSources };
+}
+
 export type DocumentLegalBasisGroup = { lawName: string; articles: string[] };
 
 /**

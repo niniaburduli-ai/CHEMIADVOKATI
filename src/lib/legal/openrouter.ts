@@ -360,9 +360,25 @@ export async function streamLegalAnswer(messages: ChatMessage[], complex = false
 export type WebSource = { url: string; title: string };
 export type WebContext = { summary: string; sources: WebSource[] };
 
-/** Web search on unless OPENROUTER_WEB_SEARCH=off. */
+/**
+ * Safety-net web search — the uncovered-topic fallback (answerViaWebSearch)
+ * and the document-generator citation fact-check (verifyLegalCitations). On
+ * unless OPENROUTER_WEB_SEARCH=off. Kept separate from WEB_CONTEXT_ON below
+ * so turning off the cosmetic "practical context" enrichment never disables
+ * the ability to actually answer a question outside the 8 approved sources.
+ */
 const WEB_SEARCH_ON = () =>
   (process.env.OPENROUTER_WEB_SEARCH ?? "on").toLowerCase() !== "off";
+
+/**
+ * Supplementary "practical context" enrichment (searchWebContext) added to
+ * already-grounded chat answers — procedure/deadlines color, never a legal
+ * source (SYSTEM_PROMPT rule 10). Purely cosmetic: disabling it cannot affect
+ * answer accuracy, since legal facts never come from this path. On unless
+ * OPENROUTER_WEB_CONTEXT=off.
+ */
+const WEB_CONTEXT_ON = () =>
+  (process.env.OPENROUTER_WEB_CONTEXT ?? "on").toLowerCase() !== "off";
 
 /**
  * Model that runs the web-search call. Defaults to Perplexity Sonar — a cheap,
@@ -403,7 +419,7 @@ const WEB_SEARCH_SYSTEM = [
 export async function searchWebContext(
   question: string
 ): Promise<WebContext | null> {
-  if (!WEB_SEARCH_ON()) return null;
+  if (!WEB_CONTEXT_ON()) return null;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
 

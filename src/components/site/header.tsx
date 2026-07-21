@@ -56,7 +56,7 @@ export async function Header() {
             contactEmail={contactEmail}
             contactAddress={contactAddress}
           />
-          <Link href="/" className="flex flex-row items-baseline gap-1.5 md:flex-col md:items-start md:gap-0 leading-tight min-w-0 group">
+          <Link href="/" className="flex flex-col items-start leading-tight min-w-0 group">
             <span className="text-lg font-bold text-gold tracking-wide [font-family:var(--font-noto-serif)] transition-opacity group-hover:opacity-80 shrink-0">
               {siteName}
             </span>
@@ -83,10 +83,10 @@ export async function Header() {
 
         {/* Auth — wraps onto its own line on mobile, inline on desktop */}
         <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
-          <div className="hidden md:flex items-center gap-1.5">
+          <div className="hidden md:block">
             <LanguageSwitcher current={locale} />
-            <ThemeToggle />
           </div>
+          <ThemeToggle />
           {user ? (
             <>
               {user.role === "admin" && (
