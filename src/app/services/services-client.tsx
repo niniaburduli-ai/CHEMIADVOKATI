@@ -182,7 +182,7 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gold">{sm.aiTab}</h3>
+            <h3 className="text-lg font-bold text-foreground">{sm.aiTab}</h3>
             <p className="text-xs text-muted-foreground">{sm.aiSubtitle}</p>
           </div>
         </div>
@@ -293,7 +293,7 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
     <div className="flex flex-col h-full">
       <header className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>
-          <h3 className="text-lg font-bold text-gold">{sm.customDocsTab}</h3>
+          <h3 className="text-lg font-bold text-foreground">{sm.customDocsTab}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{sm.customDocsHint}</p>
         </div>
         <div className="relative">
@@ -350,7 +350,7 @@ function TemplatesLinkPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesMo
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b border-border shrink-0">
-        <h3 className="text-lg font-bold text-gold">{sm.templatesTab}</h3>
+        <h3 className="text-lg font-bold text-foreground">{sm.templatesTab}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">{sm.templatesHint}</p>
       </header>
 

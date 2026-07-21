@@ -266,7 +266,7 @@ export function AdminDashboard({
             >
               <Menu className="h-4 w-4" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 gap-0 bg-sidebar p-0 text-sidebar-foreground">
+            <SheetContent side="left" className="!w-64 gap-0 bg-sidebar p-0 text-sidebar-foreground">
               <SheetTitle className="sr-only">ნავიგაცია</SheetTitle>
               {navList(() => setMobileOpen(false))}
             </SheetContent>

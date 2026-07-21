@@ -65,7 +65,7 @@ export function PreviousCorrespondenceButton({ locale }: { locale: Locale }) {
       </Button>
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col bg-background">
+        <SheetContent side="right" className="!w-full sm:!max-w-md p-0 flex flex-col bg-background">
           <SheetHeader className="border-b border-border">
             <SheetTitle>{t.viewCorrespondence}</SheetTitle>
           </SheetHeader>

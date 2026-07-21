@@ -81,7 +81,7 @@ export async function Header() {
         </nav>
 
         {/* Auth — wraps onto its own line on mobile, inline on desktop */}
-        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
           <LanguageSwitcher current={locale} />
           <ThemeToggle />
           {user ? (
