@@ -19,8 +19,12 @@ export async function POST(request: Request) {
   const rootDomain = `.${new URL(SITE_URL).hostname.replace(/^www\./, "")}`;
 
   for (const name of COOKIE_NAMES) {
-    res.headers.append("Set-Cookie", `${name}=; Path=/; Max-Age=0`);
-    res.headers.append("Set-Cookie", `${name}=; Path=/; Domain=${rootDomain}; Max-Age=0`);
+    // __Secure- prefixed cookies are rejected by the browser unless the
+    // clearing Set-Cookie also carries the Secure attribute — omitting it
+    // silently no-ops the delete, leaving the session cookie (and the login) intact.
+    const secure = name.startsWith("__Secure-") ? "; Secure" : "";
+    res.headers.append("Set-Cookie", `${name}=; Path=/; Max-Age=0${secure}`);
+    res.headers.append("Set-Cookie", `${name}=; Path=/; Domain=${rootDomain}; Max-Age=0${secure}`);
   }
 
   return res;

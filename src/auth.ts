@@ -19,7 +19,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
       allowDangerousEmailAccountLinking: true,
-      authorization: { params: { prompt: "select_account" } },
+      authorization: {
+        params: {
+          prompt: "select_account",
+          // Google requires these on the authorize request whenever the
+          // redirect_uri host is a private IP (e.g. testing from a phone
+          // over LAN at 192.168.x.x) — otherwise it 400s with invalid_request.
+          ...(process.env.NODE_ENV !== "production" && {
+            device_id: "chemiiuristi-dev",
+            device_name: "Chemiiuristi Dev Server",
+          }),
+        },
+      },
     }),
     Credentials({
       credentials: {
@@ -77,11 +88,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           consentAcceptedAt: new Date(),
           consentVersion: "1.0",
         });
-        try {
-          await sendWelcomeEmail(created.email, created.name);
-        } catch {
+        sendWelcomeEmail(created.email, created.name).catch(() => {
           // Email delivery failure shouldn't block sign-in — account is already created.
-        }
+        });
         user.id = String(created._id);
         user.role = created.role ?? "user";
       }
