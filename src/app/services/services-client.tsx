@@ -469,6 +469,23 @@ export function ServicesPageClient({
                   <UpgradeCard plan={upgradePlan} locale={locale} d={d} />
                 </div>
               </div>
+
+              <div className="bg-card border border-border rounded-2xl p-4 mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-5 w-5 text-gold" />
+                  <h3 className="font-bold text-foreground">{sm.cabinetTitle}</h3>
+                </div>
+                <ul className="text-xs text-muted-foreground space-y-1 mb-3 list-disc list-inside">
+                  <li>{sm.cabinetLimitsItem}</li>
+                  <li>{sm.cabinetPlanItem}</li>
+                  <li>{sm.cabinetHistoryItem}</li>
+                </ul>
+                <Link href="/dashboard" className="block">
+                  <Button size="sm" variant="outline" className="w-full">
+                    {sm.cabinetCta}
+                  </Button>
+                </Link>
+              </div>
             </aside>
 
             {/* Canvas */}
