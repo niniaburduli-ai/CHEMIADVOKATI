@@ -502,9 +502,9 @@ export function ServicesPageClient({
         ) : (
           <div className="flex flex-col gap-6 md:grid md:grid-cols-[minmax(18rem,1fr)_3fr]">
             {/* Sidebar */}
-            <aside className="w-full flex flex-col gap-4 md:sticky md:top-24">
-              <div className="bg-card border border-border rounded-2xl p-4 space-y-2 shrink-0">
-                <div className="px-2 pb-2">
+            <aside className="w-full flex flex-col gap-3 md:sticky md:top-24">
+              <div className="bg-card border border-border rounded-2xl p-3 space-y-1.5 shrink-0">
+                <div className="px-2 pb-1.5">
                   <h2 className="text-lg font-bold text-foreground">{sm.sidebarHeading}</h2>
                   <p className="text-xs text-muted-foreground">{sm.sidebarSubtitle}</p>
                 </div>
@@ -513,7 +513,7 @@ export function ServicesPageClient({
                     key={t.key}
                     type="button"
                     onClick={() => setActiveTab(t.key)}
-                    className={`w-full flex items-center gap-2 h-10 px-3 rounded-full transition-colors text-xs font-medium ${
+                    className={`w-full flex items-center gap-2 h-9 px-3 rounded-full transition-colors text-xs font-medium ${
                       activeTab === t.key
                         ? "bg-primary text-white"
                         : "text-muted-foreground hover:bg-muted"
@@ -525,22 +525,22 @@ export function ServicesPageClient({
                 ))}
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-4 shrink-0">
+              <div className="bg-card border border-border rounded-2xl p-3 shrink-0">
                 <UpgradeCard plan={upgradePlan} locale={locale} d={d} />
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-4 shrink-0">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-card border border-border rounded-2xl p-3 shrink-0">
+                <div className="flex items-center gap-2 mb-1.5">
                   <User className="h-5 w-5 text-gold" />
                   <h3 className="text-lg font-bold text-foreground">{sm.cabinetTitle}</h3>
                 </div>
-                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <ul className="text-sm text-muted-foreground space-y-0.5 list-disc list-inside">
                   <li>{sm.cabinetLimitsItem}</li>
                   <li>{sm.cabinetPlanItem}</li>
                   <li>{sm.cabinetHistoryItem}</li>
                 </ul>
-                <Link href="/dashboard" className="block mt-3">
-                  <Button className="w-full h-10 rounded-full">
+                <Link href="/dashboard" className="block mt-2">
+                  <Button className="w-full h-9 rounded-full">
                     {sm.cabinetCta}
                   </Button>
                 </Link>
@@ -548,7 +548,7 @@ export function ServicesPageClient({
             </aside>
 
             {/* Canvas */}
-            <section className="min-w-0 h-[75vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <section className="min-w-0 h-[82vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
               <div className={activeTab === "ai" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.chat && <AiConsultPanel locale={locale} />}
               </div>

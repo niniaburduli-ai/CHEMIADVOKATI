@@ -246,8 +246,8 @@ export function DashboardClient({
     <div className="flex flex-col md:flex-row gap-6">
       {/* Sidebar */}
       <aside className="w-full md:w-72 shrink-0">
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-2 md:sticky md:top-24">
-          <div className="px-2 pb-2">
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-1.5 md:sticky md:top-24">
+          <div className="px-2 pb-1.5">
             <h2 className="text-lg font-bold text-foreground">{dp.sidebarHeading}</h2>
             <p className="text-xs text-muted-foreground">{dp.sidebarSubtitle}</p>
           </div>
@@ -256,7 +256,7 @@ export function DashboardClient({
               key={t.key}
               type="button"
               onClick={() => setActiveTab(t.key)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 activeTab === t.key
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted"
@@ -269,7 +269,7 @@ export function DashboardClient({
         </div>
 
         {isFreePlan && (
-          <div className="bg-card border border-border rounded-2xl p-4 mt-4">
+          <div className="bg-card border border-border rounded-2xl p-3 mt-3">
             <p className="text-sm font-bold text-foreground mb-1">{dp.upgradeTitle}</p>
             <p className="text-xs text-muted-foreground mb-3">{dp.upgradeBody}</p>
             <Link href="/pricing" className={buttonVariants({ size: "sm" }) + " w-full"}>
@@ -281,7 +281,7 @@ export function DashboardClient({
       </aside>
 
       {/* Canvas */}
-      <section className="flex-1 min-w-0 h-[75vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <section className="flex-1 min-w-0 h-[82vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className={activeTab === "limits" ? "flex flex-col h-full min-h-0" : "hidden"}>
           <LimitsPanel
             d={d}
