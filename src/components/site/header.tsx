@@ -66,6 +66,11 @@ export async function Header() {
           </Link>
         </div>
 
+        {/* Language switcher — mobile only, top-right corner of line 1 */}
+        <div className="md:hidden order-2 ml-auto shrink-0">
+          <LanguageSwitcher current={locale} />
+        </div>
+
         {/* Nav */}
         <nav className="hidden lg:flex items-center gap-4 lg:gap-5 text-sm shrink-0 order-2">
           {navItems.map((n) => (
@@ -82,7 +87,7 @@ export async function Header() {
         </nav>
 
         {/* Auth — wraps onto its own line on mobile, inline on desktop */}
-        <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
+        <div className="flex flex-wrap items-center justify-between md:justify-end gap-1 sm:gap-2.5 shrink-0 order-3 w-full md:w-auto md:ml-auto">
           <div className="hidden md:block">
             <LanguageSwitcher current={locale} />
           </div>
