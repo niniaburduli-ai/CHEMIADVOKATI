@@ -92,9 +92,13 @@ export default async function DashboardPage({
     : [];
 
   const subStatus = user.subscriptionStatus || (sub as { status?: string } | null)?.status || null;
-  const periodEnd = (sub as { currentPeriodEnd?: Date } | null)?.currentPeriodEnd
-    ? new Date((sub as { currentPeriodEnd: Date }).currentPeriodEnd).toLocaleDateString(dateLocale)
-    : null;
+  const planExpiryDate =
+    plan === "free" ? null : user.resetAt ?? user.planExpiresAt ?? null;
+  const periodEnd = planExpiryDate
+    ? new Date(planExpiryDate).toLocaleDateString(dateLocale)
+    : (sub as { currentPeriodEnd?: Date } | null)?.currentPeriodEnd
+      ? new Date((sub as { currentPeriodEnd: Date }).currentPeriodEnd).toLocaleDateString(dateLocale)
+      : null;
 
   const PLAN_LABELS: Record<string, string> = {
     free: dp.planFree,
@@ -231,6 +235,7 @@ export default async function DashboardPage({
       summary: r.summary,
       findings: r.findings ?? [],
       recommendations: r.recommendations ?? [],
+      sourceText: r.sourceText ?? "",
       revisions: revisions.map((rev, i) => {
         const baseText = i === 0 ? r.sourceText ?? "" : revisions[i - 1].text;
         return {
@@ -241,6 +246,7 @@ export default async function DashboardPage({
           instruction: rev.instruction,
           createdAt: rev.createdAt ? new Date(rev.createdAt).toISOString() : null,
           diff: computeWordDiff(baseText, rev.text),
+          baseText,
         };
       }),
     };

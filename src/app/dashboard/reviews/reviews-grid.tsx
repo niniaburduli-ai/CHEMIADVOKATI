@@ -2,8 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, FileSearch, AlertCircle, CheckCircle2, ChevronDown, Wand2, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  Clock,
+  FileSearch,
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  Wand2,
+  Paperclip,
+  Play,
+} from "lucide-react";
 import { RiskFindingCard, isStructuredFinding } from "@/components/site/risk-finding-card";
 import { TextDiff } from "@/components/site/text-diff";
 import { DocumentDownloadButton } from "@/components/site/document-download-button";
@@ -20,6 +29,7 @@ export type ReviewRevisionItem = {
   instruction: string;
   createdAt: string | null;
   diff: DiffSegment[];
+  baseText: string;
 };
 
 export type ReviewItem = {
@@ -30,6 +40,7 @@ export type ReviewItem = {
   findings: unknown[];
   recommendations: unknown[];
   revisions: ReviewRevisionItem[];
+  sourceText: string;
 };
 
 function RecommendationList({ recommendations }: { recommendations: unknown[] }) {
@@ -49,43 +60,116 @@ function RecommendationList({ recommendations }: { recommendations: unknown[] })
   );
 }
 
+function StageItem({
+  number,
+  title,
+  icon,
+  meta,
+  isOpen,
+  onToggle,
+  fixed = false,
+  isLast = false,
+  children,
+}: {
+  number: number;
+  title: string;
+  icon: React.ReactNode;
+  meta?: React.ReactNode;
+  isOpen?: boolean;
+  onToggle?: () => void;
+  fixed?: boolean;
+  isLast?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0">
+          {number}
+        </div>
+        {!isLast && <div className="w-px flex-1 bg-border mt-1" />}
+      </div>
+      <div className="flex-1 pb-5 min-w-0">
+        {fixed ? (
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            {icon}
+            {title}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="w-full flex items-center justify-between gap-2 text-left"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-foreground min-w-0">
+              {icon}
+              <span className="truncate">{title}</span>
+            </span>
+            <span className="flex items-center gap-2 shrink-0">
+              {meta}
+              <ChevronDown
+                className={`h-4 w-4 text-gold transition-transform ${isOpen ? "rotate-180" : ""}`}
+              />
+            </span>
+          </button>
+        )}
+        {(fixed || isOpen) && <div className="mt-3 space-y-3">{children}</div>}
+      </div>
+    </div>
+  );
+}
+
 function ReviewDetail({ review }: { review: ReviewItem }) {
-  const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const findings = review.findings ?? [];
   const recommendations = review.recommendations ?? [];
+  const revisions = review.revisions ?? [];
+  const rounds = revisions.length > 0 ? revisions.length : 1;
+
+  function toggle(key: string) {
+    setOpenKey((prev) => (prev === key ? null : key));
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold leading-snug flex items-center gap-2">
-            <FileSearch className="h-4 w-4 shrink-0 text-gold" />
-            {review.fileName ?? "document"}
-          </p>
-          {review.createdAt && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <Clock className="h-3 w-3 text-gold" /> {formatDate(review.createdAt)}
-            </p>
-          )}
+    <div>
+      <StageItem
+        number={1}
+        title="დოკუმენტის მიმოხილვა"
+        icon={<FileSearch className="h-4 w-4 text-gold" />}
+        fixed
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold leading-snug">{review.fileName ?? "document"}</p>
+            {review.createdAt && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <Clock className="h-3 w-3 text-gold" /> {formatDate(review.createdAt)}
+              </p>
+            )}
+          </div>
+          <Link
+            href={`/services?tab=docs&reviewId=${review.id}`}
+            className="inline-flex items-center gap-1 text-xs font-medium text-gold hover:underline px-2 py-1.5 shrink-0"
+          >
+            <Play className="h-3 w-3 text-gold" /> განაგრძეთ
+          </Link>
         </div>
-        <Link
-          href={`/services?tab=docs&reviewId=${review.id}`}
-          className="inline-flex items-center gap-1 text-xs font-medium text-gold hover:underline px-2 py-1.5 shrink-0"
-        >
-          <Play className="h-3 w-3 text-gold" /> განაგრძეთ
-        </Link>
-      </div>
-
-      <div>
-        <p className="text-xs font-semibold text-muted-foreground mb-1">შეჯამება</p>
         <p className="text-sm leading-relaxed">{review.summary}</p>
-      </div>
+      </StageItem>
 
-      {findings.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3 text-gold" /> ნაპოვნი რისკები
-          </p>
+      <StageItem
+        number={2}
+        title="გამოვლენილი რისკები და რეკომენდაციები"
+        icon={<AlertCircle className="h-4 w-4 text-gold" />}
+        meta={
+          findings.length > 0 ? (
+            <span className="text-xs text-muted-foreground">{findings.length}</span>
+          ) : undefined
+        }
+        isOpen={openKey === "risks"}
+        onToggle={() => toggle("risks")}
+      >
+        {findings.length > 0 ? (
           <div className="space-y-2">
             {findings.map((f, i) =>
               isStructuredFinding(f) ? (
@@ -98,88 +182,131 @@ function ReviewDetail({ review }: { review: ReviewItem }) {
               )
             )}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">რისკები არ არის გამოვლენილი.</p>
+        )}
 
-      {recommendations.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-gold" /> რეკომენდაციები
-          </p>
-          <RecommendationList recommendations={recommendations} />
-        </div>
-      )}
+        {recommendations.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-gold" /> რეკომენდაციები
+            </p>
+            <RecommendationList recommendations={recommendations} />
+          </div>
+        )}
+      </StageItem>
 
-      {review.revisions.length > 0 && (
-        <div className="border-t border-border pt-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setRevisionsOpen((v) => !v)}
-            className="px-0 h-auto text-xs font-semibold text-muted-foreground flex items-center gap-1"
-          >
-            <Wand2 className="h-3 w-3 text-gold" /> შესწორების ისტორია
-            <ChevronDown className={`h-3.5 w-3.5 text-gold transition-transform ${revisionsOpen ? "rotate-180" : ""}`} />
-          </Button>
+      {Array.from({ length: rounds }, (_, i) => {
+        const revision = revisions[i];
+        const roundLabel = revisions.length > 1 ? ` · რაუნდი ${i + 1}` : "";
+        const attachedText = revision ? revision.baseText : review.sourceText;
+        const isLastStage = i === rounds - 1;
 
-          {revisionsOpen && (
-            <div className="space-y-3 mt-3">
-              {review.revisions.map((rev, i) => (
-                <div key={i} className="space-y-3 rounded-lg border border-border p-3">
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      მოთხოვნა #{i + 1}
+        return (
+          <div key={i}>
+            <StageItem
+              number={3}
+              title={`თანდართული ტექსტი და მოთხოვნა${roundLabel}`}
+              icon={<Paperclip className="h-4 w-4 text-gold" />}
+              isOpen={openKey === `request-${i}`}
+              onToggle={() => toggle(`request-${i}`)}
+            >
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">
+                  თანდართული დოკუმენტის ტექსტი
+                </p>
+                <pre className="whitespace-pre-wrap text-xs bg-muted/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                  {attachedText || "—"}
+                </pre>
+              </div>
+
+              {revision ? (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                    მომხმარებლის მოთხოვნა
+                  </p>
+                  <p className="text-sm">
+                    {revision.instruction.trim() || "შეასწორე ყველა გამოვლენილი რისკი."}
+                  </p>
+                  {revision.createdAt && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <Clock className="h-3 w-3 text-gold" /> {formatDate(revision.createdAt)}
                     </p>
-                    <p className="text-sm">
-                      {rev.instruction.trim() || "შეასწორე ყველა გამოვლენილი რისკი."}
-                    </p>
-                    {rev.createdAt && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <Clock className="h-3 w-3 text-gold" /> {formatDate(rev.createdAt)}
-                      </p>
-                    )}
-                  </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                  მოთხოვნა ჯერ არ გაგზავნილა.{" "}
+                  <Link
+                    href={`/services?tab=docs&reviewId=${review.id}`}
+                    className="text-gold underline"
+                  >
+                    მოითხოვეთ გაუმჯობესებული ვერსია
+                  </Link>
+                </div>
+              )}
+            </StageItem>
 
+            <StageItem
+              number={4}
+              title={`გენერირებული გაუმჯობესებული ვერსია${roundLabel}`}
+              icon={<Wand2 className="h-4 w-4 text-gold" />}
+              isOpen={openKey === `result-${i}`}
+              onToggle={() => toggle(`result-${i}`)}
+              isLast={isLastStage}
+            >
+              {revision ? (
+                <div className="space-y-3 rounded-lg border border-border p-3">
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-semibold text-muted-foreground">
                         შესწორებული ვერსია
                       </p>
                       <DocumentDownloadButton
-                        content={rev.text}
+                        content={revision.text}
                         filename={`${review.fileName || "document"}-corrected-${i + 1}`}
                       />
                     </div>
-                    <TextDiff segments={rev.diff} />
+                    <TextDiff segments={revision.diff} />
                   </div>
 
-                  {rev.findings.length > 0 && (
+                  {revision.findings.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground mb-2">
                         განახლებული რისკები
                       </p>
                       <div className="space-y-2">
-                        {rev.findings.map((f, fi) => (
+                        {revision.findings.map((f, fi) => (
                           <RiskFindingCard key={fi} finding={f} locale="ka" />
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {rev.recommendations.length > 0 && (
+                  {revision.recommendations.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground mb-2">
                         განახლებული რეკომენდაციები
                       </p>
-                      <RecommendationList recommendations={rev.recommendations} />
+                      <RecommendationList recommendations={revision.recommendations} />
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                  ვერსია ჯერ არ გენერირებულა.{" "}
+                  <Link
+                    href={`/services?tab=docs&reviewId=${review.id}`}
+                    className="text-gold underline"
+                  >
+                    დაიწყეთ გენერაცია
+                  </Link>
+                </div>
+              )}
+            </StageItem>
+          </div>
+        );
+      })}
     </div>
   );
 }
