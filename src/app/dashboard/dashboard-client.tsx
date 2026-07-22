@@ -281,7 +281,7 @@ export function DashboardClient({
       </aside>
 
       {/* Canvas */}
-      <section className="flex-1 min-w-0 h-[88vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <section className="flex-1 min-w-0 h-[700px] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className={activeTab === "limits" ? "flex flex-col h-full min-h-0" : "hidden"}>
           <LimitsPanel
             d={d}

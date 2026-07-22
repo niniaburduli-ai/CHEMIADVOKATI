@@ -548,7 +548,7 @@ export function ServicesPageClient({
             </aside>
 
             {/* Canvas */}
-            <section className="min-w-0 h-[88vh] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <section className="min-w-0 h-[700px] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
               <div className={activeTab === "ai" ? "flex flex-col h-full min-h-0" : "hidden"}>
                 {flags.chat && <AiConsultPanel locale={locale} />}
               </div>
