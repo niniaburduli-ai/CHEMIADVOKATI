@@ -141,13 +141,20 @@ function toData(d: PlanDoc): PlanData {
   }
 }
 
+declare global {
+  var plansSeeded: boolean | undefined
+}
+
 /**
  * Ensure the collection has at least the default plans. Idempotent, and only
  * ever touches a plan on its FIRST insert — every field is $setOnInsert, so a
- * saved admin edit is never overwritten by a later seed call (this runs on
- * every getPlans(), i.e. every page load).
+ * saved admin edit is never overwritten by a later seed call. Memoized per
+ * process: without this, getPlanByKey()/getPlans() re-ran 3 upsert writes to
+ * Mongo on every single call (every dashboard load, every pricing page view),
+ * adding needless round trips once the plans already exist.
  */
 export async function ensurePlansSeeded(): Promise<void> {
+  if (global.plansSeeded) return
   await dbConnect()
   await Promise.all(
     DEFAULT_PLANS.map((def) =>
@@ -158,6 +165,7 @@ export async function ensurePlansSeeded(): Promise<void> {
       )
     )
   )
+  global.plansSeeded = true
 }
 
 /** All plans, ordered. Seeds defaults on first call. */
