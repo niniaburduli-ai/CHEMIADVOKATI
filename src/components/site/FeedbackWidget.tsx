@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
 import { toast } from "sonner"
@@ -18,6 +18,45 @@ export function FeedbackWidget({ locale }: { locale: Locale }) {
   const [hoverRating, setHoverRating] = useState(0)
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
+  const [dragTop, setDragTop] = useState<number | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragState = useRef<{ startY: number; startTop: number; moved: boolean } | null>(null)
+
+  function handlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    dragState.current = { startY: e.clientY, startTop: rect.top, moved: false }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const state = dragState.current
+    if (!state) return
+    const delta = e.clientY - state.startY
+    if (!state.moved && Math.abs(delta) > 4) {
+      state.moved = true
+      setIsDragging(true)
+    }
+    if (!state.moved) return
+    const height = e.currentTarget.offsetHeight
+    const nextTop = Math.min(Math.max(state.startTop + delta, 8), window.innerHeight - height - 8)
+    setDragTop(nextTop)
+  }
+
+  function handlePointerUp(e: React.PointerEvent<HTMLButtonElement>) {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    setIsDragging(false)
+  }
+
+  function handleTabClick() {
+    if (dragState.current?.moved) {
+      dragState.current = null
+      return
+    }
+    dragState.current = null
+    setOpen(true)
+  }
 
   function reset() {
     setRating(0)
@@ -60,9 +99,14 @@ export function FeedbackWidget({ locale }: { locale: Locale }) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={handleTabClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={dragTop !== null ? { top: dragTop, transform: "none", transition: isDragging ? "none" : undefined } : undefined}
         aria-label={d.tabLabel}
-        className="fixed right-0 top-1/2 -translate-y-1/2 rotate-180 z-40 [writing-mode:vertical-rl] bg-gold text-slate-900 text-xs font-semibold tracking-wider px-2 py-4 rounded-l-lg shadow-lg hover:brightness-95 hover:px-3 transition-all"
+        className={`fixed right-0 rotate-180 z-40 touch-none cursor-grab active:cursor-grabbing [writing-mode:vertical-rl] bg-gold text-slate-900 text-xs font-semibold tracking-wider px-2 py-4 rounded-l-lg shadow-lg hover:brightness-95 hover:px-3 transition-all ${dragTop === null ? "top-1/2 -translate-y-1/2" : ""}`}
       >
         {d.tabLabel}
       </button>
