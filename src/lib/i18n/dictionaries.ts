@@ -299,6 +299,7 @@ const ka = {
     sidebarHeading: "ჩემი კაბინეტი",
     sidebarSubtitle: "პაკეტი და ისტორია",
     planExpiresPrefix: "მოქმედებს",
+    serviceHistoryHeading: "მომსახურების ისტორია",
   },
   documentAnalysis: {
     title: "დოკუმენტის ანალიზი",
@@ -692,6 +693,7 @@ const en: Dict = {
     sidebarHeading: "My Cabinet",
     sidebarSubtitle: "Plan & history",
     planExpiresPrefix: "Valid until",
+    serviceHistoryHeading: "Service History",
   },
   documentAnalysis: {
     title: "Document Analysis",

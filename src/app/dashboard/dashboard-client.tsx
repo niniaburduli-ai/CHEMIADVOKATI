@@ -54,20 +54,25 @@ function LimitsPanel({
           )}
         </div>
 
-        {metrics.map((m) => (
-          <div key={m.key} className="rounded-xl border border-border p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <div className="grid grid-cols-2 gap-3">
+          {metrics.map((m) => (
+            <div key={m.key} className="rounded-xl border border-border p-3 flex flex-col gap-2 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-foreground min-w-0">
                 {m.icon}
-                {m.label}
+                <span className="truncate">{m.label}</span>
               </div>
-              <span className="text-xl font-bold tabular-nums text-gold">{m.used}</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-bold tabular-nums text-gold">{m.used}</span>
+                {!m.isUnlimited && (
+                  <span className="text-xs text-muted-foreground">/ {m.total}</span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {m.isUnlimited ? dp.unlimited : `${dp.remainingOf}: ${m.remaining}`}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {m.isUnlimited ? dp.unlimited : `${dp.remainingOf}: ${m.remaining} / ${m.total}`}
-            </p>
-          </div>
-        ))}
+          ))}
+        </div>
 
         {hasCustomPlan && (
           <div className="rounded-xl border border-t-[3px] border-t-gold border-border p-4">
@@ -204,28 +209,51 @@ export function DashboardClient({
 }) {
   const dp = d.profile;
 
-  const tabs: { key: Tab; label: string; icon: LucideIcon; enabled: boolean }[] = [
+  const cabinetTabs: { key: Tab; label: string; icon: LucideIcon; enabled: boolean }[] = [
     { key: "limits", label: dp.limits, icon: BarChart3, enabled: true },
     { key: "profile", label: dp.myProfile, icon: User, enabled: true },
+  ];
+  const historyTabs: { key: Tab; label: string; icon: LucideIcon; enabled: boolean }[] = [
     { key: "consultations", label: dp.aiConsultations, icon: MessagesSquare, enabled: true },
     { key: "reviews", label: dp.analysisResults, icon: FileSearch, enabled: showReview },
     { key: "documents", label: dp.generatedDocs, icon: FileText, enabled: showGenerate },
     { key: "templates", label: dp.usedTemplates, icon: LayoutList, enabled: showTemplates },
   ];
-  const enabledTabs = tabs.filter((t) => t.enabled);
+  const enabledTabs = [...cabinetTabs, ...historyTabs].filter((t) => t.enabled);
   const requested = enabledTabs.find((t) => t.key === initialTab)?.key;
   const [activeTab, setActiveTab] = useState<Tab>(requested ?? enabledTabs[0]?.key ?? "limits");
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* Sidebar */}
-      <aside className="w-full md:w-80 shrink-0">
+      <aside className="w-full md:w-80 shrink-0 space-y-3">
         <div className="bg-card border border-border rounded-2xl p-3 space-y-1.5 md:sticky md:top-24">
           <div className="px-2 pb-1.5">
             <h2 className="text-lg font-bold text-foreground">{dp.sidebarHeading}</h2>
             <p className="text-xs text-muted-foreground">{dp.sidebarSubtitle}</p>
           </div>
-          {enabledTabs.map((t) => (
+          {cabinetTabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActiveTab(t.key)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                activeTab === t.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <t.icon className="h-4 w-4 shrink-0 text-gold" />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-1.5">
+          <div className="px-2 pb-1.5">
+            <h2 className="text-lg font-bold text-foreground">{dp.serviceHistoryHeading}</h2>
+          </div>
+          {historyTabs.filter((t) => t.enabled).map((t) => (
             <button
               key={t.key}
               type="button"
