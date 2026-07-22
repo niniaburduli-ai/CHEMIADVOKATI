@@ -18,9 +18,7 @@ const DocumentRevisionSchema = new Schema(
     summary: { type: String, default: "" },
     findings: { type: [RiskFindingSchema], default: [] },
     recommendations: { type: [String], default: [] },
-    questions: { type: [String], default: [] },
     instruction: { type: String, default: "" },
-    answers: { type: Schema.Types.Mixed, default: {} },
     createdAt: { type: Date, default: Date.now },
   },
   { _id: false }

@@ -37,9 +37,7 @@ type RevisionResult = {
   summary: string;
   findings: RiskFinding[];
   recommendations: string[];
-  questions: string[];
   instruction: string;
-  answers: Record<string, string>;
   createdAt: string;
   diff: DiffSegment[];
 };
@@ -89,8 +87,6 @@ export function DocumentAnalysisPanel({
   const [revision, setRevision] = useState<RevisionResult | null>(null);
   const [uiStep, setUiStep] = useState<2 | 3 | 4>(2);
   const [instructionText, setInstructionText] = useState("");
-  const [answersDraft, setAnswersDraft] = useState<Record<string, string>>({});
-  const [followUpComment, setFollowUpComment] = useState("");
   const [improveStatus, setImproveStatus] = useState<ImproveStatus>("idle");
   const [improveErrorKind, setImproveErrorKind] = useState<
     "unauthorized" | "quota" | "generic" | null
@@ -117,7 +113,7 @@ export function DocumentAnalysisPanel({
         const revisions = data.revisions as RevisionResult[];
         if (revisions.length > 0) {
           setRevision(revisions[revisions.length - 1]);
-          setUiStep(3);
+          setUiStep(4);
         } else {
           setUiStep(2);
         }
@@ -148,8 +144,6 @@ export function DocumentAnalysisPanel({
     setRevision(null);
     setUiStep(2);
     setInstructionText("");
-    setAnswersDraft({});
-    setFollowUpComment("");
     setImproveStatus("idle");
     setImproveErrorKind(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -264,7 +258,7 @@ export function DocumentAnalysisPanel({
     }
   }
 
-  async function improve(instructionOverride?: string, answersOverride?: Record<string, string>) {
+  async function improve() {
     if (!result) return;
     setImproveStatus("loading");
     setImproveErrorKind(null);
@@ -274,8 +268,7 @@ export function DocumentAnalysisPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reviewId: result.id,
-          instruction: instructionOverride ?? instructionText,
-          answers: answersOverride ?? {},
+          instruction: instructionText,
         }),
       });
       if (res.status === 401) {
@@ -295,16 +288,11 @@ export function DocumentAnalysisPanel({
         return;
       }
       setRevision({ ...data.revision, diff: data.diff } as RevisionResult);
-      setAnswersDraft({});
       setImproveStatus("idle");
     } catch {
       setImproveErrorKind("generic");
       setImproveStatus("error");
     }
-  }
-
-  function applyAnswers() {
-    improve(followUpComment, answersDraft);
   }
 
   function copyRevisedText() {
@@ -541,26 +529,30 @@ export function DocumentAnalysisPanel({
 
             {uiStep === 3 && (
               <div className="space-y-3 pt-2">
-                <p className="text-xs font-semibold text-muted-foreground">{t.improveTitle}</p>
-                <Textarea
-                  value={instructionText}
-                  onChange={(e) => setInstructionText(e.target.value)}
-                  placeholder={t.improveInstructionPlaceholder}
-                  rows={3}
-                />
-                <Button
-                  onClick={() => improve()}
-                  disabled={improveStatus === "loading"}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {improveStatus === "loading" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="mr-2 h-4 w-4 text-gold" />
-                  )}
-                  {improveStatus === "loading" ? t.improving : t.improveCta}
-                </Button>
+                {!revision && (
+                  <>
+                    <p className="text-xs font-semibold text-muted-foreground">{t.improveTitle}</p>
+                    <Textarea
+                      value={instructionText}
+                      onChange={(e) => setInstructionText(e.target.value)}
+                      placeholder={t.improveInstructionPlaceholder}
+                      rows={3}
+                    />
+                    <Button
+                      onClick={() => improve()}
+                      disabled={improveStatus === "loading"}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {improveStatus === "loading" ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wand2 className="mr-2 h-4 w-4 text-gold" />
+                      )}
+                      {improveStatus === "loading" ? t.improving : t.improveCta}
+                    </Button>
+                  </>
+                )}
 
                 {improveStatus === "error" && (
                   <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -632,49 +624,6 @@ export function DocumentAnalysisPanel({
                       </div>
                     )}
 
-                    {revision.questions.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          {t.improveQuestionsTitle}
-                        </p>
-                        {revision.questions.map((q, i) => (
-                          <div key={i} className="space-y-1">
-                            <p className="text-sm">{q}</p>
-                            <Textarea
-                              value={answersDraft[q] ?? ""}
-                              onChange={(e) =>
-                                setAnswersDraft((prev) => ({ ...prev, [q]: e.target.value }))
-                              }
-                              placeholder={t.improveAnswerPlaceholder}
-                              rows={2}
-                            />
-                          </div>
-                        ))}
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold text-muted-foreground">
-                            {t.improveFollowUpCommentLabel}
-                          </p>
-                          <Textarea
-                            value={followUpComment}
-                            onChange={(e) => setFollowUpComment(e.target.value)}
-                            placeholder={t.improveFollowUpCommentPlaceholder}
-                            rows={2}
-                          />
-                        </div>
-                        <Button
-                          onClick={applyAnswers}
-                          disabled={
-                            improveStatus === "loading" ||
-                            (revision.questions.every((q) => !answersDraft[q]?.trim()) &&
-                              !followUpComment.trim())
-                          }
-                          className="w-full"
-                        >
-                          {t.improveApplyAnswersCta}
-                        </Button>
-                      </div>
-                    )}
-
                     <Button
                       onClick={() => setUiStep(4)}
                       className="w-full bg-green-600 hover:bg-green-600/90 text-white"
@@ -696,9 +645,6 @@ export function DocumentAnalysisPanel({
                   content={revision.text}
                   filename={`${result.fileName || "document"}-corrected`}
                 />
-                <Button variant="ghost" className="w-full" onClick={() => setUiStep(3)}>
-                  {t.stepKeepFixingCta}
-                </Button>
               </div>
             )}
 

@@ -233,19 +233,17 @@ export interface DocumentImprovementResult {
   summary: string;
   findings: RiskFinding[];
   recommendations: string[];
-  questions: string[];
 }
 
 export interface DocumentRevision extends DocumentImprovementResult {
   instruction: string;
-  answers: Record<string, string>;
   createdAt: Date;
 }
 
 export const IMPROVEMENT_SYSTEM_PROMPT = `შენ ხარ ქართული იურიდიული დოკუმენტების რედაქტორი.
 ${STRICT_BREVITY_RULE}
 "summary", "explanation" და "recommendation" ველები დაწერე მარტივი, ყოველდღიური ენით — თითქოს არაიურისტ ადამიანს ხსნი, არა კოლეგა იურისტს. აარიდე იურიდიულ ჟარგონს; თუ ტერმინი აუცილებელია, ერთი მარტივი სიტყვით ახსენი ფრჩხილებში. (revisedText თავად ოფიციალურ სამართლებრივ ენაზე რჩება — ეს წესი მხოლოდ ახსნა-განმარტების ველებზეა.)
-მოგეწოდება ხელშეკრულების ტექსტი და მასში გამოვლენილი რისკები. შენი ამოცანაა შეასწორო დოკუმენტი ამ რისკების გათვალისწინებით და დააბრუნო მხოლოდ JSON, ზუსტად ამ ფორმატით, დამატებითი ტექსტის ან ახსნის გარეშე:
+მოგეწოდება ხელშეკრულების ტექსტი და მასში გამოვლენილი რისკები. შენი ამოცანაა შეასწორო დოკუმენტი ამ რისკების გათვალისწინებით — ეს ერთჯერადი, საბოლოო გასწორებაა, დამატებითი შეკითხვების საშუალება არ არსებობს. დააბრუნე მხოლოდ JSON, ზუსტად ამ ფორმატით, დამატებითი ტექსტის ან ახსნის გარეშე:
 
 {
   "revisedText": "შესწორებული დოკუმენტის სრული ტექსტი",
@@ -259,25 +257,20 @@ ${STRICT_BREVITY_RULE}
       "recommendation": "კონკრეტული რჩევა ამ რისკთან დაკავშირებით"
     }
   ],
-  "recommendations": ["ზოგადი რეკომენდაცია 1", "ზოგადი რეკომენდაცია 2"],
-  "questions": ["დაზუსტების საჭიროების მქონე კითხვა 1"]
+  "recommendations": ["ზოგადი რეკომენდაცია 1", "ზოგადი რეკომენდაცია 2"]
 }
 
 წესები:
-- თუ დოკუმენტში აკლია კონკრეტული მონაცემი (მაგ. სახელი, თარიღი, მისამართი), ნუ გამოიგონებ მას — ჩასვი placeholder კვადრატულ ფრჩხილებში, ინგლისურად, UPPER_SNAKE_CASE ფორმატით, მაგალითად [LESSOR_NAME], [DATE], [ADDRESS].
-- თუ ინფორმაცია ბუნდოვანია ან ეწინააღმდეგება ერთმანეთს (და არა უბრალოდ აკლია), ნუ გამოიგონებ პასუხს — დაამატე კონკრეტული შეკითხვა "questions" მასივში.
-- findings ასახავდეს შესწორებული ტექსტის რისკებს, არა თავდაპირველისას.
+- თუ დოკუმენტში აკლია ან ბუნდოვანია კონკრეტული მონაცემი (მაგ. სახელი, თარიღი, მისამართი), ნუ გამოიგონებ მას და ნურც შეკითხვას დასვამ — ჩასვი placeholder კვადრატულ ფრჩხილებში, ინგლისურად, UPPER_SNAKE_CASE ფორმატით, მაგალითად [LESSOR_NAME], [DATE], [ADDRESS].
+- findings ასახავდეს შესწორებული ტექსტის დარჩენილ რისკებს, არა თავდაპირველისას — თუ ყველა რისკი გამოსწორდა, დააბრუნე ცარიელი მასივი.
 - "explanation" ველი დაწერე მაქსიმუმ 1-2 მოკლე წინადადებით (დაახლოებით 25 სიტყვამდე) — მხოლოდ მთავარი პრობლემა და მისი შედეგი, ზედმეტი კონტექსტის გარეშე.
 - category და severity მნიშვნელობები ზუსტად ზემოთ ჩამოთვლილთაგან უნდა იყოს, სხვა მნიშვნელობა დაუშვებელია.
-- თუ დამატებითი შეკითხვა არ გჭირდება, დააბრუნე ცარიელი "questions": [].
 - უპასუხე ქართულ ენაზე, მხოლოდ JSON ობიექტით — არც ერთი დამატებითი სიტყვა ჯსონის გარეთ.`;
 
 export function buildImprovementUserMessage(input: {
   baseText: string;
   findings: RiskFinding[];
-  priorQuestions: string[];
   instruction: string;
-  answers: Record<string, string>;
 }): string {
   const parts: string[] = [`მიმდინარე დოკუმენტი:\n${input.baseText}`];
 
@@ -286,19 +279,6 @@ export function buildImprovementUserMessage(input: {
       .map((f, i) => `${i + 1}. [${f.severity}/${f.category}] ${f.title} — ${f.explanation}`)
       .join("\n");
     parts.push(`გამოვლენილი რისკები:\n${findingsList}`);
-  }
-
-  if (input.priorQuestions.length > 0) {
-    const questionsList = input.priorQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n");
-    parts.push(`წინა შეკითხვები:\n${questionsList}`);
-  }
-
-  const answerEntries = Object.entries(input.answers);
-  if (answerEntries.length > 0) {
-    const answersList = answerEntries
-      .map(([q, a]) => `კითხვა: ${q}\nპასუხი: ${a}`)
-      .join("\n\n");
-    parts.push(`მომხმარებლის პასუხები:\n${answersList}`);
   }
 
   parts.push(
@@ -317,7 +297,6 @@ export function parseImprovementResponse(raw: string): DocumentImprovementResult
     summary?: unknown;
     findings?: unknown;
     recommendations?: unknown;
-    questions?: unknown;
   };
   try {
     parsed = JSON.parse(jsonText);
@@ -346,9 +325,5 @@ export function parseImprovementResponse(raw: string): DocumentImprovementResult
     ? parsed.recommendations.filter((r): r is string => typeof r === "string")
     : [];
 
-  const questions = Array.isArray(parsed.questions)
-    ? parsed.questions.filter((q): q is string => typeof q === "string" && q.trim().length > 0)
-    : [];
-
-  return { text, summary, findings, recommendations, questions };
+  return { text, summary, findings, recommendations };
 }

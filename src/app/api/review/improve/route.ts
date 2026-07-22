@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  const { reviewId, instruction, answers } = parsed.data;
+  const { reviewId, instruction } = parsed.data;
 
   if (!isValidObjectId(reviewId)) {
     return NextResponse.json({ error: "Invalid reviewId" }, { status: 400 });
@@ -57,6 +57,12 @@ export async function POST(req: Request) {
   if (String(review.userId) !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  if ((review.revisions ?? []).length > 0) {
+    return NextResponse.json(
+      { error: "This document has already been improved. Start a new analysis for further changes." },
+      { status: 409 }
+    );
+  }
 
   // Same size-based pricing as the initial review (reviewCreditCost) — an
   // improve call re-sends the full document and asks for a full rewrite, so
@@ -72,28 +78,19 @@ export async function POST(req: Request) {
     );
   }
 
-  const revisions = (review.revisions ?? []) as Array<{
-    text: string;
-    findings: RiskFinding[];
-    questions: string[];
-  }>;
-  const latest = revisions[revisions.length - 1];
-  const baseText = latest?.text || review.sourceText || "";
+  const baseText = review.sourceText || "";
   if (!baseText) {
     return NextResponse.json(
       { error: "No source text available for this review" },
       { status: 400 }
     );
   }
-  const currentFindings = (latest?.findings ?? review.findings ?? []) as RiskFinding[];
-  const priorQuestions = latest?.questions ?? [];
+  const currentFindings = (review.findings ?? []) as RiskFinding[];
 
   const userMessage = buildImprovementUserMessage({
     baseText,
     findings: currentFindings,
-    priorQuestions,
     instruction,
-    answers,
   });
 
   let raw: string;
@@ -134,9 +131,7 @@ export async function POST(req: Request) {
     summary: improvement.summary,
     findings: improvement.findings,
     recommendations: improvement.recommendations,
-    questions: improvement.questions,
     instruction,
-    answers,
     createdAt: new Date(),
   };
   const diff = computeWordDiff(baseText, improvement.text);

@@ -39,7 +39,6 @@ export async function GET(
       summary: rev.summary,
       findings: rev.findings,
       recommendations: rev.recommendations,
-      questions: rev.questions,
       instruction: rev.instruction,
       diff: computeWordDiff(baseText, rev.text),
     };

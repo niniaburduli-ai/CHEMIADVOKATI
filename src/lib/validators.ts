@@ -155,10 +155,5 @@ export type FeedbackCreateInput = z.infer<typeof FeedbackCreateSchema>;
 export const DocumentImproveSchema = z.object({
   reviewId: z.string().trim().min(1).max(64),
   instruction: z.string().trim().max(2000).optional().default(""),
-  answers: z
-    .record(z.string(), z.string().max(2000))
-    .refine((obj) => Object.keys(obj).length <= 30, { message: "Too many fields" })
-    .optional()
-    .default({}),
 });
 export type DocumentImproveInput = z.infer<typeof DocumentImproveSchema>;

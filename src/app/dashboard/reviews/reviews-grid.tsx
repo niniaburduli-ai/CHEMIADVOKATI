@@ -273,7 +273,7 @@ function ReviewDetail({ review }: { review: ReviewItem }) {
                   {revision.findings.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground mb-2">
-                        განახლებული რისკები
+                        დარჩენილი რისკები
                       </p>
                       <div className="space-y-2">
                         {revision.findings.map((f, fi) => (
@@ -286,7 +286,7 @@ function ReviewDetail({ review }: { review: ReviewItem }) {
                   {revision.recommendations.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground mb-2">
-                        განახლებული რეკომენდაციები
+                        დარჩენილი რეკომენდაციები
                       </p>
                       <RecommendationList recommendations={revision.recommendations} />
                     </div>
