@@ -43,8 +43,7 @@ export default async function Home() {
   ])
   const [dbPlans, customRatesFull] = await Promise.all([getVisiblePlans(), getCustomPlanRatesFull()])
 
-  // Seed lookup maps for En fallback when CMS doc predates bilingual fields
-  const seedStatById = new Map(seed.stats.map((s) => [s._id, s]))
+  // Seed lookup map for En fallback when CMS doc predates bilingual fields
   const seedFeatureById = new Map(seed.features.map((f) => [f._id, f]))
 
   const sections = cmsData?.sections ?? seed.sections
@@ -55,17 +54,29 @@ export default async function Home() {
   const heroSubtitle = pick(cmsHero.subtitle || seed.hero.subtitle, cmsHero.subtitleEn || seed.hero.subtitleEn, locale)
 
   // ── Stats ─────────────────────────────────────────────────────────────────────
-  // "registered users" is dropped in favor of live feedback metrics below.
-  const REGISTERED_USERS_LABELS = new Set(["რეგისტრირებული მომხმარებელი", "Registered users"])
-  const stats = (cmsData?.stats ?? seed.stats)
-    .filter(
-      (s) =>
-        s.visible !== false &&
-        s.metric !== "users" &&
-        !REGISTERED_USERS_LABELS.has(s.label) &&
-        !(s.labelEn && REGISTERED_USERS_LABELS.has(s.labelEn)),
-    )
+  const allStats = (cmsData?.stats ?? seed.stats)
+    .filter((s) => s.visible !== false)
     .sort((a, b) => a.order - b.order)
+
+  const usersStat = allStats.find((s) => resolveMetric(s.metric, s.label) === "users") ?? null
+  const otherStats = allStats.filter((s) => s !== usersStat)
+
+  const statsCardsVisible = { ...seed.statsCardsVisible, ...cmsData?.statsCardsVisible }
+
+  const servicesReceivedTotal = otherStats.reduce((sum, s) => {
+    const metric = resolveMetric(s.metric, s.label)
+    const n = metric ? publicStats[metric] : Number(String(s.value).replace(/[^0-9.]/g, ""))
+    return sum + (Number.isFinite(n) ? n : 0)
+  }, 0)
+
+  const usersCard = usersStat
+    ? {
+        display: resolveMetric(usersStat.metric, usersStat.label)
+          ? publicStats.users.toLocaleString("ka-GE")
+          : usersStat.value,
+        label: pick(usersStat.label, usersStat.labelEn, locale),
+      }
+    : null
 
   const feedbackCard =
     feedbackSummary.count > 0
@@ -76,6 +87,13 @@ export default async function Home() {
           ratingLabel: d.feedback.ratingLabel,
         }
       : null
+
+  const showServicesCard = statsCardsVisible.services !== false && otherStats.length > 0
+  const showSatisfactionCard = statsCardsVisible.satisfaction !== false && !!feedbackCard
+  const showRatingCard = statsCardsVisible.rating !== false && !!feedbackCard
+  const showUsersCard = !!usersCard
+  const visibleCardCount =
+    [showServicesCard, showSatisfactionCard, showRatingCard, showUsersCard].filter(Boolean).length
 
   const cardsHeading = pick(
     cmsData?.cardsHeading   || seed.cardsHeading,
@@ -211,15 +229,15 @@ export default async function Home() {
 
       {/* ── FEATURES + STATS ── */}
       {((sections.features !== false && features.length > 0) ||
-        (sections.stats !== false && stats.length > 0)) && (
+        (sections.stats !== false && visibleCardCount > 0)) && (
         <section className="bg-background">
           <div className="container mx-auto px-4 py-20">
             <div
-              className={`grid gap-10 items-start ${
+              className={`grid gap-10 items-stretch ${
                 sections.features !== false &&
                 features.length > 0 &&
                 sections.stats !== false &&
-                (stats.length > 0 || feedbackCard)
+                visibleCardCount > 0
                   ? "md:grid-cols-2"
                   : "md:grid-cols-1"
               }`}
@@ -254,50 +272,59 @@ export default async function Home() {
                 </div>
               )}
 
-              {sections.stats !== false && (stats.length > 0 || feedbackCard) && (
-                <div className={sections.features !== false && features.length > 0 ? "" : "max-w-3xl mx-auto w-full"}>
+              {sections.stats !== false && visibleCardCount > 0 && (
+                <div
+                  className={`flex flex-col h-full ${
+                    sections.features !== false && features.length > 0 ? "" : "max-w-3xl mx-auto w-full"
+                  }`}
+                >
                   <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center">
                     {statsHeading}
                   </h2>
                   <div className="h-1.5 w-16 rounded-full bg-gradient-to-r from-primary to-gold mx-auto mt-4 mb-8" />
                   <div
-                    className={`grid gap-3 mx-auto ${
+                    className={`mx-auto flex-1 ${
                       sections.features !== false && features.length > 0
-                        ? "grid-cols-1 w-[65%] mx-auto"
-                        : statsGrid(stats.length + (feedbackCard ? 1 : 0))
+                        ? "flex flex-col justify-evenly w-[65%]"
+                        : `grid gap-3 ${statsGrid(visibleCardCount)}`
                     }`}
                   >
-                    {stats.map((s, idx) => {
-                      const metric = resolveMetric(s.metric, s.label)
-                      const display = metric ? publicStats[metric].toLocaleString("ka-GE") : s.value
-                      const seedStat = seedStatById.get(s._id)
-                      const statLabel = pick(s.label, s.labelEn || seedStat?.labelEn, locale)
-                      return (
-                        <AnimateIn key={s._id} delay={idx * 100} className="h-full">
-                          <div className="relative h-full overflow-hidden bg-card border border-border rounded-2xl p-4 pt-5 flex flex-col items-center justify-center text-center space-y-1 card-hover">
-                            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
-                            <p className="text-2xl font-bold text-gold leading-none tabular-nums">{display}</p>
-                            <p className="text-xs text-muted-foreground leading-snug">{statLabel}</p>
-                          </div>
-                        </AnimateIn>
-                      )
-                    })}
-                    {feedbackCard && (
-                      <AnimateIn delay={stats.length * 100} className="h-full">
-                        <div className="relative h-full overflow-hidden bg-card border border-border rounded-2xl p-4 pt-5 flex flex-col items-center justify-center text-center space-y-1 card-hover">
+                    {showUsersCard && usersCard && (
+                      <AnimateIn delay={0}>
+                        <div className="relative h-20 overflow-hidden bg-card border border-border rounded-2xl px-4 py-2 flex flex-col items-center justify-center text-center space-y-0.5 card-hover">
+                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
+                          <p className="text-2xl font-bold text-gold leading-none tabular-nums">{usersCard.display}</p>
+                          <p className="text-xs text-muted-foreground leading-snug">{usersCard.label}</p>
+                        </div>
+                      </AnimateIn>
+                    )}
+                    {showServicesCard && (
+                      <AnimateIn delay={100}>
+                        <div className="relative h-20 overflow-hidden bg-card border border-border rounded-2xl px-4 py-2 flex flex-col items-center justify-center text-center space-y-0.5 card-hover">
+                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
+                          <p className="text-2xl font-bold text-gold leading-none tabular-nums">
+                            {servicesReceivedTotal.toLocaleString("ka-GE")}
+                          </p>
+                          <p className="text-xs text-muted-foreground leading-snug">{d.feedback.servicesReceivedLabel}</p>
+                        </div>
+                      </AnimateIn>
+                    )}
+                    {showSatisfactionCard && feedbackCard && (
+                      <AnimateIn delay={200}>
+                        <div className="relative h-20 overflow-hidden bg-card border border-border rounded-2xl px-4 py-2 flex flex-col items-center justify-center text-center space-y-0.5 card-hover">
+                          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
+                          <p className="text-2xl font-bold text-gold leading-none tabular-nums">{feedbackCard.percentage}</p>
+                          <p className="text-xs text-muted-foreground leading-snug">{feedbackCard.percentageLabel}</p>
+                        </div>
+                      </AnimateIn>
+                    )}
+                    {showRatingCard && feedbackCard && (
+                      <AnimateIn delay={300}>
+                        <div className="relative h-20 overflow-hidden bg-card border border-border rounded-2xl px-4 py-2 flex flex-col items-center justify-center text-center space-y-0.5 card-hover">
                           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold" />
                           <Star className="h-4 w-4 mx-auto text-gold fill-gold" />
-                          <div className="flex items-center justify-center gap-3">
-                            <div>
-                              <p className="text-2xl font-bold text-gold leading-none tabular-nums">{feedbackCard.percentage}</p>
-                              <p className="text-xs text-muted-foreground leading-snug mt-1">{feedbackCard.percentageLabel}</p>
-                            </div>
-                            <div className="w-px h-8 bg-border shrink-0" />
-                            <div>
-                              <p className="text-2xl font-bold text-gold leading-none tabular-nums">{feedbackCard.rating}</p>
-                              <p className="text-xs text-muted-foreground leading-snug mt-1">{feedbackCard.ratingLabel}</p>
-                            </div>
-                          </div>
+                          <p className="text-2xl font-bold text-gold leading-none tabular-nums">{feedbackCard.rating}</p>
+                          <p className="text-xs text-muted-foreground leading-snug">{feedbackCard.ratingLabel}</p>
                         </div>
                       </AnimateIn>
                     )}

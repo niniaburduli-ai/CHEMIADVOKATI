@@ -47,7 +47,6 @@ export async function Header() {
           <MobileNavSheet
             siteName={siteName}
             menuLabel={d.header.menu}
-            locale={locale}
             navItems={navItems}
             legalItems={legalItems}
             navigationLabel={d.footer.navigation}

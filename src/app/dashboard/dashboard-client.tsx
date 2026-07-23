@@ -200,7 +200,10 @@ function ProfilePanel({
           </form>
         </div>
         {resetState?.sent && (
-          <p className="text-xs text-muted-foreground mt-2">{d.auth.forgotSentBody}</p>
+          <div className="mt-2 space-y-0.5">
+            <p className="text-xs text-muted-foreground">{d.auth.forgotSentBody}</p>
+            <p className="text-xs text-muted-foreground">{d.auth.forgotSpamHint}</p>
+          </div>
         )}
         {resetState?.error && (
           <p className="text-xs text-destructive mt-2">{resetState.error}</p>

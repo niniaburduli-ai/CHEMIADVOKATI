@@ -88,8 +88,9 @@ export const HOME_SEED: Omit<HomePageData, "status"> = {
     { _id: "st-1", label: "დასმული კითხვა", labelEn: "Questions asked", value: "0", icon: "MessageSquare", visible: true, order: 0 },
     { _id: "st-2", label: "დამუშავებული დოკუმენტი", labelEn: "Documents processed", value: "0", icon: "FileText", visible: true, order: 1 },
     { _id: "st-3", label: "გამოყენებული შაბლონი", labelEn: "Templates used", value: "0", icon: "Layers", visible: true, order: 2 },
-    { _id: "st-4", label: "რეგისტრირებული მომხმარებელი", labelEn: "Registered users", value: "11", icon: "Users", visible: true, order: 3 },
+    { _id: "st-4", label: "რეგისტრირებული მომხმარებელი", labelEn: "Registered users", value: "11", icon: "Users", metric: "users", visible: true, order: 3 },
   ],
+  statsCardsVisible: { services: true, satisfaction: true, rating: true },
   featuresHeading: "რატომ ჩემი იურისტი?",
   featuresHeadingEn: "Why My Lawyer?",
   features: [

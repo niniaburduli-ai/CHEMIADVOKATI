@@ -43,6 +43,7 @@ const EMPTY: HomePageData = {
   ],
   statsHeading: "", statsHeadingEn: "",
   stats: [],
+  statsCardsVisible: { services: true, satisfaction: true, rating: true },
   featuresHeading: "", featuresHeadingEn: "",
   features: [],
   pricingHeading: "", pricingHeadingEn: "",
@@ -235,6 +236,13 @@ export function HomePageForm() {
     setData((p) => ({
       ...p,
       stats: p.stats.filter((_, j) => j !== i).map((s, idx) => ({ ...s, order: idx })),
+    }))
+  }
+
+  function updStatsCardVisible(key: keyof HomePageData["statsCardsVisible"], value: boolean) {
+    setData((p) => ({
+      ...p,
+      statsCardsVisible: { ...p.statsCardsVisible, [key]: value },
     }))
   }
 
@@ -509,6 +517,36 @@ export function HomePageForm() {
           onKa={(v) => upd("statsHeading", v)}
           onEn={(v) => upd("statsHeadingEn", v)}
         />
+
+        <div className="space-y-2 rounded border p-3">
+          <p className="text-xs font-medium text-muted-foreground">
+            შედეგების ბარათები (homepage summary cards)
+          </p>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">სერვისების ჯამი</Label>
+            <Vis
+              value={data.statsCardsVisible.services}
+              onChange={(v) => updStatsCardVisible("services", v)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">კმაყოფილი მომხმარებელი (%)</Label>
+            <Vis
+              value={data.statsCardsVisible.satisfaction}
+              onChange={(v) => updStatsCardVisible("satisfaction", v)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">შეფასება (რეიტინგი)</Label>
+            <Vis
+              value={data.statsCardsVisible.rating}
+              onChange={(v) => updStatsCardVisible("rating", v)}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1">
+            რეგისტრირებული მომხმარებლების ბარათი იმართება ქვემოთ, შესაბამისი სტატისტიკის ხილვადობით (👁).
+          </p>
+        </div>
 
         <div className="space-y-2">
           {data.stats.map((s, i) => (

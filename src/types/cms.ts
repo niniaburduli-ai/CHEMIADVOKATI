@@ -119,6 +119,7 @@ export interface HomePageData {
   statsHeading: string
   statsHeadingEn?: string
   stats: HomePageStatCard[]
+  statsCardsVisible: { services: boolean; satisfaction: boolean; rating: boolean }
   featuresHeading: string
   featuresHeadingEn?: string
   features: HomePageFeature[]

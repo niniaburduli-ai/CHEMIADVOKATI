@@ -98,6 +98,7 @@ const ka = {
     forgotSending: "იგზავნება...",
     forgotSentTitle: "შეამოწმეთ ელ. ფოსტა",
     forgotSentBody: "თუ ანგარიში არსებობს, აღდგენის ბმული გამოგზავნილია. ბმული მოქმედებს 1 საათი.",
+    forgotSpamHint: "თუ ბმული არ მოგივიდათ, შეამოწმეთ სპამის საქაღალდე.",
     backToLogin: "უკან შესვლაზე",
     resetTitle: "ახალი პაროლის დაყენება",
     resetDescription: "შეიყვანეთ ახალი პაროლი თქვენი ანგარიშისთვის",
@@ -401,6 +402,7 @@ const ka = {
     reviewCardBasedOn: "შეფასების საფუძველზე",
     positiveFeedbackLabel: "კმაყოფილი მომხმარებელი",
     ratingLabel: "შეფასება",
+    servicesReceivedLabel: "მიღებული სერვისი",
   },
 }
 
@@ -503,6 +505,7 @@ const en: Dict = {
     forgotSending: "Sending...",
     forgotSentTitle: "Check your email",
     forgotSentBody: "If an account exists, a reset link has been sent. The link is valid for 1 hour.",
+    forgotSpamHint: "If the link doesn't arrive, please check your spam folder.",
     backToLogin: "Back to sign in",
     resetTitle: "Set a new password",
     resetDescription: "Enter a new password for your account",
@@ -806,6 +809,7 @@ const en: Dict = {
     reviewCardBasedOn: "based on ratings",
     positiveFeedbackLabel: "Satisfied customers",
     ratingLabel: "Rating",
+    servicesReceivedLabel: "Services received",
   },
 }
 

@@ -29,6 +29,7 @@ export function ForgotPasswordForm({ locale }: { locale: Locale }) {
         <div className="space-y-1.5">
           <p className="font-medium">{d.auth.forgotSentTitle}</p>
           <p className="text-sm text-muted-foreground">{d.auth.forgotSentBody}</p>
+          <p className="text-xs text-muted-foreground">{d.auth.forgotSpamHint}</p>
         </div>
         <Link
           href="/login"

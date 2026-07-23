@@ -113,6 +113,11 @@ const HomePageSchema = new Schema(
     statsHeading: { type: String, default: "" },
     statsHeadingEn: { type: String, default: "" },
     stats: [statCardSchema],
+    statsCardsVisible: {
+      services: { type: Boolean, default: true },
+      satisfaction: { type: Boolean, default: true },
+      rating: { type: Boolean, default: true },
+    },
     featuresHeading: { type: String, default: "" },
     featuresHeadingEn: { type: String, default: "" },
     features: [featureSchema],

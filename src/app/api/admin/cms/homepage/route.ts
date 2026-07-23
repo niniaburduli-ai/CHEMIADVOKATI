@@ -40,6 +40,10 @@ export async function GET() {
     stats: (raw.stats as unknown[] | undefined)?.length
       ? raw.stats
       : HOME_SEED.stats,
+    statsCardsVisible: {
+      ...HOME_SEED.statsCardsVisible,
+      ...(raw.statsCardsVisible as object | undefined),
+    },
     featuresHeading: (raw.featuresHeading as string | undefined) || HOME_SEED.featuresHeading,
     featuresHeadingEn: (raw.featuresHeadingEn as string | undefined) || HOME_SEED.featuresHeadingEn,
     pricingHeading: (raw.pricingHeading as string | undefined) || HOME_SEED.pricingHeading,

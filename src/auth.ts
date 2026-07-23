@@ -22,13 +22,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         params: {
           prompt: "select_account",
-          // Google requires these on the authorize request whenever the
-          // redirect_uri host is a private IP (e.g. testing from a phone
-          // over LAN at 192.168.x.x) — otherwise it 400s with invalid_request.
-          ...(process.env.NODE_ENV !== "production" && {
-            device_id: "chemiiuristi-dev",
-            device_name: "Chemiiuristi Dev Server",
-          }),
         },
       },
     }),

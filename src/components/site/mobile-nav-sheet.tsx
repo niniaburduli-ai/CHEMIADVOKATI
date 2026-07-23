@@ -11,8 +11,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { LanguageSwitcher } from "@/components/site/language-switcher";
-import type { Locale } from "@/lib/i18n/config";
 
 type NavItem = {
   _id: string;
@@ -29,7 +27,6 @@ type LegalItem = {
 export function MobileNavSheet({
   siteName,
   menuLabel,
-  locale,
   navItems,
   legalItems,
   navigationLabel,
@@ -40,7 +37,6 @@ export function MobileNavSheet({
 }: {
   siteName: string;
   menuLabel: string;
-  locale: Locale;
   navItems: NavItem[];
   legalItems: LegalItem[];
   navigationLabel: string;
@@ -63,10 +59,6 @@ export function MobileNavSheet({
           <SheetTitle className="text-gold">{siteName}</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-4 overflow-y-auto">
-          <div className="px-3">
-            <LanguageSwitcher current={locale} />
-          </div>
-
           <div>
             <p className="mb-2 px-3 text-sm font-bold text-foreground">{navigationLabel}</p>
             <nav className="flex flex-col gap-1">
