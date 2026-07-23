@@ -15,9 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { COMMON_FIELDS, QUESTION_SCHEMAS } from "@/lib/legal/document-fields";
+import { COMMON_FIELDS, QUESTION_SCHEMAS, fieldLabel } from "@/lib/legal/document-fields";
+import { TEMPLATE_TYPES } from "@/lib/legal/templates";
+import { docTypeLabel } from "@/lib/legal/doc-type-labels";
 import { DocumentResultPanel, type DocumentResult } from "@/components/site/DocumentResultPanel";
 import { UpgradeRequiredDialog } from "@/components/site/upgrade-required-dialog";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
 type LineItemRow = { desc: string; qty: string; price: string };
 
@@ -43,27 +47,21 @@ function serializeItemRows(rows: LineItemRow[]): string {
     .join("\n");
 }
 
-const QUOTA_STRINGS = {
-  title: "კრედიტები ამოწურულია",
-  body: "თქვენ გამოწურეთ ამ სერვისის უფასო კრედიტები. გასაგრძელებლად გთხოვთ განაახლოთ პაკეტი.",
-  upgradeCta: "გეგმის განახლება",
-  close: "დახურვა",
-};
+export function getTemplateDocTypes(locale: Locale) {
+  return TEMPLATE_TYPES.map((value) => ({ value, label: docTypeLabel(value, locale) }));
+}
 
-export const TEMPLATE_DOC_TYPES = [
-  { value: "rental-agreement", label: "ქირავნობის ხელშეკრულება" },
-  { value: "employment-contract", label: "შრომის ხელშეკრულება" },
-  { value: "service-agreement", label: "მომსახურების ხელშეკრულება" },
-  { value: "power-of-attorney", label: "მინდობილობა" },
-  { value: "termination-notice", label: "სამსახურიდან გათავისუფლება" },
-  { value: "claim-letter", label: "წერილი-პრეტენზია" },
-  { value: "debt-claim", label: "დავალიანების დაფარვის მოთხოვნა" },
-  { value: "child-travel-consent", label: "თანხმობა არასრულწლოვნის საზღვარგარეთ გაყვანაზე" },
-  { value: "invoice", label: "ინვოისი" },
-  { value: "acceptance-act", label: "მიღება-ჩაბარების აქტი" },
-];
+export function TemplatesClient({
+  initialType,
+  locale,
+}: {
+  initialType?: string;
+  locale: Locale;
+}) {
+  const d = getDict(locale);
+  const tp = d.templatesPage;
+  const TEMPLATE_DOC_TYPES = getTemplateDocTypes(locale);
 
-export function TemplatesClient({ initialType }: { initialType?: string } = {}) {
   const [type, setType] = useState(
     initialType && QUESTION_SCHEMAS[initialType] ? initialType : "rental-agreement"
   );
@@ -88,7 +86,7 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
       const res = await fetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, answers }),
+        body: JSON.stringify({ type, answers, locale }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -96,13 +94,13 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
           setQuotaExceeded(true);
           return;
         }
-        setError(data.error ?? "შეცდომა");
+        setError(data.error ?? tp.genericError);
         return;
       }
       setResult(data);
-      toast.success("დოკუმენტი შეივსო");
+      toast.success(tp.successToast);
     } catch {
-      setError("სერვისთან კავშირი ვერ დამყარდა");
+      setError(tp.connectionError);
     } finally {
       setLoading(false);
     }
@@ -113,19 +111,19 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
       <SubPageHeader
         backHref="/services?tab=templatesFill"
         icon={<FileText className="h-5 w-5 text-gold" />}
-        title="მზა შაბლონები"
-        subtitle="შეავსე ველები — დოკუმენტი მზადდება მყისიერად, AI-ს გარეშე"
+        title={tp.pageTitle}
+        subtitle={tp.pageSubtitle}
       />
 
       <div className="grid gap-6 lg:grid-cols-[460px_1fr] items-start">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">შაბლონის ტიპი და დეტალები</CardTitle>
-            <CardDescription>აირჩიე ტიპი და შეავსე მონაცემები</CardDescription>
+            <CardTitle className="text-base">{tp.cardTitle}</CardTitle>
+            <CardDescription>{tp.cardSubtitle}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-[8rem_1fr] gap-3 items-center">
-              <Label htmlFor="template-type">დოკუმენტის ტიპი</Label>
+              <Label htmlFor="template-type">{tp.docTypeLabel}</Label>
               <select
                 id="template-type"
                 value={type}
@@ -158,12 +156,12 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
                 };
                 return (
                   <div key={f.key} className="grid grid-cols-[8rem_1fr] gap-3 items-start">
-                    <Label className="pt-2">{f.label}</Label>
+                    <Label className="pt-2">{fieldLabel(f, locale)}</Label>
                     <div className="space-y-2">
                       <div className="grid grid-cols-[1fr_5rem_6rem_1.75rem] gap-2 px-0.5 text-xs text-muted-foreground">
-                        <span>დასახელება</span>
-                        <span>რაოდ.</span>
-                        <span>ერთ. ფასი</span>
+                        <span>{tp.itemsDescHeader}</span>
+                        <span>{tp.itemsQtyHeader}</span>
+                        <span>{tp.itemsPriceHeader}</span>
                         <span />
                       </div>
                       <div className="space-y-2">
@@ -195,7 +193,7 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
                         ))}
                       </div>
                       <Button type="button" variant="outline" size="sm" onClick={addRow}>
-                        <Plus className="h-3.5 w-3.5 mr-1" /> პოზიციის დამატება
+                        <Plus className="h-3.5 w-3.5 mr-1" /> {tp.addRowCta}
                       </Button>
                     </div>
                   </div>
@@ -203,7 +201,7 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
               }
               return (
                 <div key={f.key} className="grid grid-cols-[8rem_1fr] gap-3 items-start">
-                  <Label htmlFor={`field-${f.key}`} className="pt-2">{f.label}</Label>
+                  <Label htmlFor={`field-${f.key}`} className="pt-2">{fieldLabel(f, locale)}</Label>
                   {f.type === "textarea" ? (
                     <Textarea
                       id={`field-${f.key}`}
@@ -225,7 +223,7 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
 
             {missingRequired.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                შესავსებია: {missingRequired.map((f) => f.label).join(", ")}
+                {tp.missingRequiredPrefix} {missingRequired.map((f) => fieldLabel(f, locale)).join(", ")}
               </p>
             )}
 
@@ -235,12 +233,12 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ივსება...
+                  {tp.filling}
                 </>
               ) : (
                 <>
                   <FileText className="mr-2 h-4 w-4" />
-                  შექმენი დოკუმენტი
+                  {tp.fillCta}
                 </>
               )}
             </Button>
@@ -251,10 +249,11 @@ export function TemplatesClient({ initialType }: { initialType?: string } = {}) 
           key={result?.id ?? "empty"}
           result={result}
           setResult={setResult}
-          emptyHint={<>შეავსე დეტალები და დააჭირე „შექმენი დოკუმენტი”</>}
+          emptyHint={<>{tp.resultEmptyHint}</>}
+          locale={locale}
         />
       </div>
-      <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={QUOTA_STRINGS} />
+      <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={d.quota} />
     </div>
   );
 }

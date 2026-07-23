@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { exportAsDocx, exportAsPdf } from "@/lib/export-document";
 import { estimatePageCount } from "@/lib/page-count";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
 export type DocumentResult = { id: string; title: string; content: string; legalBasis?: string };
 
@@ -46,11 +48,14 @@ export function DocumentResultPanel({
   result,
   setResult,
   emptyHint,
+  locale,
 }: {
   result: DocumentResult | null;
   setResult: Dispatch<SetStateAction<DocumentResult | null>>;
   emptyHint: ReactNode;
+  locale: Locale;
 }) {
+  const drp = getDict(locale).documentResultPanel;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -62,7 +67,7 @@ export function DocumentResultPanel({
   function copy() {
     if (!result) return;
     navigator.clipboard.writeText(result.content);
-    toast.success("კოპირებულია");
+    toast.success(drp.copiedToast);
   }
 
   async function saveContent(newContent: string) {
@@ -75,10 +80,10 @@ export function DocumentResultPanel({
         body: JSON.stringify({ content: newContent }),
       });
       if (!res.ok) {
-        toast.error("ცვლილება ვერ შენახულა");
+        toast.error(drp.saveErrorToast);
       }
     } catch {
-      toast.error("ცვლილება ვერ შენახულა");
+      toast.error(drp.saveErrorToast);
     } finally {
       setSaving(false);
     }
@@ -108,25 +113,25 @@ export function DocumentResultPanel({
             <div>
               <CardTitle className="text-base">{result.title}</CardTitle>
               <CardDescription>
-                დოკუმენტი შეიქმნა და შენახულია ანგარიშში · {wordCount} სიტყვა · ~{pageCount} გვერდი
+                {drp.savedMeta} · {wordCount} {drp.wordUnit} · ~{pageCount} {drp.pageUnit}
               </CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditing((e) => !e)}>
                 {editing ? (
-                  <><Eye className="h-4 w-4 mr-1 text-gold" /> მზა ტექსტი</>
+                  <><Eye className="h-4 w-4 mr-1 text-gold" /> {drp.previewCta}</>
                 ) : (
-                  <><Pencil className="h-4 w-4 mr-1 text-gold" /> რედაქტირება</>
+                  <><Pencil className="h-4 w-4 mr-1 text-gold" /> {drp.editCta}</>
                 )}
               </Button>
               <Button variant="outline" size="sm" onClick={copy}>
-                <Copy className="h-4 w-4 mr-1 text-gold" /> კოპირება
+                <Copy className="h-4 w-4 mr-1 text-gold" /> {drp.copyCta}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1 text-gold" /> ჩამოტვირთვა
+                      <Download className="h-4 w-4 mr-1 text-gold" /> {drp.downloadCta}
                     </Button>
                   }
                 />
@@ -140,7 +145,7 @@ export function DocumentResultPanel({
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
-                <Maximize2 className="h-4 w-4 mr-1 text-gold" /> სრულ ეკრანზე
+                <Maximize2 className="h-4 w-4 mr-1 text-gold" /> {drp.fullScreenCta}
               </Button>
             </div>
           </div>
@@ -165,7 +170,7 @@ export function DocumentResultPanel({
               {renderDocumentBody(normalizeSpacing(result.content))}
             </div>
           )}
-          {saving && <p className="text-xs text-muted-foreground mt-2">ინახება...</p>}
+          {saving && <p className="text-xs text-muted-foreground mt-2">{drp.savingNote}</p>}
         </CardContent>
       </Card>
 
@@ -173,7 +178,7 @@ export function DocumentResultPanel({
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-gold" /> სამართლებრივი საფუძვლები და წყაროები
+              <BookOpen className="h-4 w-4 text-gold" /> {drp.legalBasisTitle}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -208,7 +213,7 @@ export function DocumentResultPanel({
               <DropdownMenuTrigger
                 render={
                   <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-1" /> ჩამოტვირთვა
+                    <Download className="h-4 w-4 mr-1" /> {drp.downloadCta}
                   </Button>
                 }
               />

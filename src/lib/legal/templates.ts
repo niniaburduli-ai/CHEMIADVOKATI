@@ -8,6 +8,8 @@
  * modeled on real Georgian market contracts, not just statute text — see spec.
  */
 
+import type { Locale } from "@/lib/i18n/config";
+
 export const TEMPLATE_TYPES = [
   "rental-agreement",
   "employment-contract",
@@ -23,7 +25,7 @@ export const TEMPLATE_TYPES = [
 
 export type TemplateType = (typeof TEMPLATE_TYPES)[number];
 
-type TemplateDef = { body: string; legalBasis: string };
+type TemplateDef = { body: string; bodyEn: string; legalBasis: string; legalBasisEn: string };
 
 const RENTAL_BODY = `ბინის ქირავნობის ხელშეკრულება
 
@@ -66,6 +68,47 @@ const RENTAL_BODY = `ბინის ქირავნობის ხელშ
 გამქირავებელი: **[LANDLORD]**, პ/ნ [LANDLORD_ID], მის: [LANDLORD_ADDRESS], ტელ: [LANDLORD_PHONE]     ხელმოწერა: ____________
 დამქირავებელი: **[TENANT]**, პ/ნ [TENANT_ID], მის: [TENANT_ADDRESS], ტელ: [TENANT_PHONE]     ხელმოწერა: ____________`;
 
+const RENTAL_BODY_EN = `RESIDENTIAL LEASE AGREEMENT
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+Between, on the one part, **[LANDLORD]** (personal no. **[LANDLORD_ID]**, address: [LANDLORD_ADDRESS], tel: [LANDLORD_PHONE]) (hereinafter — the "Landlord"), and, on the other part, **[TENANT]** (personal no. **[TENANT_ID]**, address: [TENANT_ADDRESS], tel: [TENANT_PHONE]) (hereinafter — the "Tenant"; together — the "Parties"), have entered into this Agreement as follows:
+
+**1. Subject Matter of the Agreement**
+The Landlord shall grant the Tenant use of the residential premises located at: **[PROPERTY_ADDRESS]** (hereinafter — the "Premises"), and the Tenant undertakes to pay rent in the manner set out in this Agreement.
+
+**2. Term of the Agreement**
+This Agreement shall remain in force for a period of **[DURATION]**, commencing **[DOC_DATE]**.
+
+**3. Rent and Payment Terms**
+3.1. The monthly rent shall be **[RENT]**.
+3.2. Payment method: **[PAYMENT_METHOD]**. Bank account: **[BANK_ACCOUNT]**.
+3.3. Rent shall be paid at the end of each billing period, unless the Parties agree otherwise.
+3.4. The Tenant may be required to provide a security deposit not exceeding three times the monthly rent; the statutory rate of interest shall accrue on the sum advanced, and it shall be returned to the Tenant upon termination of the Agreement.
+
+**4. Rights and Obligations of the Parties**
+4.1. The Landlord shall deliver the Premises in proper, fit-for-purpose condition.
+4.2. The Tenant shall use the Premises for their intended purpose and take due care to preserve them.
+4.3. Upon termination of the Agreement, the Tenant shall return the Premises in the condition in which they were received, ordinary wear and tear excepted.
+
+**5. Early Termination of the Agreement**
+5.1. If the Tenant fails to pay rent for three consecutive months, the Landlord shall be entitled to terminate the Agreement early.
+5.2. Where the Agreement is for an indefinite term, either Party may terminate it by written notice, subject to a three-month notice period, unless the Parties agree on a different period.
+5.3. Termination of the Agreement shall be made in writing.
+
+**6. Force Majeure**
+The Parties shall be released from liability where failure to perform an obligation results from circumstances of insurmountable force (natural disaster, war, epidemic, and the like) that are beyond the Parties' reasonable control and could not have been avoided.
+
+**7. Dispute Resolution**
+Disputes arising out of this Agreement shall be resolved through negotiation and, failing agreement, in court, in accordance with the procedure established by the legislation of Georgia.
+
+**8. Final Provisions**
+This Agreement is executed in 2 (two) counterparts, each having equal legal force for each Party.
+
+**Details of the Parties**
+Landlord: **[LANDLORD]**, personal no. [LANDLORD_ID], address: [LANDLORD_ADDRESS], tel: [LANDLORD_PHONE]     Signature: ____________
+Tenant: **[TENANT]**, personal no. [TENANT_ID], address: [TENANT_ADDRESS], tel: [TENANT_PHONE]     Signature: ____________`;
+
 const EMPLOYMENT_BODY = `შრომის ხელშეკრულება
 
 ქ. **[CITY]**                                                                    **[DOC_DATE]**
@@ -104,6 +147,44 @@ const EMPLOYMENT_BODY = `შრომის ხელშეკრულება
 დამსაქმებელი: **[EMPLOYER]**, ს/ნ [EMPLOYER_ID], მის: [EMPLOYER_ADDRESS]     ხელმოწერა: ____________
 დასაქმებული: **[EMPLOYEE]**, პ/ნ [EMPLOYEE_ID], მის: [EMPLOYEE_ADDRESS]     ხელმოწერა: ____________`;
 
+const EMPLOYMENT_BODY_EN = `EMPLOYMENT AGREEMENT
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+Between, on the one part, **[EMPLOYER]** (ID no. **[EMPLOYER_ID]**, address: [EMPLOYER_ADDRESS]) (hereinafter — the "Employer"), and, on the other part, **[EMPLOYEE]** (personal no. **[EMPLOYEE_ID]**, address: [EMPLOYEE_ADDRESS]) (hereinafter — the "Employee"; together — the "Parties"), have entered into this Agreement as follows:
+
+**1. Subject Matter of the Agreement**
+The Employer engages the Employee in the position of **[POSITION]** as of **[START_DATE]**, and the Employee agrees to perform the assigned work in accordance with the terms set out in this Agreement.
+
+**2. Term of the Agreement**
+This Agreement is concluded for an indefinite term, unless the Parties agree otherwise in writing.
+
+**3. Working Time and Rest**
+Working time and rest periods shall be determined in accordance with the Labour Code of Georgia and the Employer's internal regulations (where such exist).
+
+**4. Remuneration**
+4.1. The base salary shall be **[SALARY]** per month.
+4.2. Payment method: **[SALARY_PAYMENT_METHOD]**. Bank account: **[BANK_ACCOUNT]**.
+4.3. Overtime work shall be compensated in accordance with the legislation.
+
+**5. Rights and Obligations of the Parties**
+5.1. The Employer shall pay the Employee's salary in a timely manner and provide a safe working environment.
+5.2. The Employee shall perform the assigned duties properly and in good faith.
+5.3. The Employee shall be entitled to paid and unpaid leave as provided by the legislation.
+
+**6. Termination of the Agreement**
+This Agreement shall be terminated on the grounds and in the manner established by Articles 47 and 48 of the Labour Code of Georgia, upon prior written notice. Final settlement shall be made no later than 7 calendar days after termination.
+
+**7. Dispute Resolution**
+Labour disputes shall be resolved through negotiation between the Parties and, failing agreement, in court, in accordance with the procedure established by the legislation of Georgia.
+
+**8. Final Provisions**
+This Agreement is executed in 2 (two) counterparts, having equal legal force.
+
+**Details of the Parties**
+Employer: **[EMPLOYER]**, ID no. [EMPLOYER_ID], address: [EMPLOYER_ADDRESS]     Signature: ____________
+Employee: **[EMPLOYEE]**, personal no. [EMPLOYEE_ID], address: [EMPLOYEE_ADDRESS]     Signature: ____________`;
+
 const POWER_OF_ATTORNEY_BODY = `მინდობილობა
 
 ქ. **[CITY]**                                                                    **[DOC_DATE]**
@@ -120,6 +201,23 @@ const POWER_OF_ATTORNEY_BODY = `მინდობილობა
 **შენიშვნა:** კანონმდებლობით განსაზღვრულ შემთხვევებში (მაგ. უძრავი ქონების განკარგვა, სასამართლო წარმომადგენლობა) მინდობილობა საჭიროებს სანოტარო დამოწმებას.
 
 მინდობელი: **[PRINCIPAL]**     ხელმოწერა: ____________`;
+
+const POWER_OF_ATTORNEY_BODY_EN = `POWER OF ATTORNEY
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+I, **[PRINCIPAL]** (personal no. **[PRINCIPAL_ID]**, registered at: [PRINCIPAL_ADDRESS]) (hereinafter — the "Principal"), hereby grant **[AGENT]** (personal no. **[AGENT_ID]**, registered at: [AGENT_ADDRESS]) (hereinafter — the "Agent") authority to represent me in performing the following actions:
+
+**Scope of Authority:**
+[SCOPE]
+
+The Agent shall act in accordance with the Principal's interests and shall not exceed the scope of this power of attorney.
+
+**Termination of Authority:** The authority granted hereunder shall terminate upon expiry of its term (where a term is specified), renunciation by the Agent, revocation by the Principal, the Principal's death, or completion of the assigned task. If no term is specified, this power of attorney shall remain in effect until revoked. Upon revocation of authority, the Agent shall return the instrument of this power of attorney to the Principal.
+
+**Note:** In cases specified by law (e.g., disposal of immovable property, representation before a court), this power of attorney requires notarial certification.
+
+Principal: **[PRINCIPAL]**     Signature: ____________`;
 
 const TERMINATION_NOTICE_BODY = `შეტყობინება შრომითი ხელშეკრულების შეწყვეტის შესახებ
 
@@ -141,6 +239,27 @@ const TERMINATION_NOTICE_BODY = `შეტყობინება შრომ�
 დასაქმებულს უფლება აქვს, კანონმდებლობით დადგენილი წესით მოითხოვოს შეწყვეტის საფუძვლის წერილობითი დასაბუთება და გაასაჩივროს გადაწყვეტილება სასამართლოში.
 
 დამსაქმებელი: **[EMPLOYER]**     ხელმოწერა: ____________`;
+
+const TERMINATION_NOTICE_BODY_EN = `NOTICE OF TERMINATION OF EMPLOYMENT AGREEMENT
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+Employer: **[EMPLOYER]**
+Employee: **[EMPLOYEE]**, personal no. **[EMPLOYEE_ID]**, address: [EMPLOYEE_ADDRESS]
+
+We hereby notify you that the employment agreement concluded with you is terminated pursuant to Article 47 of the Labour Code of Georgia, on the following grounds:
+
+**Grounds for termination:** [REASON]
+
+**Last day of the employment relationship:** **[LAST_DAY]**
+
+This notice has been given in compliance with the advance notice period established by Article 48 of the Labour Code of Georgia. Where provided by law, the Employee shall be entitled to corresponding compensation.
+
+Final settlement shall be made no later than 7 calendar days after termination of the employment relationship (Article 44 of the Labour Code).
+
+The Employee is entitled, in the manner established by law, to request written justification of the grounds for termination and to appeal the decision in court.
+
+Employer: **[EMPLOYER]**     Signature: ____________`;
 
 const SERVICE_AGREEMENT_BODY = `მომსახურების გაწევის ხელშეკრულება
 
@@ -183,6 +302,47 @@ const SERVICE_AGREEMENT_BODY = `მომსახურების გაწ�
 შემსრულებელი: **[EXECUTOR]**, პ/ნ [EXECUTOR_ID], მის: [EXECUTOR_ADDRESS], ტელ: [EXECUTOR_PHONE]     ხელმოწერა: ____________
 დამკვეთი: **[CLIENT]**, პ/ნ [CLIENT_ID], მის: [CLIENT_ADDRESS], ტელ: [CLIENT_PHONE]     ხელმოწერა: ____________`;
 
+const SERVICE_AGREEMENT_BODY_EN = `SERVICE AGREEMENT
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+Between, on the one part, **[EXECUTOR]** (personal no. **[EXECUTOR_ID]**, address: [EXECUTOR_ADDRESS], tel: [EXECUTOR_PHONE]) (hereinafter — the "Contractor"), and, on the other part, **[CLIENT]** (personal no. **[CLIENT_ID]**, address: [CLIENT_ADDRESS], tel: [CLIENT_PHONE]) (hereinafter — the "Client"; together — the "Parties"), have entered into this Agreement as follows:
+
+**1. Subject Matter of the Agreement**
+The Contractor undertakes to provide the following services at the Client's request: **[SERVICE_DESCRIPTION]**, and the Client undertakes to pay for the services rendered in the manner set out in this Agreement.
+
+**2. Term for Provision of Services**
+The services shall be rendered within the following period: **[DEADLINE]**.
+
+**3. Fee and Settlement**
+3.1. The fee for the services shall be **[PRICE]**.
+3.2. Payment method: **[PAYMENT_METHOD]**. Bank account: **[BANK_ACCOUNT]**.
+3.3. By agreement of the Parties, an advance payment or staged settlement may be used.
+
+**4. Rights and Obligations of the Parties**
+4.1. The Contractor shall render the services properly, in good faith, and to the agreed standard of quality.
+4.2. The Client shall provide the Contractor with the information necessary to render the services in a timely manner and shall not obstruct performance.
+4.3. Where the result of the services entails the delivery of a specific work product, the Parties shall sign an acceptance act.
+
+**5. Liability**
+A Party that breaches an obligation under this Agreement shall compensate the other Party for damage thereby caused, in the manner established by the legislation of Georgia.
+
+**6. Termination of the Agreement**
+Either Party may request termination of the Agreement by sending the other Party written notice a reasonable time in advance, subject to payment for services already rendered.
+
+**7. Force Majeure**
+The Parties shall be released from liability where failure to perform an obligation results from circumstances of insurmountable force that are beyond the Parties' reasonable control and could not have been avoided.
+
+**8. Dispute Resolution**
+Disputes arising out of this Agreement shall be resolved through negotiation and, failing agreement, in court, in accordance with the procedure established by the legislation of Georgia.
+
+**9. Final Provisions**
+This Agreement is executed in 2 (two) counterparts, each having equal legal force for each Party.
+
+**Details of the Parties**
+Contractor: **[EXECUTOR]**, personal no. [EXECUTOR_ID], address: [EXECUTOR_ADDRESS], tel: [EXECUTOR_PHONE]     Signature: ____________
+Client: **[CLIENT]**, personal no. [CLIENT_ID], address: [CLIENT_ADDRESS], tel: [CLIENT_PHONE]     Signature: ____________`;
+
 const CLAIM_LETTER_BODY = `წერილი-პრეტენზია
 
 ქ. **[CITY]**                                                                    **[DOC_DATE]**
@@ -204,6 +364,28 @@ const CLAIM_LETTER_BODY = `წერილი-პრეტენზია
 თუ მითითებულ ვადაში მოთხოვნა არ დაკმაყოფილდება, ვიტოვებ უფლებას, მივმართო სასამართლოს საქართველოს კანონმდებლობით დადგენილი წესით, მათ შორის მოვითხოვო მიყენებული ზიანის, საურავისა და სასამართლო ხარჯების ანაზღაურება.
 
 გამომგზავნი: **[SENDER_NAME]**     ხელმოწერა: ____________`;
+
+const CLAIM_LETTER_BODY_EN = `LETTER OF CLAIM
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+To: **[RECIPIENT_NAME]**, address: [RECIPIENT_ADDRESS]
+From: **[SENDER_NAME]**, personal no. [SENDER_ID], address: [SENDER_ADDRESS], tel: [SENDER_PHONE]
+
+**1. Factual Background**
+[GROUNDS]
+
+**2. Demand**
+In light of the foregoing, I request that you: **[DEMAND]**.
+Amount claimed (if any): **[AMOUNT]**. Payment method: [PAYMENT_METHOD]. Bank account: [BANK_ACCOUNT].
+
+**3. Deadline for Compliance**
+Please satisfy the above demand no later than: **[DEADLINE]**.
+
+**4. Consequences of Non-Compliance**
+If this demand is not satisfied within the stated deadline, I reserve the right to apply to court in accordance with the procedure established by the legislation of Georgia, including to claim compensation for the damage caused, penalties, and court costs.
+
+Sender: **[SENDER_NAME]**     Signature: ____________`;
 
 const DEBT_CLAIM_BODY = `მოთხოვნა (პრეტენზია) დავალიანების დაფარვის შესახებ
 
@@ -230,6 +412,31 @@ const DEBT_CLAIM_BODY = `მოთხოვნა (პრეტენზია) 
 
 კრედიტორი: **[CREDITOR_NAME]**     ხელმოწერა: ____________`;
 
+const DEBT_CLAIM_BODY_EN = `DEMAND (CLAIM) FOR REPAYMENT OF DEBT
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+Creditor: **[CREDITOR_NAME]**, personal no. [CREDITOR_ID], address: [CREDITOR_ADDRESS], tel: [CREDITOR_PHONE]
+Debtor: **[DEBTOR_NAME]**, address: [DEBTOR_ADDRESS]
+
+**1. Basis of the Debt**
+[DEBT_BASIS]
+
+**2. Amount of the Debt**
+Principal amount: **[PRINCIPAL_AMOUNT]**
+Accrued interest/penalty: **[INTEREST_AMOUNT]**
+Total amount due: **[TOTAL_AMOUNT]**
+Original due date for repayment: **[ORIGINAL_DUE_DATE]**
+
+**3. Demand**
+Please repay the above debt in full, no later than: **[NEW_DEADLINE]**.
+Payment method: **[PAYMENT_METHOD]**. Bank account: **[BANK_ACCOUNT]**.
+
+**4. Consequences of Non-Compliance**
+If the debt is not repaid within the stated deadline, the Creditor shall be entitled to apply to court for recovery of the debt, accrued interest, and penalty (if any), as well as court costs, including through simplified (order-for-payment) proceedings, in accordance with the procedure established by the Civil Procedure Code of Georgia.
+
+Creditor: **[CREDITOR_NAME]**     Signature: ____________`;
+
 const CHILD_TRAVEL_CONSENT_BODY = `თანხმობა არასრულწლოვნის საზღვარგარეთ გაყვანაზე
 
 ქ. **[CITY]**                                                                    **[DOC_DATE]**
@@ -245,6 +452,22 @@ const CHILD_TRAVEL_CONSENT_BODY = `თანხმობა არასრუ�
 **შენიშვნა:** საზღვრის კვეთისას ეს დოკუმენტი, როგორც წესი, საჭიროებს ნოტარიულ დამოწმებას; საზღვარგარეთ გამოსაყენებლად შესაძლოა დამატებით საჭირო გახდეს აპოსტილი ან თარგმანი მიმღები ქვეყნის მოთხოვნების შესაბამისად.
 
 მშობელი/კანონიერი წარმომადგენელი: **[PARENT_NAME]**     ხელმოწერა: ____________`;
+
+const CHILD_TRAVEL_CONSENT_BODY_EN = `CONSENT TO A MINOR'S TRAVEL ABROAD
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+I, **[PARENT_NAME]** (personal no. **[PARENT_ID]**, address: [PARENT_ADDRESS], tel: [PARENT_PHONE]), parent/legal guardian of the minor, hereby declare my consent that my minor child — **[CHILD_NAME]** (date of birth: **[CHILD_DOB]**, ID/passport No. **[CHILD_DOCUMENT]**) — may travel outside the territory of Georgia.
+
+**Destination country/countries:** [DESTINATION]
+**Travel period:** [TRAVEL_PERIOD]
+**Accompanying person:** [ESCORT]
+
+This consent is given pursuant to Article 8 of the Law of Georgia "On the Rules for the Exit of Georgian Citizens from Georgia and Entry into Georgia," under which the consent of a legal guardian is required for a person under 18 years of age to travel abroad, and, in the absence of the other parent's consent, the notarized consent of a single legal guardian shall suffice, provided that it states the destination country and the travel period.
+
+**Note:** For purposes of crossing the border, this document generally requires notarial certification; use abroad may additionally require an apostille or translation, depending on the requirements of the receiving country.
+
+Parent/legal guardian: **[PARENT_NAME]**     Signature: ____________`;
 
 const INVOICE_BODY = `ინვოისი № **[INVOICE_NUMBER]**
 
@@ -263,6 +486,24 @@ const INVOICE_BODY = `ინვოისი № **[INVOICE_NUMBER]**
 წინამდებარე დოკუმენტი წარმოადგენს გადახდის მოთხოვნას ზემოაღნიშნული საქონლის/მომსახურების მისაწოდებლად ან უკვე მიწოდებულის საფასურის დასაფარად და არ ჩაითვლება საგადასახადო კანონმდებლობით გათვალისწინებულ ანგარიშ-ფაქტურად RS.ge-ს მონაცემთა ერთიან ცხრილში რეგისტრაციის გაგებით.
 
 გამომწერი: **[SELLER]**     ხელმოწერა/ბეჭედი: ____________`;
+
+const INVOICE_BODY_EN = `INVOICE No. **[INVOICE_NUMBER]**
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+**Issuer:** [SELLER], personal no. [SELLER_ID], address: [SELLER_ADDRESS]
+**Recipient (payer):** [BUYER], address: [BUYER_ADDRESS]
+
+**List of goods/services:**
+[ITEMS]
+
+**Total amount due:** **[TOTAL_AMOUNT]**
+**Payment due date:** **[DUE_DATE]**
+**Payment method:** [PAYMENT_METHOD]. **Bank account:** [BANK_ACCOUNT]
+
+This document constitutes a request for payment for the above goods/services to be supplied, or already supplied, and shall not be regarded as a tax invoice within the meaning of registration in RS.ge's unified data table under the tax legislation.
+
+Issuer: **[SELLER]**     Signature/Seal: ____________`;
 
 const ACCEPTANCE_ACT_BODY = `მიღება-ჩაბარების აქტი № **[ACT_NUMBER]**
 
@@ -286,56 +527,108 @@ const ACCEPTANCE_ACT_BODY = `მიღება-ჩაბარების ა�
 მიმცემი: **[PROVIDER]**     ხელმოწერა: ____________
 მიმღები: **[RECEIVER]**     ხელმოწერა: ____________`;
 
+const ACCEPTANCE_ACT_BODY_EN = `ACCEPTANCE ACT No. **[ACT_NUMBER]**
+
+City of **[CITY]**                                                                    **[DOC_DATE]**
+
+**Transferring party:** [PROVIDER], personal no. [PROVIDER_ID], address: [PROVIDER_ADDRESS]
+**Receiving party:** [RECEIVER], personal no. [RECEIVER_ID], address: [RECEIVER_ADDRESS]
+
+**Underlying contract:** [CONTRACT_REF]
+
+This act confirms that the transferring party has delivered, and the receiving party has accepted, the following goods/work/services:
+
+[SUBJECT_DESCRIPTION]
+
+**Value:** [AMOUNT]
+
+**Parties' remarks/objections:** [OBJECTIONS]
+
+The Parties confirm that the above goods/work/services have been transferred (performed) in the agreed volume and quality. As of the moment of signing this act, the corresponding obligation shall be deemed performed to the extent no objection has been recorded.
+
+Transferring party: **[PROVIDER]**     Signature: ____________
+Receiving party: **[RECEIVER]**     Signature: ____________`;
+
 const TEMPLATES: Record<TemplateType, TemplateDef> = {
   "rental-agreement": {
     body: RENTAL_BODY,
+    bodyEn: RENTAL_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 531\n- მუხლი 552\n- მუხლი 553\n- მუხლი 558\n- მუხლი 559\n- მუხლი 561\n- მუხლი 563\n- მუხლი 564",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Article 531\n- Article 552\n- Article 553\n- Article 558\n- Article 559\n- Article 561\n- Article 563\n- Article 564",
   },
   "employment-contract": {
     body: EMPLOYMENT_BODY,
+    bodyEn: EMPLOYMENT_BODY_EN,
     legalBasis:
       "საქართველოს ორგანული კანონი „საქართველოს შრომის კოდექსი“:\n- მუხლი 14\n- მუხლი 44\n- მუხლი 47\n- მუხლი 48",
+    legalBasisEn:
+      "Organic Law of Georgia \"Labour Code of Georgia\":\n- Article 14\n- Article 44\n- Article 47\n- Article 48",
   },
   "power-of-attorney": {
     body: POWER_OF_ATTORNEY_BODY,
+    bodyEn: POWER_OF_ATTORNEY_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 107\n- მუხლი 108\n- მუხლი 109\n- მუხლი 110",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Article 107\n- Article 108\n- Article 109\n- Article 110",
   },
   "termination-notice": {
     body: TERMINATION_NOTICE_BODY,
+    bodyEn: TERMINATION_NOTICE_BODY_EN,
     legalBasis:
       "საქართველოს ორგანული კანონი „საქართველოს შრომის კოდექსი“:\n- მუხლი 44\n- მუხლი 47\n- მუხლი 48",
+    legalBasisEn:
+      "Organic Law of Georgia \"Labour Code of Georgia\":\n- Article 44\n- Article 47\n- Article 48",
   },
   "service-agreement": {
     body: SERVICE_AGREEMENT_BODY,
+    bodyEn: SERVICE_AGREEMENT_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 361 (ვალდებულების ჯეროვანი შესრულება)\n- მუხლი 394 (ზიანის ანაზღაურება ვალდებულების დარღვევისთვის)\n- მუხლი 629 და შემდგომი მუხლები (ნარდობის/მომსახურების ხელშეკრულების ზოგადი წესები)",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Article 361 (proper performance of an obligation)\n- Article 394 (compensation for damage caused by breach of an obligation)\n- Article 629 et seq. (general rules on service/work contracts)",
   },
   "claim-letter": {
     body: CLAIM_LETTER_BODY,
+    bodyEn: CLAIM_LETTER_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 361 (ვალდებულების ჯეროვანი შესრულება)\n- მუხლი 394 (ზიანის ანაზღაურება ვალდებულების დარღვევისთვის)",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Article 361 (proper performance of an obligation)\n- Article 394 (compensation for damage caused by breach of an obligation)",
   },
   "debt-claim": {
     body: DEBT_CLAIM_BODY,
+    bodyEn: DEBT_CLAIM_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 623-628 (სესხის ხელშეკრულება)\n- მუხლი 394 (ზიანის ანაზღაურება ვალდებულების დარღვევისთვის)\nსაქართველოს სამოქალაქო საპროცესო კოდექსი — ბრძანების გამოცემის (გამარტივებული) წარმოება ფულადი მოთხოვნისთვის.",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Articles 623-628 (loan agreement)\n- Article 394 (compensation for damage caused by breach of an obligation)\nCivil Procedure Code of Georgia — order-for-payment (simplified) proceedings for monetary claims.",
   },
   "child-travel-consent": {
     body: CHILD_TRAVEL_CONSENT_BODY,
+    bodyEn: CHILD_TRAVEL_CONSENT_BODY_EN,
     legalBasis:
       "საქართველოს კანონი „საქართველოს მოქალაქეების საქართველოდან გასვლისა და საქართველოში შემოსვლის წესების შესახებ“:\n- მუხლი 8",
+    legalBasisEn:
+      "Law of Georgia \"On the Rules for the Exit of Georgian Citizens from Georgia and Entry into Georgia\":\n- Article 8",
   },
   invoice: {
     body: INVOICE_BODY,
+    bodyEn: INVOICE_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 361 (ვალდებულების ჯეროვანი შესრულება)\n- მუხლი 477 (ნასყიდობის ფასის გადახდის ვალდებულება, ანალოგიით — მომსახურების საფასურზეც)\n\nშენიშვნა: ეს არის კომერციული ინვოისი (გადახდის მოთხოვნა), არა საგადასახადო კანონმდებლობით რეგულირებული ანგარიშ-ფაქტურა.",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Article 361 (proper performance of an obligation)\n- Article 477 (obligation to pay the purchase price, applied by analogy to service fees)\n\nNote: This is a commercial invoice (payment request), not a tax invoice regulated by tax legislation.",
   },
   "acceptance-act": {
     body: ACCEPTANCE_ACT_BODY,
+    bodyEn: ACCEPTANCE_ACT_BODY_EN,
     legalBasis:
       "საქართველოს სამოქალაქო კოდექსი:\n- მუხლი 629 (ნარდობის/მომსახურების ხელშეკრულება)\n- მუხლი 646 (შესრულებულის მიღება-ჩაბარება)",
+    legalBasisEn:
+      "Civil Code of Georgia:\n- Article 629 (service/work contract)\n- Article 646 (acceptance of performance)",
   },
 };
 
@@ -416,14 +709,18 @@ const FIELD_MAP: Record<TemplateType, Record<string, string>> = {
  * Expected line format: "description; quantity; unit price" — quantity ×
  * unit price is auto-computed into a line total when both parse as numbers.
  */
-function buildInvoiceItemsTable(raw: string): string {
+function buildInvoiceItemsTable(raw: string, locale: Locale): string {
   const lines = raw
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
   if (lines.length === 0) return "—";
 
-  const header = ["დასახელება", "რაოდენობა", "ერთ. ფასი", "ჯამი"].join("\t");
+  const header = (
+    locale === "en"
+      ? ["Description", "Quantity", "Unit price", "Total"]
+      : ["დასახელება", "რაოდენობა", "ერთ. ფასი", "ჯამი"]
+  ).join("\t");
   const rows = lines.map((line) => {
     const [desc = "", qtyRaw = "", priceRaw = ""] = line.split(";").map((p) => p.trim());
     const qty = parseFloat(qtyRaw.replace(",", "."));
@@ -449,14 +746,17 @@ function fillTemplate(body: string, values: Record<string, string>): string {
  */
 export function renderTemplate(
   type: TemplateType,
-  answers: Record<string, string>
+  answers: Record<string, string>,
+  locale: Locale = "ka"
 ): { content: string; legalBasis: string } {
   const map = FIELD_MAP[type];
   const values: Record<string, string> = {};
   for (const [formKey, placeholder] of Object.entries(map)) {
     const raw = answers[formKey] ?? "";
-    values[placeholder] = type === "invoice" && formKey === "items" ? buildInvoiceItemsTable(raw) : raw;
+    values[placeholder] = type === "invoice" && formKey === "items" ? buildInvoiceItemsTable(raw, locale) : raw;
   }
   const def = TEMPLATES[type];
-  return { content: fillTemplate(def.body, values), legalBasis: def.legalBasis };
+  const chosenBody = locale === "en" ? def.bodyEn : def.body;
+  const chosenLegalBasis = locale === "en" ? def.legalBasisEn : def.legalBasis;
+  return { content: fillTemplate(chosenBody, values), legalBasis: chosenLegalBasis };
 }

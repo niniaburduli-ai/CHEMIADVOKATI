@@ -15,24 +15,31 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { COMMON_FIELDS, QUESTION_SCHEMAS } from "@/lib/legal/document-fields";
+import { COMMON_FIELDS, QUESTION_SCHEMAS, fieldLabel } from "@/lib/legal/document-fields";
+import { docTypeLabel } from "@/lib/legal/doc-type-labels";
 import { DocumentResultPanel, type DocumentResult } from "@/components/site/DocumentResultPanel";
 import { UpgradeRequiredDialog } from "@/components/site/upgrade-required-dialog";
 import { ChatStreamReader } from "@/lib/streaming/chat-protocol";
+import { getDict } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
-const QUOTA_STRINGS = {
-  title: "კრედიტები ამოწურულია",
-  body: "თქვენ გამოწურეთ ამ სერვისის უფასო კრედიტები. გასაგრძელებლად გთხოვთ განაახლოთ პაკეტი.",
-  upgradeCta: "გეგმის განახლება",
-  close: "დახურვა",
-};
+export const DOC_TYPE_VALUES = ["complaint", "demand-letter"] as const;
 
-export const DOC_TYPES = [
-  { value: "complaint", label: "საჩივარი" },
-  { value: "demand-letter", label: "სამართლებრივი მოთხოვნა" },
-];
+export function getDocTypes(locale: Locale) {
+  return DOC_TYPE_VALUES.map((value) => ({ value, label: docTypeLabel(value, locale) }));
+}
 
-export function GenerateClient({ initialType }: { initialType?: string } = {}) {
+export function GenerateClient({
+  initialType,
+  locale,
+}: {
+  initialType?: string;
+  locale: Locale;
+}) {
+  const d = getDict(locale);
+  const gp = d.generatePage;
+  const DOC_TYPES = getDocTypes(locale);
+
   const [type, setType] = useState(
     initialType && QUESTION_SCHEMAS[initialType] ? initialType : "complaint"
   );
@@ -48,7 +55,9 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
 
   function buildDetails(): string {
     const lines = fields
-      .map((f) => (answers[f.key]?.trim() ? `${f.label}: ${answers[f.key].trim()}` : null))
+      .map((f) =>
+        answers[f.key]?.trim() ? `${fieldLabel(f, locale)}: ${answers[f.key].trim()}` : null
+      )
       .filter((line): line is string => line !== null);
     if (extra.trim()) lines.push(extra.trim());
     return lines.join("\n");
@@ -63,7 +72,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
 
   async function generate() {
     if (details.trim().length < 10) {
-      toast.error("შეავსე მინიმუმ ერთი ველი დეტალური ინფორმაციით");
+      toast.error(gp.minLengthError);
       return;
     }
     setLoading(true);
@@ -74,7 +83,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, details }),
+        body: JSON.stringify({ type, details, locale }),
       });
 
       if (!res.ok) {
@@ -83,12 +92,12 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
           return;
         }
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "შეცდომა");
+        setError(data.error ?? gp.genericError);
         return;
       }
 
       if (!res.body) {
-        setError("სერვისთან კავშირი ვერ დამყარდა");
+        setError(gp.connectionError);
         return;
       }
 
@@ -121,7 +130,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
       }
 
       if (!meta || meta.error) {
-        setError(meta?.error ?? "შეცდომა");
+        setError(meta?.error ?? gp.genericError);
         return;
       }
       setResult({
@@ -130,9 +139,9 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
         content: meta.content!,
         legalBasis: meta.legalBasis,
       });
-      toast.success("დოკუმენტი შეიქმნა");
+      toast.success(gp.successToast);
     } catch {
-      setError("სერვისთან კავშირი ვერ დამყარდა");
+      setError(gp.connectionError);
     } finally {
       setLoading(false);
       setStreamingText("");
@@ -144,26 +153,24 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
       <SubPageHeader
         backHref="/dashboard"
         icon={<FileText className="h-5 w-5 text-gold" />}
-        title="დოკუმენტის მომზადება"
-        subtitle="AI ადგენს საჩივარს ან მოთხოვნას შენი კონკრეტული სიტუაციის მიხედვით"
+        title={gp.pageTitle}
+        subtitle={gp.pageSubtitle}
       />
 
       <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 mb-6 text-sm text-amber-700 dark:text-amber-400">
         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-        <p>ხელშეკრულება შეინახება ისტორიაში 1 თვის ვადით, რის შემდეგაც ავტომატურად წაიშლება.</p>
+        <p>{gp.retentionNotice}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[460px_1fr] items-start">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">დოკუმენტის ტიპი და დეტალები</CardTitle>
-            <CardDescription>
-              აირჩიე ტიპი და შეავსე ცნობილი დეტალები
-            </CardDescription>
+            <CardTitle className="text-base">{gp.cardTitle}</CardTitle>
+            <CardDescription>{gp.cardSubtitle}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-[8rem_1fr] gap-3 items-center">
-              <Label htmlFor="doc-type">დოკუმენტის ტიპი</Label>
+              <Label htmlFor="doc-type">{gp.docTypeLabel}</Label>
               <select
                 id="doc-type"
                 value={type}
@@ -185,7 +192,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
 
             {fields.map((f) => (
               <div key={f.key} className="grid grid-cols-[8rem_1fr] gap-3 items-start">
-                <Label htmlFor={`field-${f.key}`} className="pt-2">{f.label}</Label>
+                <Label htmlFor={`field-${f.key}`} className="pt-2">{fieldLabel(f, locale)}</Label>
                 {f.type === "textarea" ? (
                   <Textarea
                     id={`field-${f.key}`}
@@ -205,22 +212,22 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
             ))}
 
             <div className="grid grid-cols-[8rem_1fr] gap-3 items-start">
-              <Label htmlFor="extra" className="pt-2">დამატებითი დეტალები</Label>
+              <Label htmlFor="extra" className="pt-2">{gp.extraLabel}</Label>
               <div className="space-y-1">
                 <Textarea
                   id="extra"
                   value={extra}
                   onChange={(e) => setExtra(e.target.value)}
-                  placeholder="დაამატე ნებისმიერი სხვა მნიშვნელოვანი დეტალი"
+                  placeholder={gp.extraPlaceholder}
                   className="min-h-[80px]"
                 />
-                <p className="text-xs text-muted-foreground">{details.length} / 2000 სიმბოლო</p>
+                <p className="text-xs text-muted-foreground">{details.length} / 2000 {gp.charCountSuffix}</p>
               </div>
             </div>
 
             {missingRequired.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                შესავსებია: {missingRequired.map((f) => f.label).join(", ")}
+                {gp.missingRequiredPrefix} {missingRequired.map((f) => fieldLabel(f, locale)).join(", ")}
               </p>
             )}
 
@@ -232,12 +239,12 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  იქმნება...
+                  {gp.generating}
                 </>
               ) : (
                 <>
                   <FileText className="mr-2 h-4 w-4" />
-                  შექმენი დოკუმენტი
+                  {gp.generateCta}
                 </>
               )}
             </Button>
@@ -249,7 +256,7 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
             <CardContent className="py-6">
               <p className="text-sm whitespace-pre-wrap leading-relaxed">
                 {streamingText || (
-                  <span className="text-muted-foreground">დოკუმენტი იქმნება...</span>
+                  <span className="text-muted-foreground">{gp.streamingPlaceholder}</span>
                 )}
               </p>
             </CardContent>
@@ -259,11 +266,12 @@ export function GenerateClient({ initialType }: { initialType?: string } = {}) {
             key={result?.id ?? 'empty'}
             result={result}
             setResult={setResult}
-            emptyHint={<>შეავსე დეტალები და დააჭირე „შექმენი დოკუმენტი”</>}
+            emptyHint={<>{gp.resultEmptyHint}</>}
+            locale={locale}
           />
         )}
       </div>
-      <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={QUOTA_STRINGS} />
+      <UpgradeRequiredDialog open={quotaExceeded} onOpenChange={setQuotaExceeded} strings={d.quota} />
     </div>
   );
 }

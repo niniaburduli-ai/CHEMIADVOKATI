@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { TEMPLATE_TYPES } from "@/lib/legal/templates";
 import { MAX_ANALYSIS_TEXT } from "@/lib/legal/review-limits";
+import { LOCALES } from "@/lib/i18n/config";
+
+const LocaleSchema = z.enum(LOCALES).optional().default("ka");
 
 export const RegisterSchema = z.object({
   name: z.string().min(2, { message: "სახელი მინიმუმ 2 სიმბოლო" }).max(80).trim(),
@@ -129,6 +132,7 @@ export type DocType = keyof typeof DOC_TYPES;
 export const GenerateDocSchema = z.object({
   type: z.enum(["complaint", "demand-letter"]),
   details: z.string().min(10).max(2000),
+  locale: LocaleSchema,
 });
 export type GenerateDocInput = z.infer<typeof GenerateDocSchema>;
 
@@ -138,6 +142,7 @@ export const GenerateTemplateSchema = z.object({
     (obj) => Object.keys(obj).length <= 30,
     { message: "Too many fields" }
   ),
+  locale: LocaleSchema,
 });
 export type GenerateTemplateInput = z.infer<typeof GenerateTemplateSchema>;
 

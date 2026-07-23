@@ -3,8 +3,9 @@ import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { GeneratedDocument } from "@/lib/models/generated-document";
-import { GenerateTemplateSchema, DOC_TYPES } from "@/lib/validators";
+import { GenerateTemplateSchema } from "@/lib/validators";
 import { renderTemplate } from "@/lib/legal/templates";
+import { docTypeLabel } from "@/lib/legal/doc-type-labels";
 import { applyPlanExpiryIfDue, applyCustomPlanExpiryIfDue } from "@/lib/plan-expiry";
 import { splitQuota, applyQuotaSplit } from "@/lib/quota";
 
@@ -48,9 +49,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const { type, answers } = parsed.data;
-  const { content, legalBasis } = renderTemplate(type, answers);
-  const typeName = DOC_TYPES[type];
+  const { type, answers, locale } = parsed.data;
+  const { content, legalBasis } = renderTemplate(type, answers, locale);
+  const typeName = docTypeLabel(type, locale);
   const title = `${typeName} — ${new Date().toISOString().slice(0, 10)}`;
 
   const docCreate = GeneratedDocument.create({

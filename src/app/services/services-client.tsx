@@ -34,8 +34,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { DocumentAnalysisPanel } from "@/components/site/document-analysis-modal";
 import { PreviousCorrespondenceButton } from "@/components/site/previous-correspondence-panel";
 import { PageHero } from "@/components/site/PageHero";
-import { DOC_TYPES } from "@/app/generate/generate-client";
-import { TEMPLATE_DOC_TYPES } from "@/app/templates/templates-client";
+import { getDocTypes } from "@/app/generate/generate-client";
+import { getTemplateDocTypes } from "@/app/templates/templates-client";
 import { getDict } from "@/lib/i18n/dictionaries";
 import { renderMarkdownBold } from "@/lib/markdown-bold";
 import { groupItemsByArticle, splitRawSources, type RawSource } from "@/lib/legal/citations";
@@ -65,19 +65,19 @@ type Message = {
 
 const NOT_FOUND_MSG = "პასუხი ვერ მოიძებნა დამტკიცებულ იურიდიულ წყაროებში.";
 
-const TEMPLATE_META: Record<string, { icon: LucideIcon; description: string }> = {
-  complaint: { icon: Scale, description: "წარადგინეთ ოფიციალური საჩივარი შესაბამის ორგანოში" },
-  "rental-agreement": { icon: Home, description: "ბინის ან კომერციული ფართის იჯარის სრული დოკუმენტი" },
-  "employment-contract": { icon: Briefcase, description: "სტანდარტული ხელშეკრულება დამსაქმებელსა და დასაქმებულს შორის" },
-  "power-of-attorney": { icon: Gavel, description: "წარმომადგენლობის უფლების მინიჭება სხვადასხვა ინსტანციაში" },
-  "demand-letter": { icon: Mail, description: "ფორმალური მოთხოვნის წერილი დავალიანების ან ვალდებულების შესახებ" },
-  "termination-notice": { icon: UserMinus, description: "შრომითი ხელშეკრულების შეწყვეტის ოფიციალური შეტყობინება" },
-  "service-agreement": { icon: Handshake, description: "შემსრულებელსა და დამკვეთს შორის მომსახურების გაწევის ხელშეკრულება" },
-  "claim-letter": { icon: FileWarning, description: "წერილი-პრეტენზია მოთხოვნის წარსადგენად სასამართლომდე" },
-  "debt-claim": { icon: Banknote, description: "დავალიანების დაფარვის ოფიციალური მოთხოვნა მოვალის მიმართ" },
-  "child-travel-consent": { icon: PlaneTakeoff, description: "მშობლის თანხმობა არასრულწლოვნის საზღვარგარეთ გასამგზავრებლად" },
-  invoice: { icon: Receipt, description: "გადახდის მოთხოვნა მიწოდებული საქონლის ან მომსახურებისთვის" },
-  "acceptance-act": { icon: ClipboardCheck, description: "საქონლის, სამუშაოს ან მომსახურების მიღება-ჩაბარების დამადასტურებელი აქტი" },
+const TEMPLATE_META: Record<string, { icon: LucideIcon; description: string; descriptionEn: string }> = {
+  complaint: { icon: Scale, description: "წარადგინეთ ოფიციალური საჩივარი შესაბამის ორგანოში", descriptionEn: "File an official complaint with the relevant authority" },
+  "rental-agreement": { icon: Home, description: "ბინის ან კომერციული ფართის იჯარის სრული დოკუმენტი", descriptionEn: "A complete lease agreement for residential or commercial space" },
+  "employment-contract": { icon: Briefcase, description: "სტანდარტული ხელშეკრულება დამსაქმებელსა და დასაქმებულს შორის", descriptionEn: "A standard contract between an employer and an employee" },
+  "power-of-attorney": { icon: Gavel, description: "წარმომადგენლობის უფლების მინიჭება სხვადასხვა ინსტანციაში", descriptionEn: "Grant representation authority before various institutions" },
+  "demand-letter": { icon: Mail, description: "ფორმალური მოთხოვნის წერილი დავალიანების ან ვალდებულების შესახებ", descriptionEn: "A formal demand letter regarding a debt or obligation" },
+  "termination-notice": { icon: UserMinus, description: "შრომითი ხელშეკრულების შეწყვეტის ოფიციალური შეტყობინება", descriptionEn: "An official notice of termination of an employment contract" },
+  "service-agreement": { icon: Handshake, description: "შემსრულებელსა და დამკვეთს შორის მომსახურების გაწევის ხელშეკრულება", descriptionEn: "A service agreement between a provider and a client" },
+  "claim-letter": { icon: FileWarning, description: "წერილი-პრეტენზია მოთხოვნის წარსადგენად სასამართლომდე", descriptionEn: "A pre-litigation claim letter to raise a demand" },
+  "debt-claim": { icon: Banknote, description: "დავალიანების დაფარვის ოფიციალური მოთხოვნა მოვალის მიმართ", descriptionEn: "An official demand for debt repayment addressed to the debtor" },
+  "child-travel-consent": { icon: PlaneTakeoff, description: "მშობლის თანხმობა არასრულწლოვნის საზღვარგარეთ გასამგზავრებლად", descriptionEn: "Parental consent for a minor to travel abroad" },
+  invoice: { icon: Receipt, description: "გადახდის მოთხოვნა მიწოდებული საქონლის ან მომსახურებისთვის", descriptionEn: "A payment request for goods or services provided" },
+  "acceptance-act": { icon: ClipboardCheck, description: "საქონლის, სამუშაოს ან მომსახურების მიღება-ჩაბარების დამადასტურებელი აქტი", descriptionEn: "An act confirming acceptance of goods, work, or services" },
 };
 
 function AiConsultPanel({ locale }: { locale: Locale }) {
@@ -353,9 +353,10 @@ function AiConsultPanel({ locale }: { locale: Locale }) {
   );
 }
 
-function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"] }) {
+function TemplatesPanel({ sm, locale }: { sm: ReturnType<typeof getDict>["servicesModal"]; locale: Locale }) {
   const [query, setQuery] = useState("");
-  const filtered = DOC_TYPES.filter((t) => t.label.toLowerCase().includes(query.trim().toLowerCase()));
+  const docTypes = getDocTypes(locale);
+  const filtered = docTypes.filter((t) => t.label.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <div className="flex flex-col h-full">
@@ -392,7 +393,11 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
                 <h4 className="text-sm font-bold text-foreground group-hover:text-gold transition-colors">
                   {t.label}
                 </h4>
-                {meta && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{meta.description}</p>}
+                {meta && (
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {locale === "en" ? meta.descriptionEn : meta.description}
+                  </p>
+                )}
                 <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-gold">
                   {sm.generateCta}
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
@@ -414,7 +419,8 @@ function TemplatesPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"
   );
 }
 
-function TemplatesLinkPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesModal"] }) {
+function TemplatesLinkPanel({ sm, locale }: { sm: ReturnType<typeof getDict>["servicesModal"]; locale: Locale }) {
+  const templateDocTypes = getTemplateDocTypes(locale);
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b border-border shrink-0">
@@ -424,7 +430,7 @@ function TemplatesLinkPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesMo
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {TEMPLATE_DOC_TYPES.map((t) => {
+          {templateDocTypes.map((t) => {
             const meta = TEMPLATE_META[t.value];
             const Icon = meta?.icon ?? LayoutTemplate;
             return (
@@ -439,7 +445,11 @@ function TemplatesLinkPanel({ sm }: { sm: ReturnType<typeof getDict>["servicesMo
                 <h4 className="text-sm font-bold text-foreground group-hover:text-gold transition-colors">
                   {t.label}
                 </h4>
-                {meta && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{meta.description}</p>}
+                {meta && (
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {locale === "en" ? meta.descriptionEn : meta.description}
+                  </p>
+                )}
                 <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-gold">
                   {sm.generateCta}
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
@@ -567,10 +577,10 @@ export function ServicesPageClient({
                 )}
               </div>
               <div className={activeTab === "templates" ? "flex flex-col h-full min-h-0" : "hidden"}>
-                {flags.generate && <TemplatesPanel sm={sm} />}
+                {flags.generate && <TemplatesPanel sm={sm} locale={locale} />}
               </div>
               <div className={activeTab === "templatesFill" ? "flex flex-col h-full min-h-0" : "hidden"}>
-                {flags.templates && <TemplatesLinkPanel sm={sm} />}
+                {flags.templates && <TemplatesLinkPanel sm={sm} locale={locale} />}
               </div>
             </section>
           </div>

@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { GeneratedDocument } from "@/lib/models/generated-document";
-import { GenerateDocSchema, DOC_TYPES } from "@/lib/validators";
+import { GenerateDocSchema } from "@/lib/validators";
+import { docTypeLabel } from "@/lib/legal/doc-type-labels";
 import { streamOpenRouterChat } from "@/lib/ai-call";
 import { verifyLegalCitations, STRICT_BREVITY_RULE } from "@/lib/legal/openrouter";
 import { getCachedCitations, setCachedCitations } from "@/lib/legal/doc-citation-cache";
@@ -21,7 +22,7 @@ export const maxDuration = 90;
  * sources panel on /generate). */
 const CITATIONS_DELIM = "###წყაროები###";
 
-const SYSTEM = `შენ ხარ ქართული იურიდიული დოკუმენტების გენერატორი.
+const SYSTEM_KA = `შენ ხარ ქართული იურიდიული დოკუმენტების გენერატორი.
 შექმენი სრული, პროფესიონალური ქართული იურიდიული დოკუმენტი მომხმარებლის მიერ მოწოდებული დეტალების საფუძველზე.
 გამოიყენე ოფიციალური ქართული სამართლებრივი ენა.
 ${STRICT_BREVITY_RULE}
@@ -45,6 +46,31 @@ ${STRICT_BREVITY_RULE}
 - მუხლი <N>, პუნქტი <M> (საჭიროებისას)
 - მუხლი <N2>
 თითოეული კანონი დაწერე ცალკე ბლოკად, ერთი ცარიელი ხაზით გამოყოფილი. არ გამოიგონო მუხლის ნომერი — მიუთითე მხოლოდ ის ნორმები, რომლებიც რეალურად შეესაბამება დოკუმენტის შინაარსს შენი ცოდნით. ეს სექცია არასოდეს უნდა გამოჩნდეს ${CITATIONS_DELIM}-მდე, მხოლოდ მის შემდეგ.`;
+
+const SYSTEM_EN = `You are a Georgian legal document generator.
+Draft a complete, professional legal document in English, based on the details provided by the user, applying the current legislation of Georgia.
+Use formal English legal drafting language.
+${STRICT_BREVITY_RULE}
+
+Formatting (follow strictly):
+- The document is plain text, not a markdown file — never use heading symbols # ## ### or any other markdown syntax.
+- Write the document's title as plain text on the first line (e.g. "Rental Agreement"), without a # symbol.
+- Number sections with plain numerals (1., 2., 1.1., etc.), without # or ## symbols.
+- Write each section's number and full heading together, entirely in **bold** (e.g. **4. Rent and Payment Terms**).
+- To highlight data (names, dates, amounts, ID numbers, addresses), use only **bold** (markdown ** syntax) — no other markdown syntax is allowed.
+- The document must be compact: at most one blank line between sections, no excessive spacing.
+
+Data (critical):
+- Use exactly the data the user provided in the details.
+- Never leave a blank field, square brackets [ ], or other placeholder text in the output. If some additional detail (e.g. phone, email) was not provided in the details at all — simply omit that detail from the document instead of writing an empty placeholder.
+- The document must be fully filled in, complete, and ready to use as-is, with no fields left for manual completion.
+
+After finishing the document text, on its own line write exactly: ${CITATIONS_DELIM}
+Then, after that line, list the articles of Georgian legislation the document is based on, in this format:
+<Full name of the law/code>:
+- Article <N>, paragraph <M> (if applicable)
+- Article <N2>
+Write each law as a separate block, separated by one blank line. Do not invent an article number — cite only the provisions that genuinely correspond to the document's content, to the best of your knowledge. This section must never appear before ${CITATIONS_DELIM}, only after it.`;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -83,14 +109,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const typeName = DOC_TYPES[parsed.data.type];
-  const userMsg = `დოკუმენტის ტიპი: ${typeName}\n\nდეტალები:\n${parsed.data.details}`;
+  const locale = parsed.data.locale;
+  const typeName = docTypeLabel(parsed.data.type, locale);
+  const userMsg =
+    locale === "en"
+      ? `Document type: ${typeName}\n\nDetails:\n${parsed.data.details}`
+      : `დოკუმენტის ტიპი: ${typeName}\n\nდეტალები:\n${parsed.data.details}`;
 
   let deltas: AsyncGenerator<string, void, unknown>;
   try {
     deltas = await streamOpenRouterChat(
       [
-        { role: "system", content: SYSTEM },
+        { role: "system", content: locale === "en" ? SYSTEM_EN : SYSTEM_KA },
         { role: "user", content: userMsg },
       ],
       undefined,
@@ -166,14 +196,14 @@ export async function POST(req: Request) {
       // that result instead of paying a live web-search fee on every
       // generation.
       let legalBasis = citationsSection;
-      const cachedCitations = await getCachedCitations(parsed.data.type);
+      const cachedCitations = await getCachedCitations(parsed.data.type, locale);
       if (cachedCitations) {
         legalBasis = cachedCitations;
       } else if (citationsSection) {
         const verified = await verifyLegalCitations(typeName, citationsSection);
         if (verified) {
           legalBasis = verified;
-          await setCachedCitations(parsed.data.type, verified);
+          await setCachedCitations(parsed.data.type, verified, locale);
         }
       }
 
