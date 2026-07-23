@@ -22,7 +22,7 @@ import {
   Rocket,
   type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DocumentAnalysisPanel } from "@/components/site/document-analysis-modal";
@@ -538,10 +538,8 @@ export function ServicesPageClient({
                   <li>{sm.cabinetLimitsItem}</li>
                   <li>{sm.cabinetHistoryItem}</li>
                 </ul>
-                <Link href="/dashboard" className="block mt-2">
-                  <Button className="w-full h-9 rounded-full">
-                    {sm.cabinetCta}
-                  </Button>
+                <Link href="/dashboard" className={buttonVariants({ className: "w-full h-9 rounded-full mt-2" })}>
+                  {sm.cabinetCta}
                 </Link>
               </div>
             </aside>

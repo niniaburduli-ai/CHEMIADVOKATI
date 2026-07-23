@@ -5,6 +5,13 @@ const UserSchema = new Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, required: false },
     name: { type: String, required: true, trim: true },
+    // Optional profile fields — filled in voluntarily by the user, never
+    // auto-used elsewhere (e.g. document generation) since a document may be
+    // generated on behalf of someone other than the account holder.
+    firstName: { type: String, default: "", trim: true },
+    lastName: { type: String, default: "", trim: true },
+    personalNumber: { type: String, default: "", trim: true },
+    phone: { type: String, default: "", trim: true },
     image: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user", index: true },
     // Plan is a DB-backed plan key (see models/Plan.ts) — no fixed enum.

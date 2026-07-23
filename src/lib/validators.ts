@@ -32,6 +32,33 @@ export const ResetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
+// All fields optional — voluntary contact/ID info shown only in the user's
+// own profile, never fed into document generation (a document may be
+// generated for someone other than the account holder).
+export const ProfileUpdateSchema = z.object({
+  firstName: z.string().trim().max(60).optional().default(""),
+  lastName: z.string().trim().max(60).optional().default(""),
+  personalNumber: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .default("")
+    .refine((v) => v === "" || /^\d{11}$/.test(v), {
+      message: "პირადი ნომერი უნდა შედგებოდეს 11 ციფრისგან",
+    }),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .default("")
+    .refine((v) => v === "" || /^(\+?995)?5\d{8}$/.test(v.replace(/[\s-]/g, "")), {
+      message: "არასწორი ტელეფონის ნომერი",
+    }),
+});
+export type ProfileUpdateInput = z.infer<typeof ProfileUpdateSchema>;
+
 export const ConsultationCreateSchema = z.object({
   question: z.string().min(5).max(2000),
 });

@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
-import { BarChart3, MessagesSquare, FileText, FileSearch, Clock, ArrowRight, User, LayoutList, CreditCard, type LucideIcon } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { BarChart3, MessagesSquare, FileText, FileSearch, Clock, ArrowRight, User, LayoutList, CreditCard, KeyRound, type LucideIcon } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ConsultationsGrid, type ConsultationItem } from "./consultations/consultations-grid";
 import { DocumentsList, type GeneratedDocItem } from "./documents/documents-list";
 import { ReviewsGrid, type ReviewItem } from "./reviews/reviews-grid";
+import { updateProfileAction, type ProfileUpdateState } from "@/actions/profile";
+import { requestPasswordResetAction, type ForgotPasswordState } from "@/actions/password-reset";
 import type { LimitMetric } from "@/components/site/limits-dialog";
 import type { Dict } from "@/lib/i18n/dictionaries";
 
@@ -112,6 +117,10 @@ function ProfilePanel({
   planLabel,
   statusLabel,
   planExpiresLabel,
+  firstName,
+  lastName,
+  personalNumber,
+  phone,
 }: {
   d: Dict;
   name: string;
@@ -120,8 +129,21 @@ function ProfilePanel({
   planLabel: string;
   statusLabel: string | null;
   planExpiresLabel: string | null;
+  firstName: string;
+  lastName: string;
+  personalNumber: string;
+  phone: string;
 }) {
   const dp = d.profile;
+  const [profileState, profileFormAction, profilePending] = useActionState<ProfileUpdateState, FormData>(
+    updateProfileAction,
+    undefined
+  );
+  const [resetState, resetFormAction, resetPending] = useActionState<ForgotPasswordState, FormData>(
+    requestPasswordResetAction,
+    undefined
+  );
+
   return (
     <div className="flex flex-col h-full">
       <header className="p-5 border-b border-border shrink-0">
@@ -132,7 +154,11 @@ function ProfilePanel({
       </header>
       <div className="flex-1 overflow-y-auto p-5">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-lg font-bold shrink-0 select-none">
+          <div
+            className={`h-14 w-14 rounded-full bg-primary flex items-center justify-center text-lg font-bold shrink-0 select-none ${
+              planLabel === dp.planPremium ? "text-gold" : "text-primary-foreground"
+            }`}
+          >
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -141,7 +167,12 @@ function ProfilePanel({
           </div>
         </div>
         <div className="flex items-center gap-2 mt-4 flex-wrap">
-          <Badge variant={planLabel === dp.planFree ? "secondary" : "default"}>{planLabel}</Badge>
+          <Badge
+            variant={planLabel === dp.planFree ? "secondary" : "default"}
+            className={planLabel === dp.planPremium ? "text-gold" : undefined}
+          >
+            {planLabel}
+          </Badge>
           {statusLabel && (
             <Badge variant={statusLabel === dp.statusActive ? "default" : "destructive"} className="text-xs">
               {statusLabel}
@@ -155,10 +186,66 @@ function ProfilePanel({
             </span>
           )}
         </div>
-        <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" }) + " mt-5"}>
-          <CreditCard className="mr-2 h-4 w-4 text-gold" />
-          {dp.subscription}
-        </Link>
+        <div className="flex items-center gap-2 mt-5 flex-wrap">
+          <Link href="/billing" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-gold")}>
+            <CreditCard className="mr-2 h-4 w-4 text-gold" />
+            {dp.subscription}
+          </Link>
+          <form action={resetFormAction}>
+            <input type="hidden" name="email" value={email} />
+            <Button type="submit" variant="outline" size="sm" disabled={resetPending} className="border-gold">
+              <KeyRound className="mr-2 h-4 w-4 text-gold" />
+              {resetPending ? d.auth.forgotSending : d.auth.forgotSubmit}
+            </Button>
+          </form>
+        </div>
+        {resetState?.sent && (
+          <p className="text-xs text-muted-foreground mt-2">{d.auth.forgotSentBody}</p>
+        )}
+        {resetState?.error && (
+          <p className="text-xs text-destructive mt-2">{resetState.error}</p>
+        )}
+
+        <div className="mt-6 pt-6 border-t border-border">
+          <h4 className="text-sm font-bold text-foreground mb-1">{dp.personalInfoTitle}</h4>
+          <p className="text-xs text-muted-foreground mb-3">{dp.personalInfoHint}</p>
+          <form action={profileFormAction} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="firstName">{dp.firstNameLabel}</Label>
+              <Input id="firstName" name="firstName" defaultValue={firstName} />
+              {profileState?.fields?.firstName && (
+                <p className="text-xs text-destructive">{profileState.fields.firstName[0]}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lastName">{dp.lastNameLabel}</Label>
+              <Input id="lastName" name="lastName" defaultValue={lastName} />
+              {profileState?.fields?.lastName && (
+                <p className="text-xs text-destructive">{profileState.fields.lastName[0]}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="personalNumber">{dp.personalNumberLabel}</Label>
+              <Input id="personalNumber" name="personalNumber" defaultValue={personalNumber} />
+              {profileState?.fields?.personalNumber && (
+                <p className="text-xs text-destructive">{profileState.fields.personalNumber[0]}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">{dp.phoneLabel}</Label>
+              <Input id="phone" name="phone" defaultValue={phone} />
+              {profileState?.fields?.phone && (
+                <p className="text-xs text-destructive">{profileState.fields.phone[0]}</p>
+              )}
+            </div>
+            <div className="sm:col-span-2 flex items-center gap-3">
+              <Button type="submit" size="sm" disabled={profilePending}>
+                {profilePending ? dp.savingCta : dp.saveCta}
+              </Button>
+              {profileState?.ok && <span className="text-xs text-muted-foreground">{dp.savedMessage}</span>}
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -178,6 +265,10 @@ export function DashboardClient({
   profileEmail,
   profileInitials,
   profileStatusLabel,
+  profileFirstName,
+  profileLastName,
+  profilePersonalNumber,
+  profilePhone,
   consultations,
   documents,
   templates,
@@ -199,6 +290,10 @@ export function DashboardClient({
   profileEmail: string;
   profileInitials: string;
   profileStatusLabel: string | null;
+  profileFirstName: string;
+  profileLastName: string;
+  profilePersonalNumber: string;
+  profilePhone: string;
   consultations: ConsultationItem[];
   documents: GeneratedDocItem[];
   templates: GeneratedDocItem[];
@@ -230,7 +325,6 @@ export function DashboardClient({
         <div className="bg-card border border-border rounded-2xl p-3 space-y-1.5 md:sticky md:top-24">
           <div className="px-2 pb-1.5">
             <h2 className="text-lg font-bold text-foreground">{dp.sidebarHeading}</h2>
-            <p className="text-xs text-muted-foreground">{dp.sidebarSubtitle}</p>
           </div>
           {cabinetTabs.map((t) => (
             <button
@@ -270,6 +364,18 @@ export function DashboardClient({
           ))}
         </div>
 
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-3">
+          <div className="px-2 pb-1.5">
+            <h2 className="text-lg font-bold text-foreground">{dp.servicesCardTitle}</h2>
+          </div>
+          <div className="px-2">
+            <Link href="/services" className={buttonVariants({ size: "sm" }) + " w-full"}>
+              {dp.returnToServices}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+
         {isFreePlan && (
           <div className="bg-card border border-border rounded-2xl p-3 mt-3">
             <p className="text-sm font-bold text-foreground mb-1">{dp.upgradeTitle}</p>
@@ -304,6 +410,10 @@ export function DashboardClient({
             planLabel={planLabel}
             statusLabel={profileStatusLabel}
             planExpiresLabel={planExpiresLabel}
+            firstName={profileFirstName}
+            lastName={profileLastName}
+            personalNumber={profilePersonalNumber}
+            phone={profilePhone}
           />
         </div>
         <div className={activeTab === "consultations" ? "flex flex-col h-full min-h-0" : "hidden"}>

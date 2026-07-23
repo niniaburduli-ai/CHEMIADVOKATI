@@ -258,7 +258,11 @@ export default async function DashboardPage({
       <section className="bg-slate-900">
         <div className="container mx-auto px-4 py-16 max-w-5xl">
           <div className="flex items-center gap-5 flex-wrap">
-            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold shrink-0 select-none">
+            <div
+              className={`h-16 w-16 rounded-full bg-primary flex items-center justify-center text-xl font-bold shrink-0 select-none ${
+                plan === "premium" ? "text-gold" : "text-primary-foreground"
+              }`}
+            >
               {initials}
             </div>
             <div className="flex-1 min-w-0">
@@ -269,7 +273,10 @@ export default async function DashboardPage({
                 {user.email}
               </p>
               <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <Badge variant={plan === "free" ? "secondary" : "default"}>
+                <Badge
+                  variant={plan === "free" ? "secondary" : "default"}
+                  className={plan === "premium" ? "text-gold" : undefined}
+                >
                   {PLAN_LABELS[plan] ?? plan}
                 </Badge>
                 {subStatus && (
@@ -309,6 +316,10 @@ export default async function DashboardPage({
           profileEmail={user.email}
           profileInitials={initials}
           profileStatusLabel={subStatus ? STATUS_LABELS[subStatus] ?? subStatus : null}
+          profileFirstName={user.firstName ?? ""}
+          profileLastName={user.lastName ?? ""}
+          profilePersonalNumber={user.personalNumber ?? ""}
+          profilePhone={user.phone ?? ""}
           consultations={consultationItems}
           documents={documentItems}
           templates={templateItems}

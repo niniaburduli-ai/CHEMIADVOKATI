@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getDict } from "@/lib/i18n/dictionaries";
@@ -34,8 +34,13 @@ export function CancelSubscriptionButton({ locale }: { locale: Locale }) {
   };
 
   return (
-    <Button variant="outline" onClick={cancel} disabled={loading}>
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : d.billing.cancelSub}
+    <Button variant="outline" size="sm" onClick={cancel} disabled={loading}>
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Ban className="mr-2 h-4 w-4 text-gold" />
+      )}
+      {d.billing.cancelSub}
     </Button>
   );
 }

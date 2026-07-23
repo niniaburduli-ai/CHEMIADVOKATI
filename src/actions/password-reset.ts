@@ -2,6 +2,7 @@
 
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
 import { PasswordResetToken } from "@/lib/models/password-reset-token";
@@ -14,8 +15,16 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-function baseUrl(): string {
-  return (process.env.AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
+// Mirrors AUTH_TRUST_HOST: build the origin from the request's own Host header
+// instead of AUTH_URL, so the reset link always matches the domain the user
+// actually visited (AUTH_URL is prod-only and easy to leave stale/unset).
+async function baseUrl(): Promise<string> {
+  if (process.env.AUTH_URL) return process.env.AUTH_URL.replace(/\/$/, "");
+  const h = await headers();
+  const host = h.get("host");
+  if (!host) return "http://localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
 }
 
 export type ForgotPasswordState =
@@ -67,7 +76,7 @@ export async function requestPasswordResetAction(
       expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
     });
 
-    const resetUrl = `${baseUrl()}/reset-password?token=${rawToken}`;
+    const resetUrl = `${await baseUrl()}/reset-password?token=${rawToken}`;
     await sendPasswordResetEmail(email, resetUrl);
   } catch (err) {
     console.error("password reset request failed:", err);

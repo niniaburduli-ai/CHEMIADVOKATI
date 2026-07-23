@@ -489,6 +489,19 @@ function EditUserDialog({
               {!durationValid && durationMonths !== "" && (
                 <p className="text-xs text-destructive">მიუთითეთ თვეების მთელი რიცხვი (მინ. 1).</p>
               )}
+              {durationValid && durationMonths !== "" && (
+                <p className="text-xs text-muted-foreground">
+                  გეგმა გაუქმდება ავტომატურად და დაბრუნდება Free-ზე{" "}
+                  <span className="font-medium text-foreground">
+                    {(() => {
+                      const d = new Date();
+                      d.setMonth(d.getMonth() + Number(durationMonths));
+                      return d.toLocaleDateString("ka-GE");
+                    })()}
+                  </span>
+                  -ს (შენახვის მომენტიდან +{durationMonths} თვე), თუ მანამდე არ გააგრძელებთ ან არ შეცვლით.
+                </p>
+              )}
             </div>
           )}
         </div>
