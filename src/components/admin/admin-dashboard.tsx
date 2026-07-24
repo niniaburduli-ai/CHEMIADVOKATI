@@ -109,13 +109,23 @@ function formatModelTier(tier: string | null): string {
   return MODEL_TIER_LABEL[tier] ?? tier;
 }
 
-/** USD → cents, formatted with enough decimals to stay visible for cheap
- * calls (e.g. "0.0231¢"). "—" for untracked/zero-cost records (cache hits,
- * pre-tracking rows). */
+/** NBG official USD/GEL rate. Update if it drifts significantly. */
+const GEL_RATE = 2.6285;
+
+function trimTrailingZeros(s: string): string {
+  return s.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+/** USD with GEL equivalent in parentheses, e.g. "$0.0054 (~0.014 ₾)".
+ * USD uses 4-5 decimals so cheap calls stay visible instead of rounding
+ * to "$0.00". "—" for untracked/zero-cost records (cache hits, pre-tracking
+ * rows). */
 function formatCostUsd(costUsd: number): string {
   if (!costUsd || costUsd <= 0) return "—";
-  const cents = costUsd * 100;
-  return `${cents < 0.01 ? cents.toFixed(4) : cents.toFixed(2)}¢`;
+  const usdDecimals = costUsd < 0.01 ? 5 : 4;
+  const usdStr = trimTrailingZeros(costUsd.toFixed(usdDecimals));
+  const gelStr = trimTrailingZeros((costUsd * GEL_RATE).toFixed(3));
+  return `$${usdStr} (~${gelStr} ₾)`;
 }
 
 export type GeneratedDocRow = {
