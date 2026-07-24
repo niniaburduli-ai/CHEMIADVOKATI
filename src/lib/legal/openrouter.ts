@@ -44,6 +44,50 @@ export const ANSWER_MODEL =
 export const ANSWER_MODEL_COMPLEX =
   process.env.OPENROUTER_ANSWER_MODEL_COMPLEX || "anthropic/claude-haiku-4.5";
 
+/**
+ * Free-tier escalation rungs, tried BEFORE the paid ANSWER_MODEL. Both are
+ * OpenRouter ":free" models picked for usable Georgian output — most free
+ * models garble Georgian grammar/case endings badly enough to be unusable
+ * for legal answers. Free-tier requests are rate-limited and less reliable
+ * at strict formatting than the paid tiers, so a throttled/retired/malformed
+ * response here just falls through to the next rung via the same
+ * citation-verification gate that already guards the cheap->complex
+ * escalation (see hasVerifiedCitation + the tier loop in app/api/chat/route.ts)
+ * — no separate error handling needed.
+ */
+export const ANSWER_MODEL_FREE_1 =
+  process.env.OPENROUTER_ANSWER_MODEL_FREE_1 ||
+  "google/gemini-2.0-flash-exp:free";
+export const ANSWER_MODEL_FREE_2 =
+  process.env.OPENROUTER_ANSWER_MODEL_FREE_2 ||
+  "deepseek/deepseek-chat-v3.1:free";
+
+/**
+ * Escalation ladder for the grounded answer call. Tried in order (see the
+ * tier loop in app/api/chat/route.ts) until one produces a verified-citation
+ * answer; the last rung's output is accepted even if still unverified.
+ */
+export type AnswerTier = "free1" | "free2" | "cheap" | "complex";
+export const ANSWER_TIER_ORDER: AnswerTier[] = [
+  "free1",
+  "free2",
+  "cheap",
+  "complex",
+];
+
+function modelForTier(tier: AnswerTier): string {
+  switch (tier) {
+    case "free1":
+      return ANSWER_MODEL_FREE_1;
+    case "free2":
+      return ANSWER_MODEL_FREE_2;
+    case "cheap":
+      return ANSWER_MODEL;
+    case "complex":
+      return ANSWER_MODEL_COMPLEX;
+  }
+}
+
 /** Cheap model for structured/auxiliary calls (query understanding). */
 export const FAST_MODEL =
   process.env.OPENROUTER_FAST_MODEL ||
@@ -312,16 +356,16 @@ export async function callOpenRouter(
  * streams only the prose via streamText. Upstream stays non-streaming for
  * connection-pool safety; the browser still sees a progressive stream.
  *
- * `complex` routes to ANSWER_MODEL_COMPLEX (the expensive model) — callers set
- * this only on a retry, after the cheap ANSWER_MODEL's first attempt failed
- * to produce a verified citation. Everything else uses ANSWER_MODEL.
+ * `tier` selects the model via modelForTier — callers escalate through
+ * ANSWER_TIER_ORDER only when an earlier rung's response fails to produce a
+ * verified citation. Defaults to "cheap" (ANSWER_MODEL).
  */
 export async function generateLegalAnswer(
   messages: ChatMessage[],
-  complex = false
+  tier: AnswerTier = "cheap"
 ): Promise<string> {
   return callOpenRouter(messages, {
-    model: complex ? ANSWER_MODEL_COMPLEX : ANSWER_MODEL,
+    model: modelForTier(tier),
     // 0, not 0.1: identical question + identical retrieved text should always
     // cite the same articles and figures — any sampling temperature reopens
     // that drift even with rule 6e in SYSTEM_PROMPT.
@@ -339,9 +383,12 @@ export async function generateLegalAnswer(
  * groundedness check (which needs the full text, citation block included)
  * still runs after the caller has drained the generator to completion.
  */
-export async function streamLegalAnswer(messages: ChatMessage[], complex = false) {
+export async function streamLegalAnswer(
+  messages: ChatMessage[],
+  tier: AnswerTier = "cheap"
+) {
   return openOpenRouterStream(messages, {
-    model: complex ? ANSWER_MODEL_COMPLEX : ANSWER_MODEL,
+    model: modelForTier(tier),
     temperature: 0,
     maxTokens: 1200,
     frequencyPenalty: 0.2,

@@ -23,12 +23,14 @@ import {
   NOT_FOUND_MSG,
   TECHNICAL_ERROR_MSG,
   CITATION_DELIM,
+  ANSWER_TIER_ORDER,
   buildGroundedPrompt,
   parseAnswer,
   searchWebContext,
   answerViaWebSearch,
   streamLegalAnswer,
   streamText,
+  type AnswerTier,
   type ChatMessage,
   type WebContext,
   type WebSource,
@@ -41,6 +43,10 @@ export const dynamic = "force-dynamic";
 
 const encoder = new TextEncoder();
 
+/** Which model tier actually produced an answer — recorded per consultation
+ * so the admin panel can show free-vs-paid usage without reading server logs. */
+type ModelTier = AnswerTier | "web" | "cached";
+
 /** Save the consultation, decrement quota, and stream the answer to the client. */
 async function finalizeAnswer(params: {
   userId: string;
@@ -50,8 +56,10 @@ async function finalizeAnswer(params: {
   answer: string;
   legalBasis: LegalBasisGroup[];
   webSources?: WebSource[];
+  modelTier: ModelTier;
 }): Promise<Response> {
-  const { userId, isAdmin, quotaSplit, question, answer, legalBasis, webSources } = params;
+  const { userId, isAdmin, quotaSplit, question, answer, legalBasis, webSources, modelTier } =
+    params;
 
   // Grounded-source citations when we have them; otherwise fall back to the
   // web-search sources so a web-fallback answer still records where it came
@@ -71,7 +79,7 @@ async function finalizeAnswer(params: {
       : (webSources ?? []).map((s) => ({ title: s.title, url: s.url }));
 
   const saveOps: Promise<unknown>[] = [
-    Consultation.create({ userId, question, answer, sources }),
+    Consultation.create({ userId, question, answer, sources, modelTier }),
   ];
   if (!isAdmin && quotaSplit) {
     saveOps.push(applyQuotaSplit(userId, "consultations", quotaSplit));
@@ -131,6 +139,7 @@ async function tryWebFallback(
       answer: prose,
       legalBasis: [],
       webSources: web.sources,
+      modelTier: "web",
     });
   }
   return NextResponse.json(
@@ -145,9 +154,9 @@ async function tryWebFallback(
  * upstream stream ends — same shape `parseAnswer` expects. */
 async function* streamAnswerAttempt(
   messages: ChatMessage[],
-  complex: boolean
+  tier: AnswerTier
 ): AsyncGenerator<string, string, unknown> {
-  const deltas = await streamLegalAnswer(messages, complex);
+  const deltas = await streamLegalAnswer(messages, tier);
   const splitter = new DelimiterSplitter(CITATION_DELIM);
   let full = "";
   for await (const delta of deltas) {
@@ -162,7 +171,13 @@ async function* streamAnswerAttempt(
 
 type ChatStreamEvent = { type: "chunk"; text: string } | { type: "reset" };
 type ChatOutcome =
-  | { kind: "answer"; text: string; legalBasis: LegalBasisGroup[]; webSources?: WebSource[] }
+  | {
+      kind: "answer";
+      text: string;
+      legalBasis: LegalBasisGroup[];
+      webSources?: WebSource[];
+      modelTier: ModelTier;
+    }
   | { kind: "not_found" }
   | { kind: "technical_error" };
 
@@ -174,16 +189,18 @@ type ChatOutcome =
  */
 async function* drainAttempt(
   messages: ChatMessage[],
-  complex: boolean,
+  tier: AnswerTier,
   shownAny: { value: boolean }
 ): AsyncGenerator<ChatStreamEvent, string, unknown> {
   // Creating the generator runs no code yet (generator bodies don't execute
   // until the first `.next()`) — so both a connect failure and a mid-stream
   // failure surface at the same place, inside this loop, and get identical
-  // treatment: any thrown error means "this attempt produced nothing",
+  // treatment: any thrown error means "this attempt produced nothing" — the
+  // free tiers throw for this reason often (rate limits, a retired :free
+  // model slug), and that's expected: it just means "move to the next tier",
   // matching the non-streaming original where a thrown call leaves `prose`
   // empty rather than partially filled.
-  const it = streamAnswerAttempt(messages, complex);
+  const it = streamAnswerAttempt(messages, tier);
   try {
     let r = await it.next();
     while (!r.done) {
@@ -200,11 +217,16 @@ async function* drainAttempt(
 }
 
 /**
- * Full grounded-answer flow, streamed: try the cheap model live; escalate to
- * the expensive model (visibly restarting the display) only if the cheap
- * draft fails to ground itself in a verified citation, mirroring the
- * non-streaming retry logic 1:1. Falls through to the web-search last resort
- * if the final answer is still the literal NOT_FOUND_MSG.
+ * Full grounded-answer flow, streamed: walk ANSWER_TIER_ORDER (free -> free ->
+ * cheap -> complex) live, visibly restarting the display between tiers, and
+ * stop at the first rung whose draft grounds itself in a verified citation.
+ * The last rung's output is accepted even if still unverified — matching the
+ * original cheap->complex behavior, just generalized to more rungs. If a
+ * later tier produces nothing at all (throttled free model, dead :free slug,
+ * a genuine connection failure), fall back to the most recent non-empty
+ * earlier draft rather than losing everything. Falls through to the
+ * web-search last resort if the final answer is still the literal
+ * NOT_FOUND_MSG.
  */
 async function* runChatStream(
   messages: ChatMessage[],
@@ -216,45 +238,57 @@ async function* runChatStream(
   const shownAny = { value: false };
   let prose = "";
   let citations: ReturnType<typeof parseAnswer>["citations"] = [];
+  let lastGoodProse = "";
+  let lastGoodCitations: ReturnType<typeof parseAnswer>["citations"] = [];
+  let lastGoodTier: AnswerTier | null = null;
+  // Which tier's output actually got served — logged below so free-tier
+  // outages (a retired :free model slug, sustained rate-limiting) show up in
+  // the server logs as "servedTier keeps being cheap/complex" instead of
+  // silently going unnoticed.
+  let servedTier: AnswerTier | null = null;
 
-  const cheapFull = yield* drainAttempt(messages, false, shownAny);
-  ({ prose, citations } = parseAnswer(cheapFull));
-
-  const cheapGrounded =
-    prose.trim() !== "" &&
-    prose.trim() !== NOT_FOUND_MSG &&
-    hasVerifiedCitation(matches, citations);
-
-  if (!cheapGrounded) {
-    const hadCheapProse = prose;
-    const hadCheapCitations = citations;
-    if (shownAny.value) yield { type: "reset" };
-    shownAny.value = false;
-
-    const complexIt = streamAnswerAttempt(messages, true);
-    try {
-      let r = await complexIt.next();
-      while (!r.done) {
-        yield { type: "chunk", text: r.value };
-        shownAny.value = true;
-        r = await complexIt.next();
-      }
-      ({ prose, citations } = parseAnswer(r.value));
-    } catch {
-      // Complex attempt failed (whether at connect or mid-stream) — restore
-      // the cheap draft rather than losing everything, matching the
-      // non-streaming fallback ("if complex throws, keep whatever cheap
-      // produced"). We already cleared the display above on the assumption
-      // complex would take over, so if cheap had something, redraw it.
+  for (let i = 0; i < ANSWER_TIER_ORDER.length; i++) {
+    if (i > 0) {
+      if (shownAny.value) yield { type: "reset" };
       shownAny.value = false;
-      prose = hadCheapProse;
-      citations = hadCheapCitations;
-      if (prose) {
-        yield { type: "chunk", text: prose };
-        shownAny.value = true;
-      }
+    }
+
+    const tier = ANSWER_TIER_ORDER[i];
+    const full = yield* drainAttempt(messages, tier, shownAny);
+    ({ prose, citations } = parseAnswer(full));
+
+    const grounded =
+      prose.trim() !== "" &&
+      prose.trim() !== NOT_FOUND_MSG &&
+      hasVerifiedCitation(matches, citations);
+    const isLastTier = i === ANSWER_TIER_ORDER.length - 1;
+
+    if (grounded || isLastTier) {
+      servedTier = tier;
+      break;
+    }
+
+    if (prose.trim() !== "") {
+      lastGoodProse = prose;
+      lastGoodCitations = citations;
+      lastGoodTier = tier;
     }
   }
+
+  // The final tier produced nothing (threw, or genuinely empty) but an
+  // earlier rung had a draft — restore it instead of ending up empty-handed.
+  if (prose.trim() === "" && lastGoodProse) {
+    if (shownAny.value) yield { type: "reset" };
+    yield { type: "chunk", text: lastGoodProse };
+    shownAny.value = true;
+    prose = lastGoodProse;
+    citations = lastGoodCitations;
+    servedTier = lastGoodTier;
+  }
+
+  console.log(
+    `[chat] answer tier served: ${servedTier ?? "none (all tiers failed)"}`
+  );
 
   if (!prose && !shownAny.value) {
     return { kind: "technical_error" };
@@ -267,13 +301,25 @@ async function* runChatStream(
     const webProse = web?.prose.trim();
     if (web && webProse && webProse !== NOT_FOUND_MSG) {
       yield { type: "chunk", text: webProse };
-      return { kind: "answer", text: webProse, legalBasis: [], webSources: web.sources };
+      return {
+        kind: "answer",
+        text: webProse,
+        legalBasis: [],
+        webSources: web.sources,
+        modelTier: "web",
+      };
     }
     return { kind: "not_found" };
   }
 
   const legalBasis = buildLegalBasis(matches, citations);
-  return { kind: "answer", text: answer, legalBasis, webSources: webContext?.sources };
+  return {
+    kind: "answer",
+    text: answer,
+    legalBasis,
+    webSources: webContext?.sources,
+    modelTier: servedTier ?? "cheap",
+  };
 }
 
 export async function POST(req: Request) {
@@ -324,6 +370,7 @@ export async function POST(req: Request) {
       answer: cached.answer,
       legalBasis: cached.legalBasis,
       webSources: cached.webSources,
+      modelTier: "cached",
     });
   }
 
@@ -437,6 +484,7 @@ export async function POST(req: Request) {
           question,
           answer: outcome.text,
           sources,
+          modelTier: outcome.modelTier,
         }),
       ];
       if (!isAdmin && quotaSplit) {

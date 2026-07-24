@@ -84,9 +84,28 @@ export type ConsultationRow = {
   id: string;
   question: string;
   answer: string;
+  modelTier: string | null;
   createdAt: string | null;
   owner: { name: string | null; email: string | null } | null;
 };
+
+/** Human-readable label for the model tier that produced a consultation's
+ * answer — lets a non-technical admin see free-vs-paid usage at a glance,
+ * no server logs needed. `null` covers consultations saved before this
+ * field existed. */
+const MODEL_TIER_LABEL: Record<string, string> = {
+  free1: "უფასო 1",
+  free2: "უფასო 2",
+  cheap: "იაფი",
+  complex: "ძვირი",
+  web: "ვები",
+  cached: "ქეშიდან",
+};
+
+function formatModelTier(tier: string | null): string {
+  if (!tier) return "—";
+  return MODEL_TIER_LABEL[tier] ?? tier;
+}
 
 export type GeneratedDocRow = {
   id: string;
@@ -525,13 +544,14 @@ function ConsultationsTable({ initial }: { initial: ConsultationRow[] }) {
           <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-left [&>th]:font-medium">
             <th>შეკითხვა</th>
             <th>მომხმარებელი</th>
+            <th>მოდელი</th>
             <th>თარიღი</th>
             <th className="text-right">პასუხი</th>
           </tr>
         </thead>
         <tbody>
           {initial.length === 0 && (
-            <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">კონსულტაციები არ არის</td></tr>
+            <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">კონსულტაციები არ არის</td></tr>
           )}
           {initial.map((c) => (
             <React.Fragment key={c.id}>
@@ -545,6 +565,11 @@ function ConsultationsTable({ initial }: { initial: ConsultationRow[] }) {
                     <div className="text-muted-foreground">{c.owner?.email ?? ""}</div>
                   </div>
                 </td>
+                <td>
+                  <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                    {formatModelTier(c.modelTier)}
+                  </span>
+                </td>
                 <td className="text-muted-foreground">{formatDate(c.createdAt)}</td>
                 <td className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setExpanded(expanded === c.id ? null : c.id)}>
@@ -554,7 +579,7 @@ function ConsultationsTable({ initial }: { initial: ConsultationRow[] }) {
               </tr>
               {expanded === c.id && (
                 <tr key={`${c.id}-exp`} className="border-b bg-muted/20">
-                  <td colSpan={4} className="px-4 py-3">
+                  <td colSpan={5} className="px-4 py-3">
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{c.answer}</p>
                   </td>
                 </tr>

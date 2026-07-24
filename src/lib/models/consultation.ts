@@ -23,6 +23,14 @@ const ConsultationSchema = new Schema(
     question: { type: String, required: true },
     answer: { type: String, required: true },
     sources: { type: [SourceSchema], default: [] },
+    // Which model actually produced this answer — surfaced in the admin
+    // panel's consultations table so free-tier usage/outages are visible
+    // without reading server logs. Optional: older consultations predate
+    // this field and just show "—".
+    modelTier: {
+      type: String,
+      enum: ["free1", "free2", "cheap", "complex", "web", "cached"],
+    },
   },
   { timestamps: true }
 );

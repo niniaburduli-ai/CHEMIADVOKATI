@@ -91,6 +91,7 @@ export default async function AdminPage() {
       id: String((c as { _id: unknown })._id),
       question: c.question,
       answer: c.answer,
+      modelTier: (c as { modelTier?: string }).modelTier ?? null,
       createdAt: (c as { createdAt?: Date }).createdAt?.toISOString() ?? null,
       owner: owner ? { name: owner.name ?? null, email: owner.email ?? null } : null,
     };
