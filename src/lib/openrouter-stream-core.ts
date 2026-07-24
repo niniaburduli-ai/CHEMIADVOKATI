@@ -67,7 +67,6 @@ export async function openOpenRouterStream(
     messages,
     max_tokens: opts.maxTokens,
     stream: true,
-    usage: { include: true },
     ...(opts.temperature != null ? { temperature: opts.temperature } : {}),
     ...(opts.frequencyPenalty != null ? { frequency_penalty: opts.frequencyPenalty } : {}),
     ...(opts.extraBody ?? {}),

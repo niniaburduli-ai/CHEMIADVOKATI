@@ -44,7 +44,6 @@ export async function callOpenRouterChat(
       model: model ?? MODEL(),
       messages,
       max_tokens: maxTokens,
-      usage: { include: true },
     }),
   });
 

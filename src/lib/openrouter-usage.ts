@@ -1,10 +1,16 @@
 /** @module openrouter-usage
  *
- * OpenRouter's Usage Accounting feature: adding `usage: { include: true }` to
- * a chat-completions request body makes OpenRouter return the real dollar
- * cost it billed for that exact call, as `usage.cost` (USD — OpenRouter
- * credits are 1:1 with USD). Shared by every non-streaming call site so the
- * parsing isn't duplicated across files.
+ * OpenRouter includes the real dollar cost it billed for a call as
+ * `usage.cost` (USD — OpenRouter credits are 1:1 with USD) on every response
+ * by default, streaming or not — no request-body opt-in needed.
+ *
+ * Deliberately do NOT add `usage: { include: true }` to request bodies: it's
+ * unnecessary (cost is already present without it, confirmed empirically —
+ * see docs/superpowers/plans/2026-07-24-ai-cost-tracking.md's fix-up notes),
+ * and on streaming requests it makes at least Gemini models buffer the
+ * entire response before sending the first byte (~1s -> ~15s time-to-first-
+ * chunk observed), which defeats live streaming and reads as the assistant
+ * hanging. Shared by every call site so the parsing isn't duplicated.
  */
 
 /** Extract the billed cost (USD) from an OpenRouter response body. Returns 0

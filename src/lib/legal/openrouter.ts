@@ -325,7 +325,6 @@ export async function callOpenRouter(
     messages,
     temperature: opts.temperature ?? 0.4,
     max_tokens: opts.maxTokens ?? 500,
-    usage: { include: true },
   };
   if (opts.frequencyPenalty != null) body.frequency_penalty = opts.frequencyPenalty;
   if (opts.json) body.response_format = { type: "json_object" };
@@ -482,7 +481,6 @@ export async function searchWebContext(
     model,
     temperature: 0.3,
     max_tokens: 450,
-    usage: { include: true },
     messages: [
       { role: "system", content: WEB_SEARCH_SYSTEM },
       { role: "user", content: question },
@@ -647,7 +645,6 @@ async function runWebAnswerAttempt(
     // converge on the same failed search terms.
     temperature: attempt === 0 ? 0.2 : 0.5,
     max_tokens: 900,
-    usage: { include: true },
     messages: [
       { role: "system", content: WEB_ANSWER_SYSTEM },
       { role: "user", content: question + retryHint(attempt, keywords) },
@@ -775,7 +772,6 @@ export async function verifyLegalCitations(
     model,
     temperature: 0.2,
     max_tokens: 700,
-    usage: { include: true },
     messages: [
       { role: "system", content: VERIFY_CITATIONS_SYSTEM },
       {
