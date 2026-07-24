@@ -3,10 +3,8 @@ import {
   MessagesSquare,
   FileText,
   FileSearch,
-  CreditCard,
   Clock,
 } from "lucide-react";
-import Link from "next/link";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/db";
 import { User } from "@/lib/models/user";
@@ -15,7 +13,6 @@ import { Consultation } from "@/lib/models/consultation";
 import { GeneratedDocument } from "@/lib/models/generated-document";
 import { DocumentReview } from "@/lib/models/document-review";
 import { Payment } from "@/lib/models/payment";
-import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getPlanByKey, getPlans, type PlanData } from "@/lib/plans-db";
 import { effectivePriceMinor } from "@/lib/plan-price";
@@ -329,10 +326,6 @@ export default async function DashboardPage({
                 )}
               </div>
             </div>
-            <Link href="/dashboard?tab=billing" className={buttonVariants({ variant: "outline", size: "sm" }) + " btn-hover"}>
-              <CreditCard className="mr-2 h-4 w-4 text-gold" />
-              {dp.subscription}
-            </Link>
           </div>
         </div>
       </section>

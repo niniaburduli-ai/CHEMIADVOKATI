@@ -131,10 +131,8 @@ function ProfilePanel({
   lastName,
   personalNumber,
   phone,
-  onOpenBilling,
 }: {
   d: Dict;
-  onOpenBilling: () => void;
   name: string;
   email: string;
   initials: string;
@@ -199,16 +197,6 @@ function ProfilePanel({
           )}
         </div>
         <div className="flex items-center gap-2 mt-5 flex-wrap">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onOpenBilling}
-            className="border-gold"
-          >
-            <CreditCard className="mr-2 h-4 w-4 text-gold" />
-            {dp.subscription}
-          </Button>
           <form action={resetFormAction}>
             <input type="hidden" name="email" value={email} />
             <Button type="submit" variant="outline" size="sm" disabled={resetPending} className="border-gold">
@@ -516,7 +504,7 @@ export function DashboardClient({
       </aside>
 
       {/* Canvas */}
-      <section className="flex-1 min-w-0 h-[520px] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <section className="flex-1 min-w-0 min-h-[520px] bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className={activeTab === "limits" ? "flex flex-col h-full min-h-0" : "hidden"}>
           <LimitsPanel
             d={d}
@@ -541,7 +529,6 @@ export function DashboardClient({
             lastName={profileLastName}
             personalNumber={profilePersonalNumber}
             phone={profilePhone}
-            onOpenBilling={() => setActiveTab("billing")}
           />
         </div>
         <div className={activeTab === "billing" ? "flex flex-col h-full min-h-0" : "hidden"}>
