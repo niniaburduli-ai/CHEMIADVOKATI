@@ -7,15 +7,24 @@ import { STEP_QUANTITIES } from "@/lib/custom-plan-rates-config";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDict } from "@/lib/i18n/dictionaries";
 import type { Metadata } from "next";
-import { buildMetadata, KEYWORDS_KA } from "@/lib/seo";
+import { buildMetadata, KEYWORDS_KA, KEYWORDS_EN } from "@/lib/seo";
 
-export const metadata: Metadata = buildMetadata({
-  title: "ფასები და პაკეტები — AI იურიდიული კონსულტაცია",
-  description:
-    "აირჩიეთ პაკეტი: AI იურიდიული კონსულტაცია, ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი. უფასო პაკეტი ბარათის გარეშე.",
-  path: "/pricing",
-  keywords: ["იურიდიული კონსულტაცია ფასი", "ონლაინ იურისტი", ...KEYWORDS_KA],
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const isEn = locale === "en";
+  return buildMetadata({
+    title: isEn ? "Pricing & Plans — AI Legal Consultation" : "ფასები და პაკეტები — AI იურიდიული კონსულტაცია",
+    description: isEn
+      ? "Choose a plan: AI legal consultation, contract review and generation, risk analysis. Free plan, no card required."
+      : "აირჩიეთ პაკეტი: AI იურიდიული კონსულტაცია, ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი. უფასო პაკეტი ბარათის გარეშე.",
+    path: "/pricing",
+    keywords: isEn
+      ? ["legal consultation pricing", "online lawyer", ...KEYWORDS_EN]
+      : ["იურიდიული კონსულტაცია ფასი", "ონლაინ იურისტი", ...KEYWORDS_KA],
+    locale,
+    bilingual: true,
+  });
+}
 
 export const dynamic = "force-dynamic";
 

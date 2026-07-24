@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, BadgeCheck, Star } from "lucide-react"
@@ -20,7 +21,7 @@ import { getHomeSeed } from "@/lib/homepage-defaults"
 import { getDict } from "@/lib/i18n/dictionaries"
 import { resolveIcon } from "@/lib/icon-map"
 import { JsonLd } from "@/components/site/JsonLd"
-import { faqJsonLd } from "@/lib/seo"
+import { buildMetadata, faqJsonLd, KEYWORDS_EN } from "@/lib/seo"
 
 function statsGrid(n: number) {
   if (n <= 1) return "grid-cols-1"
@@ -30,6 +31,23 @@ function statsGrid(n: number) {
 }
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  const isEn = locale === "en"
+  return buildMetadata({
+    title: isEn
+      ? "Chemi Iuristi — AI Legal Consultation for Georgia"
+      : "ჩემი იურისტი — AI იურიდიული კონსულტაცია ქართულად",
+    description: isEn
+      ? "AI lawyer — accessible legal consultation in plain language. Contract review and generation, risk analysis, and legal advice grounded in Georgian law."
+      : "AI იურისტი — ხელმისაწვდომი იურიდიული კონსულტაცია მარტივ ენაზე. ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი და იურიდიული რჩევები საქართველოს კანონმდებლობის საფუძველზე.",
+    path: "/",
+    keywords: isEn ? [...KEYWORDS_EN] : undefined,
+    locale,
+    bilingual: true,
+  })
+}
 
 export default async function Home() {
   const locale = await getLocale()

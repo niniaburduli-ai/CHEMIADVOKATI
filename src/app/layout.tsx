@@ -17,7 +17,9 @@ import { JsonLd } from "@/components/site/JsonLd";
 import {
   SITE_URL,
   SITE_NAME_KA,
+  SITE_NAME_EN,
   DEFAULT_KEYWORDS,
+  KEYWORDS_EN,
   organizationJsonLd,
   webSiteJsonLd,
 } from "@/lib/seo";
@@ -34,64 +36,84 @@ const notoSerif = Noto_Serif_Georgian({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "ჩემი იურისტი — AI იურიდიული კონსულტაცია ქართულად",
-    template: "%s | ჩემი იურისტი",
-  },
-  description:
-    "AI იურისტი — ხელმისაწვდომი იურიდიული კონსულტაცია მარტივ ენაზე. ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი და იურიდიული რჩევები საქართველოს კანონმდებლობის საფუძველზე.",
-  applicationName: SITE_NAME_KA,
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: SITE_NAME_KA,
-  },
-  keywords: DEFAULT_KEYWORDS,
-  authors: [{ name: SITE_NAME_KA }],
-  creator: SITE_NAME_KA,
-  publisher: SITE_NAME_KA,
-  category: "legal",
-  alternates: { canonical: "/" },
-  formatDetection: { telephone: false, email: false, address: false },
-  openGraph: {
-    type: "website",
-    siteName: SITE_NAME_KA,
-    locale: "ka_GE",
-    alternateLocale: ["en_US"],
-    url: SITE_URL,
-    title: "ჩემი იურისტი — AI იურიდიული კონსულტაცია ქართულად",
-    description:
-      "ხელმისაწვდომი იურიდიული კონსულტაცია, ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი — საქართველოს კანონმდებლობის საფუძველზე.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "ჩემი იურისტი — AI იურიდიული კონსულტაცია",
-    description:
-      "AI იურისტი: იურიდიული რჩევები, ხელშეკრულების შემოწმება/გენერირება, რისკების ანალიზი ქართულად.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+/**
+ * Sitewide fallback metadata — used as-is by pages that don't set their own
+ * (auth-gated app pages), and as the `title.template` base for every page.
+ * Locale-aware: /en pages (see middleware.ts + lib/i18n/locale.ts) get the
+ * English variant. Public marketing pages override title/description/canonical
+ * via buildMetadata() in their own generateMetadata(); this is just the fallback.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const isEn = locale === "en";
+  const siteName = isEn ? SITE_NAME_EN : SITE_NAME_KA;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: isEn
+        ? "Chemi Iuristi — AI Legal Consultation for Georgia"
+        : "ჩემი იურისტი — AI იურიდიული კონსულტაცია ქართულად",
+      template: isEn ? "%s | Chemi Iuristi" : "%s | ჩემი იურისტი",
+    },
+    description: isEn
+      ? "AI lawyer — accessible legal consultation in plain language. Contract review and generation, risk analysis, and legal advice grounded in Georgian law."
+      : "AI იურისტი — ხელმისაწვდომი იურიდიული კონსულტაცია მარტივ ენაზე. ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი და იურიდიული რჩევები საქართველოს კანონმდებლობის საფუძველზე.",
+    applicationName: siteName,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: siteName,
+    },
+    keywords: isEn ? [...KEYWORDS_EN] : DEFAULT_KEYWORDS,
+    authors: [{ name: siteName }],
+    creator: siteName,
+    publisher: siteName,
+    category: "legal",
+    alternates: { canonical: isEn ? "/en" : "/" },
+    formatDetection: { telephone: false, email: false, address: false },
+    openGraph: {
+      type: "website",
+      siteName,
+      locale: isEn ? "en_US" : "ka_GE",
+      alternateLocale: isEn ? ["ka_GE"] : ["en_US"],
+      url: isEn ? `${SITE_URL}/en` : SITE_URL,
+      title: isEn
+        ? "Chemi Iuristi — AI Legal Consultation for Georgia"
+        : "ჩემი იურისტი — AI იურიდიული კონსულტაცია ქართულად",
+      description: isEn
+        ? "Accessible legal consultation, contract review and generation, risk analysis — grounded in Georgian law."
+        : "ხელმისაწვდომი იურიდიული კონსულტაცია, ხელშეკრულების შემოწმება და გენერირება, რისკების ანალიზი — საქართველოს კანონმდებლობის საფუძველზე.",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: isEn ? "Chemi Iuristi — AI Legal Consultation" : "ჩემი იურისტი — AI იურიდიული კონსულტაცია",
+      description: isEn
+        ? "AI lawyer: legal advice, contract review/generation, risk analysis for Georgia."
+        : "AI იურისტი: იურიდიული რჩევები, ხელშეკრულების შემოწმება/გენერირება, რისკების ანალიზი ქართულად.",
+    },
+    robots: {
       index: true,
       follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
-  },
-  // Google Search Console verification (HTML-tag method). Array = one meta tag
-  // per property: [0] old chemiadvokati.vercel.app, [1] new chemiiuristi.com.
-  // NOTE: a GSC *Domain* property verifies via DNS TXT, not this tag.
-  verification: {
-    google: [
-      "0VcyKMbTH9PBma4pNZkSDb9WbAilRphdOxCr_vxTFxA",
-      "aEu0Nrgy_PHxDm7uJW9Grcd6S_SReIM7I1rcAdlT_ZU",
-    ],
-  },
-};
+    // Google Search Console verification (HTML-tag method). Array = one meta tag
+    // per property: [0] old chemiadvokati.vercel.app, [1] new chemiiuristi.com.
+    // NOTE: a GSC *Domain* property verifies via DNS TXT, not this tag.
+    verification: {
+      google: [
+        "0VcyKMbTH9PBma4pNZkSDb9WbAilRphdOxCr_vxTFxA",
+        "aEu0Nrgy_PHxDm7uJW9Grcd6S_SReIM7I1rcAdlT_ZU",
+      ],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

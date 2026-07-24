@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { Locale } from "@/lib/i18n/config"
 
 /**
  * Central SEO config. All canonical URLs, keyword targets, and structured-data
@@ -98,10 +99,42 @@ export function absUrl(path = "/"): string {
   return path.startsWith("http") ? path : `${SITE_URL}${path.startsWith("/") ? "" : "/"}${path}`
 }
 
+/**
+ * Public, indexable marketing routes — single source of truth shared by
+ * sitemap.ts and middleware.ts (locale-prefix rewriting) so the two can't drift.
+ * `bilingual: true` means the page's body content is actually translated
+ * (via getDict()/pick()/per-locale CMS docs) and gets an `/en` URL variant +
+ * hreflang. Legal boilerplate pages (terms/privacy/disclaimer) are hardcoded
+ * Georgian prose with no English translation yet, so they stay KA-only —
+ * shipping an `/en` URL with an English title but Georgian body would be a
+ * duplicate/mismatched-content page, worse for SEO than not having one.
+ */
+export const PUBLIC_ROUTES: {
+  path: string
+  changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never"
+  priority: number
+  bilingual: boolean
+}[] = [
+  { path: "/", changeFrequency: "daily", priority: 1, bilingual: true },
+  { path: "/services", changeFrequency: "weekly", priority: 0.9, bilingual: true },
+  { path: "/pricing", changeFrequency: "weekly", priority: 0.8, bilingual: true },
+  { path: "/legislation", changeFrequency: "weekly", priority: 0.8, bilingual: true },
+  { path: "/about", changeFrequency: "monthly", priority: 0.6, bilingual: true },
+  { path: "/faq", changeFrequency: "weekly", priority: 0.6, bilingual: true },
+  { path: "/terms", changeFrequency: "yearly", priority: 0.2, bilingual: false },
+  { path: "/privacy", changeFrequency: "yearly", priority: 0.2, bilingual: false },
+  { path: "/disclaimer", changeFrequency: "yearly", priority: 0.2, bilingual: false },
+]
+
+/** `/en` + path, collapsing "/en/" for the homepage down to "/en". */
+export function enPath(path: string): string {
+  return path === "/" ? "/en" : `/en${path}`
+}
+
 type BuildMetaOpts = {
   title: string
   description: string
-  /** Site-relative path, e.g. "/services". Used for canonical + og:url. */
+  /** Site-relative, KA (unprefixed) path, e.g. "/services". Used for canonical + og:url. */
   path?: string
   keywords?: readonly string[]
   /** Absolute or site-relative OG image. Defaults to the site-wide generated card. */
@@ -110,11 +143,15 @@ type BuildMetaOpts = {
   type?: "website" | "article"
   publishedTime?: string
   noindex?: boolean
+  /** Locale this metadata is being rendered for. Defaults to "ka". */
+  locale?: Locale
+  /** Set true when this route also has a real translated `/en` URL (see PUBLIC_ROUTES). Adds hreflang alternates. */
+  bilingual?: boolean
 }
 
 /**
  * Build a page Metadata object with canonical, OpenGraph, and Twitter tags
- * wired consistently. title is used as-is (root layout supplies the template).
+ * wired consistently. title/description should already be in the target locale.
  */
 export function buildMetadata(opts: BuildMetaOpts): Metadata {
   const {
@@ -126,24 +163,32 @@ export function buildMetadata(opts: BuildMetaOpts): Metadata {
     type = "website",
     publishedTime,
     noindex,
+    locale = "ka",
+    bilingual = false,
   } = opts
 
-  const url = absUrl(path)
+  const kaUrl = absUrl(path)
+  const url = locale === "en" && bilingual ? absUrl(enPath(path)) : kaUrl
   const ogImage = image ? absUrl(image) : undefined // undefined => inherits layout opengraph-image
 
   return {
     title,
     description,
     keywords: keywords ? [...keywords] : DEFAULT_KEYWORDS,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      ...(bilingual
+        ? { languages: { ka: kaUrl, en: absUrl(enPath(path)), "x-default": kaUrl } }
+        : {}),
+    },
     openGraph: {
       type,
       url,
       title,
       description,
       siteName: SITE_NAME_KA,
-      locale: "ka_GE",
-      alternateLocale: ["en_US"],
+      locale: locale === "en" ? "en_US" : "ka_GE",
+      alternateLocale: locale === "en" ? ["ka_GE"] : ["en_US"],
       ...(publishedTime ? { publishedTime } : {}),
       ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: title }] } : {}),
     },

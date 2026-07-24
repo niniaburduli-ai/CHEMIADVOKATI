@@ -7,15 +7,22 @@ import { getDict } from "@/lib/i18n/dictionaries"
 import { PageHero } from "@/components/site/PageHero"
 import { FaqCarousel } from "@/components/site/FaqCarousel"
 import { JsonLd } from "@/components/site/JsonLd"
-import { buildMetadata, faqJsonLd, KEYWORDS_KA } from "@/lib/seo"
+import { buildMetadata, faqJsonLd, KEYWORDS_KA, KEYWORDS_EN } from "@/lib/seo"
 
-export const metadata: Metadata = buildMetadata({
-  title: "ხშირად დასმული კითხვები — AI იურიდიული კონსულტაცია",
-  description:
-    "პასუხები ხშირად დასმულ კითხვებზე „ჩემი იურისტი“-ს შესახებ — AI კონსულტაცია, პაკეტები და გამოწერა.",
-  path: "/faq",
-  keywords: KEYWORDS_KA,
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  const isEn = locale === "en"
+  return buildMetadata({
+    title: isEn ? "FAQ — AI Legal Consultation" : "ხშირად დასმული კითხვები — AI იურიდიული კონსულტაცია",
+    description: isEn
+      ? "Answers to frequently asked questions about Chemi Iuristi — AI consultation, plans, and subscriptions."
+      : "პასუხები ხშირად დასმულ კითხვებზე „ჩემი იურისტი“-ს შესახებ — AI კონსულტაცია, პაკეტები და გამოწერა.",
+    path: "/faq",
+    keywords: isEn ? [...KEYWORDS_EN] : [...KEYWORDS_KA],
+    locale,
+    bilingual: true,
+  })
+}
 
 export const dynamic = "force-dynamic"
 

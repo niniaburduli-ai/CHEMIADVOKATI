@@ -8,12 +8,19 @@ import { AnimateIn } from '@/components/site/AnimateIn'
 import { PageHero } from '@/components/site/PageHero'
 import { buildMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = buildMetadata({
-  title: 'ჩვენ შესახებ',
-  description:
-    'ჩემი იურისტი — თანამედროვე AI იურიდიული პლატფორმა, რომელიც იურიდიულ კონსულტაციას, ხელშეკრულების შემოწმებას და გენერირებას ხელმისაწვდომს ხდის ყველასთვის.',
-  path: '/about',
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  const isEn = locale === 'en'
+  return buildMetadata({
+    title: isEn ? 'About Us' : 'ჩვენ შესახებ',
+    description: isEn
+      ? 'Chemi Iuristi — a modern AI legal platform making legal consultation, contract review, and contract generation accessible to everyone.'
+      : 'ჩემი იურისტი — თანამედროვე AI იურიდიული პლატფორმა, რომელიც იურიდიულ კონსულტაციას, ხელშეკრულების შემოწმებას და გენერირებას ხელმისაწვდომს ხდის ყველასთვის.',
+    path: '/about',
+    locale,
+    bilingual: true,
+  })
+}
 
 function Paragraphs({ text }: { text: string }) {
   return (
