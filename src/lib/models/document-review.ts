@@ -34,6 +34,10 @@ const DocumentReviewSchema = new Schema(
     sourceText: { type: String, default: "" },
     pages: { type: Number, default: 1 },
     creditsUsed: { type: Number, default: 1 },
+    // Sum of the initial analysis call's cost plus every improve call's
+    // cost (incremented, not replaced, each time /api/review/improve runs).
+    // 0 for reviews saved before cost tracking existed.
+    costUsd: { type: Number, default: 0 },
     revisions: { type: [DocumentRevisionSchema], default: [] },
   },
   { timestamps: true }

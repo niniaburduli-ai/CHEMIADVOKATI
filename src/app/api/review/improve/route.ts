@@ -94,8 +94,9 @@ export async function POST(req: Request) {
   });
 
   let raw: string;
+  let costUsd = 0;
   try {
-    raw = await callOpenRouterChat(
+    const result = await callOpenRouterChat(
       [
         { role: "system", content: IMPROVEMENT_SYSTEM_PROMPT },
         { role: "user", content: userMessage },
@@ -103,6 +104,8 @@ export async function POST(req: Request) {
       undefined,
       16000
     );
+    raw = result.content;
+    costUsd = result.costUsd;
   } catch (err) {
     return NextResponse.json(
       {
@@ -136,6 +139,7 @@ export async function POST(req: Request) {
   };
   const diff = computeWordDiff(baseText, improvement.text);
   review.revisions.push(revision);
+  review.costUsd = (review.costUsd ?? 0) + costUsd;
   await review.save();
 
   if (!isAdmin && quotaSplit) {

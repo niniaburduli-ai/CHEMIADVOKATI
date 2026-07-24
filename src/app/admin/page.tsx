@@ -19,13 +19,25 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type CostBucket = { _id: string; total: number };
+
 export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/dashboard");
 
   await dbConnect();
 
-  const [uploads, users, consultations, generatedDocs, reviews, feedback] = await Promise.all([
+  const [
+    uploads,
+    users,
+    consultations,
+    generatedDocs,
+    reviews,
+    feedback,
+    consultationCosts,
+    docCosts,
+    reviewCosts,
+  ] = await Promise.all([
     Upload.find()
       .sort({ createdAt: -1 })
       .limit(500)
@@ -48,7 +60,22 @@ export default async function AdminPage() {
       .populate({ path: "userId", model: User, select: "name email" })
       .lean(),
     Feedback.find().sort({ createdAt: -1 }).limit(500).lean(),
+    Consultation.aggregate<CostBucket>([
+      { $group: { _id: "$userId", total: { $sum: "$costUsd" } } },
+    ]),
+    GeneratedDocument.aggregate<CostBucket>([
+      { $group: { _id: "$userId", total: { $sum: "$costUsd" } } },
+    ]),
+    DocumentReview.aggregate<CostBucket>([
+      { $group: { _id: "$userId", total: { $sum: "$costUsd" } } },
+    ]),
   ]);
+
+  const costByUser = new Map<string, number>();
+  for (const bucket of [...consultationCosts, ...docCosts, ...reviewCosts]) {
+    const key = String(bucket._id);
+    costByUser.set(key, (costByUser.get(key) ?? 0) + bucket.total);
+  }
 
   const uploadRows: UploadRow[] = uploads.map((u) => {
     const owner = u.userId as unknown as
@@ -81,6 +108,7 @@ export default async function AdminPage() {
     docTemplatesRemaining: u.docTemplatesRemaining ?? 0,
     planExpiresAt: u.planExpiresAt ? new Date(u.planExpiresAt).toISOString() : null,
     createdAt: (u as { createdAt?: Date }).createdAt?.toISOString() ?? null,
+    totalAiCostUsd: costByUser.get(String((u as { _id: unknown })._id)) ?? 0,
   }));
 
   const consultationRows: ConsultationRow[] = consultations.map((c) => {
@@ -92,6 +120,7 @@ export default async function AdminPage() {
       question: c.question,
       answer: c.answer,
       modelTier: (c as { modelTier?: string }).modelTier ?? null,
+      costUsd: (c as { costUsd?: number }).costUsd ?? 0,
       createdAt: (c as { createdAt?: Date }).createdAt?.toISOString() ?? null,
       owner: owner ? { name: owner.name ?? null, email: owner.email ?? null } : null,
     };
@@ -105,6 +134,7 @@ export default async function AdminPage() {
       id: String((d as { _id: unknown })._id),
       title: d.title,
       type: d.type,
+      costUsd: (d as { costUsd?: number }).costUsd ?? 0,
       createdAt: (d as { createdAt?: Date }).createdAt?.toISOString() ?? null,
       owner: owner ? { name: owner.name ?? null, email: owner.email ?? null } : null,
     };
@@ -120,6 +150,7 @@ export default async function AdminPage() {
       summary: r.summary,
       findingsCount: (r.findings ?? []).length,
       recommendationsCount: (r.recommendations ?? []).length,
+      costUsd: (r as { costUsd?: number }).costUsd ?? 0,
       createdAt: (r as { createdAt?: Date }).createdAt?.toISOString() ?? null,
       owner: owner ? { name: owner.name ?? null, email: owner.email ?? null } : null,
     };

@@ -193,8 +193,9 @@ export async function POST(req: Request) {
   }
 
   let raw: string;
+  let costUsd = 0;
   try {
-    raw = await callOpenRouterChat(
+    const result = await callOpenRouterChat(
       [
         { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
         { role: "user", content: `გაანალიზე ეს დოკუმენტი:\n\n${text}` },
@@ -202,6 +203,8 @@ export async function POST(req: Request) {
       undefined,
       6000
     );
+    raw = result.content;
+    costUsd = result.costUsd;
   } catch (err) {
     return NextResponse.json(
       {
@@ -236,6 +239,7 @@ export async function POST(req: Request) {
     sourceText: text,
     pages,
     creditsUsed,
+    costUsd,
   });
   if (!isAdmin && quotaSplit) {
     await applyQuotaSplit(session.user.id, "docReview", quotaSplit);

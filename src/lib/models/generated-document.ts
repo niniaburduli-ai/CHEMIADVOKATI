@@ -8,6 +8,10 @@ const GeneratedDocumentSchema = new Schema(
     content: { type: String, required: true },
     legalBasis: { type: String, default: "" },
     source: { type: String, enum: ["ai", "template"], default: "ai" },
+    // Sum of the generation call's cost + the citation-verification call's
+    // cost (0 when citations came from the doc-type cache). 0 for documents
+    // saved before cost tracking existed.
+    costUsd: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -1,4 +1,5 @@
 import { openOpenRouterStream } from "./openrouter-stream-core";
+import { extractCostUsd } from "./openrouter-usage";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = () =>
@@ -11,7 +12,8 @@ const MODEL = () =>
  * connection and resolves once it's confirmed live (HTTP 200), so callers
  * can still fall back to a clean error response if the connection itself
  * fails. Rejects with `OpenRouterConnectError` in that case; once resolved,
- * the generator yields content deltas as they arrive.
+ * the generator yields content deltas as they arrive and returns the total
+ * billed cost (USD) once the stream ends.
  */
 export async function streamOpenRouterChat(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
@@ -28,7 +30,7 @@ export async function callOpenRouterChat(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   model?: string,
   maxTokens = 2500
-): Promise<string> {
+): Promise<{ content: string; costUsd: number }> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY not set");
 
@@ -38,7 +40,12 @@ export async function callOpenRouterChat(
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: model ?? MODEL(), messages, max_tokens: maxTokens }),
+    body: JSON.stringify({
+      model: model ?? MODEL(),
+      messages,
+      max_tokens: maxTokens,
+      usage: { include: true },
+    }),
   });
 
   if (!res.ok) {
@@ -49,5 +56,8 @@ export async function callOpenRouterChat(
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
-  return data.choices?.[0]?.message?.content ?? "";
+  return {
+    content: data.choices?.[0]?.message?.content ?? "",
+    costUsd: extractCostUsd(data),
+  };
 }

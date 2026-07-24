@@ -31,6 +31,11 @@ const ConsultationSchema = new Schema(
       type: String,
       enum: ["free1", "free2", "cheap", "complex", "web", "cached"],
     },
+    // Sum of every OpenRouter call's real billed cost (USD) spent producing
+    // this consultation — query expansion, every tier attempt tried (even
+    // discarded ones), web-context search, and any web-fallback attempts.
+    // 0 for consultations saved before cost tracking existed.
+    costUsd: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

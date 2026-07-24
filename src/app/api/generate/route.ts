@@ -116,7 +116,7 @@ export async function POST(req: Request) {
       ? `Document type: ${typeName}\n\nDetails:\n${parsed.data.details}`
       : `დოკუმენტის ტიპი: ${typeName}\n\nდეტალები:\n${parsed.data.details}`;
 
-  let deltas: AsyncGenerator<string, void, unknown>;
+  let deltas: AsyncGenerator<string, number, unknown>;
   try {
     deltas = await streamOpenRouterChat(
       [
@@ -153,12 +153,16 @@ export async function POST(req: Request) {
       const splitter = new DelimiterSplitter(CITATIONS_DELIM);
       let full = "";
       let midStreamError = false;
+      let generationCostUsd = 0;
       try {
-        for await (const delta of deltas) {
-          full += delta;
-          const safe = splitter.push(delta);
+        let r = await deltas.next();
+        while (!r.done) {
+          full += r.value;
+          const safe = splitter.push(r.value);
           if (safe) controller.enqueue(encoder.encode(safe));
+          r = await deltas.next();
         }
+        generationCostUsd = r.value ?? 0;
         const { prose } = splitter.finish();
         if (prose) controller.enqueue(encoder.encode(prose));
       } catch {
@@ -196,14 +200,16 @@ export async function POST(req: Request) {
       // that result instead of paying a live web-search fee on every
       // generation.
       let legalBasis = citationsSection;
+      let citationsCostUsd = 0;
       const cachedCitations = await getCachedCitations(parsed.data.type, locale);
       if (cachedCitations) {
         legalBasis = cachedCitations;
       } else if (citationsSection) {
         const verified = await verifyLegalCitations(typeName, citationsSection);
         if (verified) {
-          legalBasis = verified;
-          await setCachedCitations(parsed.data.type, verified, locale);
+          legalBasis = verified.text;
+          citationsCostUsd = verified.costUsd;
+          await setCachedCitations(parsed.data.type, verified.text, locale);
         }
       }
 
@@ -215,6 +221,7 @@ export async function POST(req: Request) {
         type: parsed.data.type,
         content,
         legalBasis,
+        costUsd: generationCostUsd + citationsCostUsd,
       });
       const saveOps: Promise<unknown>[] = [docCreate];
       if (!isAdmin && quotaSplit) {

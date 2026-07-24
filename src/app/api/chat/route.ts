@@ -57,8 +57,9 @@ async function finalizeAnswer(params: {
   legalBasis: LegalBasisGroup[];
   webSources?: WebSource[];
   modelTier: ModelTier;
+  costUsd: number;
 }): Promise<Response> {
-  const { userId, isAdmin, quotaSplit, question, answer, legalBasis, webSources, modelTier } =
+  const { userId, isAdmin, quotaSplit, question, answer, legalBasis, webSources, modelTier, costUsd } =
     params;
 
   // Grounded-source citations when we have them; otherwise fall back to the
@@ -79,7 +80,7 @@ async function finalizeAnswer(params: {
       : (webSources ?? []).map((s) => ({ title: s.title, url: s.url }));
 
   const saveOps: Promise<unknown>[] = [
-    Consultation.create({ userId, question, answer, sources, modelTier }),
+    Consultation.create({ userId, question, answer, sources, modelTier, costUsd }),
   ];
   if (!isAdmin && quotaSplit) {
     saveOps.push(applyQuotaSplit(userId, "consultations", quotaSplit));
@@ -125,12 +126,14 @@ async function tryWebFallback(
   isAdmin: boolean,
   quotaSplit: QuotaSplit | null,
   question: string,
+  priorCostUsd: number,
   keywords?: string[]
 ): Promise<Response> {
   const web = await answerViaWebSearch(question, keywords);
-  const prose = web?.prose.trim();
-  if (web && prose && prose !== NOT_FOUND_MSG) {
-    await setCachedAnswer(question, { answer: prose, legalBasis: [], webSources: web.sources });
+  const costUsd = priorCostUsd + web.costUsd;
+  const prose = web.answer?.prose.trim();
+  if (web.answer && prose && prose !== NOT_FOUND_MSG) {
+    await setCachedAnswer(question, { answer: prose, legalBasis: [], webSources: web.answer.sources });
     return finalizeAnswer({
       userId,
       isAdmin,
@@ -138,8 +141,9 @@ async function tryWebFallback(
       question,
       answer: prose,
       legalBasis: [],
-      webSources: web.sources,
+      webSources: web.answer.sources,
       modelTier: "web",
+      costUsd,
     });
   }
   return NextResponse.json(
@@ -155,18 +159,21 @@ async function tryWebFallback(
 async function* streamAnswerAttempt(
   messages: ChatMessage[],
   tier: AnswerTier
-): AsyncGenerator<string, string, unknown> {
+): AsyncGenerator<string, { full: string; costUsd: number }, unknown> {
   const deltas = await streamLegalAnswer(messages, tier);
   const splitter = new DelimiterSplitter(CITATION_DELIM);
   let full = "";
-  for await (const delta of deltas) {
-    full += delta;
-    const safe = splitter.push(delta);
+  let r = await deltas.next();
+  while (!r.done) {
+    full += r.value;
+    const safe = splitter.push(r.value);
     if (safe) yield safe;
+    r = await deltas.next();
   }
+  const costUsd = r.value ?? 0;
   const { prose } = splitter.finish();
   if (prose) yield prose;
-  return full;
+  return { full, costUsd };
 }
 
 type ChatStreamEvent = { type: "chunk"; text: string } | { type: "reset" };
@@ -177,6 +184,7 @@ type ChatOutcome =
       legalBasis: LegalBasisGroup[];
       webSources?: WebSource[];
       modelTier: ModelTier;
+      costUsd: number;
     }
   | { kind: "not_found" }
   | { kind: "technical_error" };
@@ -191,7 +199,7 @@ async function* drainAttempt(
   messages: ChatMessage[],
   tier: AnswerTier,
   shownAny: { value: boolean }
-): AsyncGenerator<ChatStreamEvent, string, unknown> {
+): AsyncGenerator<ChatStreamEvent, { full: string; costUsd: number }, unknown> {
   // Creating the generator runs no code yet (generator bodies don't execute
   // until the first `.next()`) — so both a connect failure and a mid-stream
   // failure surface at the same place, inside this loop, and get identical
@@ -212,7 +220,7 @@ async function* drainAttempt(
   } catch {
     if (shownAny.value) yield { type: "reset" };
     shownAny.value = false;
-    return "";
+    return { full: "", costUsd: 0 };
   }
 }
 
@@ -246,6 +254,10 @@ async function* runChatStream(
   // the server logs as "servedTier keeps being cheap/complex" instead of
   // silently going unnoticed.
   let servedTier: AnswerTier | null = null;
+  // Real billed cost (USD) accumulated across every tier attempt tried in
+  // this loop, even discarded ones — the point is to record what was
+  // actually spent, not just the cost of the attempt that got shown.
+  let tierCostUsd = 0;
 
   for (let i = 0; i < ANSWER_TIER_ORDER.length; i++) {
     if (i > 0) {
@@ -254,7 +266,8 @@ async function* runChatStream(
     }
 
     const tier = ANSWER_TIER_ORDER[i];
-    const full = yield* drainAttempt(messages, tier, shownAny);
+    const { full, costUsd: attemptCost } = yield* drainAttempt(messages, tier, shownAny);
+    tierCostUsd += attemptCost;
     ({ prose, citations } = parseAnswer(full));
 
     const grounded =
@@ -298,15 +311,17 @@ async function* runChatStream(
   if (answer.trim() === NOT_FOUND_MSG) {
     if (shownAny.value) yield { type: "reset" };
     const web = await answerViaWebSearch(question, keywords);
-    const webProse = web?.prose.trim();
-    if (web && webProse && webProse !== NOT_FOUND_MSG) {
+    tierCostUsd += web.costUsd;
+    const webProse = web.answer?.prose.trim();
+    if (web.answer && webProse && webProse !== NOT_FOUND_MSG) {
       yield { type: "chunk", text: webProse };
       return {
         kind: "answer",
         text: webProse,
         legalBasis: [],
-        webSources: web.sources,
+        webSources: web.answer.sources,
         modelTier: "web",
+        costUsd: tierCostUsd,
       };
     }
     return { kind: "not_found" };
@@ -319,6 +334,7 @@ async function* runChatStream(
     legalBasis,
     webSources: webContext?.sources,
     modelTier: servedTier ?? "cheap",
+    costUsd: tierCostUsd,
   };
 }
 
@@ -371,6 +387,7 @@ export async function POST(req: Request) {
       legalBasis: cached.legalBasis,
       webSources: cached.webSources,
       modelTier: "cached",
+      costUsd: 0,
     });
   }
 
@@ -394,7 +411,7 @@ export async function POST(req: Request) {
   }
 
   if (fetched.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.costUsd, expanded.keywords);
   }
 
   const searchQuery: SearchQuery = {
@@ -404,7 +421,7 @@ export async function POST(req: Request) {
   };
   const matches = searchSources(fetched, searchQuery, 10);
   if (matches.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.costUsd, expanded.keywords);
   }
 
   // Only pay Perplexity's per-request search fee once we know it'll actually
@@ -485,6 +502,7 @@ export async function POST(req: Request) {
           answer: outcome.text,
           sources,
           modelTier: outcome.modelTier,
+          costUsd: expanded.costUsd + (web?.costUsd ?? 0) + outcome.costUsd,
         }),
       ];
       if (!isAdmin && quotaSplit) {

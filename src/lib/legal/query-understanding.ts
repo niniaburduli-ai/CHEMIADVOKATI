@@ -35,6 +35,9 @@ export type ExpandedQuery = {
    * parse failure so a classifier hiccup never silently downgrades quality.
    */
   needsWebContext: boolean;
+  /** Real billed cost (USD) of this expansion call — 0 on total failure
+   * (keyless, both attempts threw before a response came back). */
+  costUsd: number;
 };
 
 // Catalog of laws the classifier chooses from.
@@ -116,6 +119,7 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
     hypothetical: "",
     sourceIds: [],
     needsWebContext: true,
+    costUsd: 0,
   };
 
   if (!process.env.OPENROUTER_API_KEY) return fallback;
@@ -133,7 +137,7 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
   // phrasing doesn't lexically overlap the formal legal text.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = await callOpenRouter(messages, {
+      const { content: raw, costUsd } = await callOpenRouter(messages, {
         model: FAST_MODEL,
         // 0, not a small positive value: this call picks which laws/keywords get
         // searched, so any sampling variance here changes which articles get
@@ -145,11 +149,12 @@ export async function expandQuery(question: string): Promise<ExpandedQuery> {
         timeoutMs: 12_000,
       });
       const { keywords, hypothetical, sourceIds, needsWebContext } = parseExpansion(raw);
-      // If the model returned nothing usable, fall back rather than pass empties.
+      // If the model returned nothing usable, fall back rather than pass empties
+      // — but the call still cost money, so keep its cost rather than dropping it.
       if (keywords.length === 0 && !hypothetical && sourceIds.length === 0) {
-        return fallback;
+        return { ...fallback, costUsd };
       }
-      return { original, keywords, hypothetical, sourceIds, needsWebContext };
+      return { original, keywords, hypothetical, sourceIds, needsWebContext, costUsd };
     } catch {
       if (attempt === 0) continue;
     }

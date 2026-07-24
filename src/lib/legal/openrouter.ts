@@ -26,6 +26,7 @@
 
 import { isAllowedHost, stripCitations } from "./sources";
 import { openOpenRouterStream } from "../openrouter-stream-core";
+import { extractCostUsd } from "../openrouter-usage";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -304,7 +305,7 @@ export type CallOptions = {
 export async function callOpenRouter(
   messages: ChatMessage[],
   opts: CallOptions = {}
-): Promise<string> {
+): Promise<{ content: string; costUsd: number }> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is not set");
@@ -324,6 +325,7 @@ export async function callOpenRouter(
     messages,
     temperature: opts.temperature ?? 0.4,
     max_tokens: opts.maxTokens ?? 500,
+    usage: { include: true },
   };
   if (opts.frequencyPenalty != null) body.frequency_penalty = opts.frequencyPenalty;
   if (opts.json) body.response_format = { type: "json_object" };
@@ -350,7 +352,7 @@ export async function callOpenRouter(
 
   const json = await res.json();
   const content: string = json?.choices?.[0]?.message?.content ?? "";
-  return content.trim();
+  return { content: content.trim(), costUsd: extractCostUsd(json) };
 }
 
 /**
@@ -366,8 +368,8 @@ export async function callOpenRouter(
 export async function generateLegalAnswer(
   messages: ChatMessage[],
   tier: AnswerTier = "cheap"
-): Promise<string> {
-  return callOpenRouter(messages, {
+): Promise<{ text: string; costUsd: number }> {
+  const { content, costUsd } = await callOpenRouter(messages, {
     model: modelForTier(tier),
     // 0, not 0.1: identical question + identical retrieved text should always
     // cite the same articles and figures — any sampling temperature reopens
@@ -376,6 +378,7 @@ export async function generateLegalAnswer(
     maxTokens: 1200,
     frequencyPenalty: 0.2,
   });
+  return { text: content, costUsd };
 }
 
 /**
@@ -408,7 +411,7 @@ export async function streamLegalAnswer(
  * Docs: https://openrouter.ai/docs/guides/features/plugins/web-search */
 
 export type WebSource = { url: string; title: string };
-export type WebContext = { summary: string; sources: WebSource[] };
+export type WebContext = { summary: string; sources: WebSource[]; costUsd: number };
 
 /**
  * Safety-net web search — the uncovered-topic fallback (answerViaWebSearch)
@@ -479,6 +482,7 @@ export async function searchWebContext(
     model,
     temperature: 0.3,
     max_tokens: 450,
+    usage: { include: true },
     messages: [
       { role: "system", content: WEB_SEARCH_SYSTEM },
       { role: "user", content: question },
@@ -523,7 +527,7 @@ export async function searchWebContext(
     const summary: string = (msg?.content ?? "").trim();
     if (!summary) return null;
 
-    return { summary, sources: extractWebSources(msg, 6) };
+    return { summary, sources: extractWebSources(msg, 6), costUsd: extractCostUsd(json) };
   } catch {
     return null;
   } finally {
@@ -635,7 +639,7 @@ async function runWebAnswerAttempt(
   attempt: number,
   apiKey: string,
   keywords?: string[]
-): Promise<WebAnswer | null> {
+): Promise<{ answer: WebAnswer | null; costUsd: number }> {
   const model = WEB_MODEL();
   const body: Record<string, unknown> = {
     model,
@@ -643,6 +647,7 @@ async function runWebAnswerAttempt(
     // converge on the same failed search terms.
     temperature: attempt === 0 ? 0.2 : 0.5,
     max_tokens: 900,
+    usage: { include: true },
     messages: [
       { role: "system", content: WEB_ANSWER_SYSTEM },
       { role: "user", content: question + retryHint(attempt, keywords) },
@@ -680,22 +685,23 @@ async function runWebAnswerAttempt(
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { answer: null, costUsd: 0 };
 
     const json = await res.json();
+    const costUsd = extractCostUsd(json);
     const msg = json?.choices?.[0]?.message;
     const prose: string = (msg?.content ?? "").trim();
-    if (!prose) return null;
+    if (!prose) return { answer: null, costUsd };
 
     // Hard enforcement: only trust this answer if at least one cited source
     // is actually matsne.gov.ge. A prose answer with no confirmed matsne.gov.ge
     // citation is an unverifiable claim, not a grounded legal answer.
     const sources = extractWebSources(msg, 6).filter((s) => isAllowedHost(s.url));
-    if (sources.length === 0) return null;
+    if (sources.length === 0) return { answer: null, costUsd };
 
-    return { prose, sources };
+    return { answer: { prose, sources }, costUsd };
   } catch {
-    return null;
+    return { answer: null, costUsd: 0 };
   } finally {
     clearTimeout(timer);
   }
@@ -712,23 +718,27 @@ async function runWebAnswerAttempt(
  * citation / real explanation), so callers fall back to NOT_FOUND_MSG rather
  * than trust an unverifiable or bare-list claim.
  */
+export type WebSearchResult = { answer: WebAnswer | null; costUsd: number };
+
 export async function answerViaWebSearch(
   question: string,
   keywords?: string[]
-): Promise<WebAnswer | null> {
-  if (!WEB_SEARCH_ON()) return null;
+): Promise<WebSearchResult> {
+  if (!WEB_SEARCH_ON()) return { answer: null, costUsd: 0 };
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) return { answer: null, costUsd: 0 };
 
   let best: WebAnswer | null = null;
+  let costUsd = 0;
   for (let attempt = 0; attempt < WEB_ANSWER_MAX_ATTEMPTS; attempt++) {
     const result = await runWebAnswerAttempt(question, attempt, apiKey, keywords);
-    if (!result) continue;
-    if (looksLikeRealAnswer(result.prose)) return result;
+    costUsd += result.costUsd;
+    if (!result.answer) continue;
+    if (looksLikeRealAnswer(result.answer.prose)) return { answer: result.answer, costUsd };
     // Keep the least-bad result in case every attempt fails the strict check.
-    best = best ?? result;
+    best = best ?? result.answer;
   }
-  return best;
+  return { answer: best, costUsd };
 }
 
 const VERIFY_CITATIONS_SYSTEM = [
@@ -755,7 +765,7 @@ const VERIFY_CITATIONS_SYSTEM = [
 export async function verifyLegalCitations(
   docTypeName: string,
   citationsSection: string
-): Promise<string | null> {
+): Promise<{ text: string; costUsd: number } | null> {
   if (!WEB_SEARCH_ON()) return null;
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
@@ -765,6 +775,7 @@ export async function verifyLegalCitations(
     model,
     temperature: 0.2,
     max_tokens: 700,
+    usage: { include: true },
     messages: [
       { role: "system", content: VERIFY_CITATIONS_SYSTEM },
       {
@@ -801,7 +812,7 @@ export async function verifyLegalCitations(
 
     const json = await res.json();
     const content: string = (json?.choices?.[0]?.message?.content ?? "").trim();
-    return content || null;
+    return content ? { text: content, costUsd: extractCostUsd(json) } : null;
   } catch {
     return null;
   } finally {

@@ -18,6 +18,7 @@
 
 import https from "node:https";
 import type { IncomingMessage } from "node:http";
+import { extractCostUsd } from "./openrouter-usage";
 
 const OPENROUTER_HOST = "openrouter.ai";
 const OPENROUTER_PATH = "/api/v1/chat/completions";
@@ -57,7 +58,7 @@ export class OpenRouterConnectError extends Error {}
 export async function openOpenRouterStream(
   messages: StreamChatMessage[],
   opts: StreamOptions
-): Promise<AsyncGenerator<string, void, unknown>> {
+): Promise<AsyncGenerator<string, number, unknown>> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
@@ -66,6 +67,7 @@ export async function openOpenRouterStream(
     messages,
     max_tokens: opts.maxTokens,
     stream: true,
+    usage: { include: true },
     ...(opts.temperature != null ? { temperature: opts.temperature } : {}),
     ...(opts.frequencyPenalty != null ? { frequency_penalty: opts.frequencyPenalty } : {}),
     ...(opts.extraBody ?? {}),
@@ -107,14 +109,18 @@ async function readAll(res: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-/** Parse OpenRouter's `data: {...}\n\n` SSE frames into content deltas. */
+/** Parse OpenRouter's `data: {...}\n\n` SSE frames into content deltas.
+ * Returns the total billed cost (USD) as the generator's return value — it
+ * arrives on the final usage-bearing frame before `[DONE]` (see
+ * openrouter-usage.ts). 0 if the stream never carried a usage frame. */
 async function* consumeSse(
   res: IncomingMessage,
   idleTimeoutMs: number
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<string, number, unknown> {
   res.setTimeout(idleTimeoutMs, () => res.destroy(new Error("OpenRouter stream idle timeout")));
 
   let buffer = "";
+  let costUsd = 0;
   try {
     for await (const raw of res) {
       buffer += (raw as Buffer).toString("utf8");
@@ -136,10 +142,13 @@ async function* consumeSse(
             json as { choices?: Array<{ delta?: { content?: string } }> }
           )?.choices?.[0]?.delta?.content;
           if (delta) yield delta;
+          const cost = extractCostUsd(json);
+          if (cost > 0) costUsd = cost;
         }
       }
     }
   } finally {
     res.destroy();
   }
+  return costUsd;
 }

@@ -78,6 +78,7 @@ export type UserRow = {
   docTemplatesRemaining?: number;
   planExpiresAt?: string | null;
   createdAt: string | null;
+  totalAiCostUsd: number;
 };
 
 export type ConsultationRow = {
@@ -85,6 +86,7 @@ export type ConsultationRow = {
   question: string;
   answer: string;
   modelTier: string | null;
+  costUsd: number;
   createdAt: string | null;
   owner: { name: string | null; email: string | null } | null;
 };
@@ -107,10 +109,20 @@ function formatModelTier(tier: string | null): string {
   return MODEL_TIER_LABEL[tier] ?? tier;
 }
 
+/** USD → cents, formatted with enough decimals to stay visible for cheap
+ * calls (e.g. "0.0231¢"). "—" for untracked/zero-cost records (cache hits,
+ * pre-tracking rows). */
+function formatCostUsd(costUsd: number): string {
+  if (!costUsd || costUsd <= 0) return "—";
+  const cents = costUsd * 100;
+  return `${cents < 0.01 ? cents.toFixed(4) : cents.toFixed(2)}¢`;
+}
+
 export type GeneratedDocRow = {
   id: string;
   title: string;
   type: string;
+  costUsd: number;
   createdAt: string | null;
   owner: { name: string | null; email: string | null } | null;
 };
@@ -121,6 +133,7 @@ export type ReviewRow = {
   summary: string;
   findingsCount: number;
   recommendationsCount: number;
+  costUsd: number;
   createdAt: string | null;
   owner: { name: string | null; email: string | null } | null;
 };
@@ -340,13 +353,14 @@ function UsersTable({
             <th>კონს.</th>
             <th>დოკ.გ</th>
             <th>მიმ.</th>
+            <th>AI ხარჯი</th>
             <th>რეგ.</th>
             <th className="text-right">ქმედება</th>
           </tr>
         </thead>
         <tbody>
           {users.length === 0 && (
-            <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">მომხმარებლები არ არის</td></tr>
+            <tr><td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">მომხმარებლები არ არის</td></tr>
           )}
           {users.map((u) => (
             <tr key={u.id} className="border-b last:border-0 [&>td]:px-4 [&>td]:py-3">
@@ -360,6 +374,7 @@ function UsersTable({
               <td>{u.consultationsRemaining}</td>
               <td>{u.docGenerationRemaining}</td>
               <td>{u.docReviewRemaining}</td>
+              <td className="text-muted-foreground">{formatCostUsd(u.totalAiCostUsd)}</td>
               <td className="text-muted-foreground">{formatDate(u.createdAt)}</td>
               <td>
                 <div className="flex justify-end gap-1">
@@ -468,6 +483,11 @@ function EditUserDialog({
           <DialogTitle>მომხმარებლის რედაქტირება</DialogTitle>
           <DialogDescription>{user?.email}</DialogDescription>
         </DialogHeader>
+        {user && (
+          <p className="text-xs text-muted-foreground">
+            სულ AI ხარჯი: <span className="font-medium text-foreground">{formatCostUsd(user.totalAiCostUsd)}</span>
+          </p>
+        )}
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label htmlFor="edit-name">სახელი</Label>
@@ -545,13 +565,14 @@ function ConsultationsTable({ initial }: { initial: ConsultationRow[] }) {
             <th>შეკითხვა</th>
             <th>მომხმარებელი</th>
             <th>მოდელი</th>
+            <th>ღირებულება</th>
             <th>თარიღი</th>
             <th className="text-right">პასუხი</th>
           </tr>
         </thead>
         <tbody>
           {initial.length === 0 && (
-            <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">კონსულტაციები არ არის</td></tr>
+            <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">კონსულტაციები არ არის</td></tr>
           )}
           {initial.map((c) => (
             <React.Fragment key={c.id}>
@@ -574,6 +595,7 @@ function ConsultationsTable({ initial }: { initial: ConsultationRow[] }) {
                     <span className="text-xs text-muted-foreground">უცნობი (ძველი ჩანაწერი)</span>
                   )}
                 </td>
+                <td className="text-muted-foreground">{formatCostUsd(c.costUsd)}</td>
                 <td className="text-muted-foreground">{formatDate(c.createdAt)}</td>
                 <td className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setExpanded(expanded === c.id ? null : c.id)}>
@@ -583,7 +605,7 @@ function ConsultationsTable({ initial }: { initial: ConsultationRow[] }) {
               </tr>
               {expanded === c.id && (
                 <tr key={`${c.id}-exp`} className="border-b bg-muted/20">
-                  <td colSpan={5} className="px-4 py-3">
+                  <td colSpan={6} className="px-4 py-3">
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{c.answer}</p>
                   </td>
                 </tr>
@@ -606,13 +628,14 @@ function GeneratedDocsTable({ initial }: { initial: GeneratedDocRow[] }) {
           <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-left [&>th]:font-medium">
             <th>სათაური</th>
             <th>ტიპი</th>
+            <th>ღირებულება</th>
             <th>მომხმარებელი</th>
             <th>თარიღი</th>
           </tr>
         </thead>
         <tbody>
           {initial.length === 0 && (
-            <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">დოკუმენტები არ არის</td></tr>
+            <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">დოკუმენტები არ არის</td></tr>
           )}
           {initial.map((d) => (
             <tr key={d.id} className="border-b last:border-0 [&>td]:px-4 [&>td]:py-3">
@@ -622,6 +645,7 @@ function GeneratedDocsTable({ initial }: { initial: GeneratedDocRow[] }) {
                   {DOC_TYPES[d.type as keyof typeof DOC_TYPES] ?? d.type}
                 </Badge>
               </td>
+              <td className="text-muted-foreground">{formatCostUsd(d.costUsd)}</td>
               <td>
                 <div className="text-xs">
                   <div>{d.owner?.name ?? "—"}</div>
@@ -650,13 +674,14 @@ function ReviewsTable({ initial }: { initial: ReviewRow[] }) {
             <th>მომხმარებელი</th>
             <th>პრობლ.</th>
             <th>რეკ.</th>
+            <th>ღირებულება</th>
             <th>თარიღი</th>
             <th className="text-right">შეჯამება</th>
           </tr>
         </thead>
         <tbody>
           {initial.length === 0 && (
-            <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">მიმოხილვები არ არის</td></tr>
+            <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">მიმოხილვები არ არის</td></tr>
           )}
           {initial.map((r) => (
             <React.Fragment key={r.id}>
@@ -670,6 +695,7 @@ function ReviewsTable({ initial }: { initial: ReviewRow[] }) {
                 </td>
                 <td>{r.findingsCount}</td>
                 <td>{r.recommendationsCount}</td>
+                <td className="text-muted-foreground">{formatCostUsd(r.costUsd)}</td>
                 <td className="text-muted-foreground">{formatDate(r.createdAt)}</td>
                 <td className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setExpanded(expanded === r.id ? null : r.id)}>
@@ -679,7 +705,7 @@ function ReviewsTable({ initial }: { initial: ReviewRow[] }) {
               </tr>
               {expanded === r.id && (
                 <tr key={`${r.id}-exp`} className="border-b bg-muted/20">
-                  <td colSpan={6} className="px-4 py-3">
+                  <td colSpan={7} className="px-4 py-3">
                     <p className="text-sm leading-relaxed">{r.summary}</p>
                   </td>
                 </tr>
