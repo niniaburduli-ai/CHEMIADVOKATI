@@ -8,6 +8,8 @@ const FeedbackSchema = new Schema(
   { timestamps: true }
 );
 
+FeedbackSchema.index({ createdAt: -1 });
+
 export type FeedbackDoc = InferSchemaType<typeof FeedbackSchema> & { _id: unknown };
 
 export const Feedback: Model<FeedbackDoc> =

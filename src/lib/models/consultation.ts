@@ -40,6 +40,8 @@ const ConsultationSchema = new Schema(
   { timestamps: true }
 );
 
+ConsultationSchema.index({ createdAt: -1 });
+
 export type ConsultationDoc = InferSchemaType<typeof ConsultationSchema>;
 
 export const Consultation: Model<ConsultationDoc> =

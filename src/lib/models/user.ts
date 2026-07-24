@@ -79,6 +79,8 @@ const UserSchema = new Schema(
   { timestamps: true }
 );
 
+UserSchema.index({ createdAt: -1 });
+
 export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: unknown };
 
 export const User: Model<UserDoc> =

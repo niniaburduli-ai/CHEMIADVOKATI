@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
@@ -22,6 +22,7 @@ import {
   Menu,
   Scale,
   Star,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -166,41 +167,87 @@ function formatDate(iso: string | null): string {
   return iso.slice(0, 10);
 }
 
+function SectionLoading() {
+  return (
+    <div className="flex items-center justify-center py-20 text-muted-foreground">
+      <Loader2 className="mr-2 h-5 w-5 animate-spin" /> იტვირთება…
+    </div>
+  );
+}
+
 type AdminSection =
   | "overview" | "users" | "consultations" | "documents" | "reviews" | "feedback"
   | "files" | "cms" | "theme" | "plans" | "custom-plan-rates" | "features" | "database";
 
+type SectionCounts = {
+  uploads: number;
+  users: number;
+  consultations: number;
+  generatedDocs: number;
+  reviews: number;
+  feedback: number;
+};
+
+/** Section row data loads lazily (one fetch, the first time a tab opens) and
+ * is cached here for the lifetime of the dashboard — switching tabs back and
+ * forth never re-fetches. `null` means "not loaded yet". */
+function useLazySection<T>(url: string, active: boolean) {
+  const [rows, setRows] = useState<T[] | null>(null);
+
+  useEffect(() => {
+    if (!active || rows !== null) return;
+    let cancelled = false;
+    fetch(url)
+      .then((r) => r.json())
+      .then(({ items }) => {
+        if (!cancelled) setRows(Array.isArray(items) ? items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, rows === null]);
+
+  return [rows, setRows] as const;
+}
+
 export function AdminDashboard({
-  initialUploads,
-  initialUsers,
-  initialConsultations,
-  initialGeneratedDocs,
-  initialReviews,
-  initialFeedback,
   currentUserId,
+  counts,
 }: {
-  initialUploads: UploadRow[];
-  initialUsers: UserRow[];
-  initialConsultations: ConsultationRow[];
-  initialGeneratedDocs: GeneratedDocRow[];
-  initialReviews: ReviewRow[];
-  initialFeedback: FeedbackRow[];
   currentUserId: string;
+  counts: SectionCounts;
 }) {
   const [section, setSection] = useState<AdminSection>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [users, setUsers] = useLazySection<UserRow>("/api/admin/users", section === "users");
+  const [consultations] = useLazySection<ConsultationRow>(
+    "/api/admin/consultations",
+    section === "consultations"
+  );
+  const [generatedDocs] = useLazySection<GeneratedDocRow>(
+    "/api/admin/generated-documents",
+    section === "documents"
+  );
+  const [reviews] = useLazySection<ReviewRow>("/api/admin/reviews", section === "reviews");
+  const [feedback] = useLazySection<FeedbackRow>("/api/admin/feedback", section === "feedback");
+  const [uploads, setUploads] = useLazySection<UploadRow>("/api/admin/uploads", section === "files");
 
   const NAV: { group: string; items: { id: AdminSection; label: string; icon: LucideIcon; count?: number }[] }[] = [
     {
       group: "მთავარი",
       items: [
         { id: "overview", label: "მიმოხილვა", icon: BarChart3 },
-        { id: "users", label: "მომხმარებლები", icon: Users, count: initialUsers.length },
-        { id: "consultations", label: "კონსულტაციები", icon: MessagesSquare, count: initialConsultations.length },
-        { id: "documents", label: "დოკუმენტები", icon: FileText, count: initialGeneratedDocs.length },
-        { id: "reviews", label: "მიმოხილვები", icon: FileSearch, count: initialReviews.length },
-        { id: "feedback", label: "შეფასებები", icon: Star, count: initialFeedback.length },
-        { id: "files", label: "ფაილები", icon: ImageIcon, count: initialUploads.length },
+        { id: "users", label: "მომხმარებლები", icon: Users, count: counts.users },
+        { id: "consultations", label: "კონსულტაციები", icon: MessagesSquare, count: counts.consultations },
+        { id: "documents", label: "დოკუმენტები", icon: FileText, count: counts.generatedDocs },
+        { id: "reviews", label: "მიმოხილვები", icon: FileSearch, count: counts.reviews },
+        { id: "feedback", label: "შეფასებები", icon: Star, count: counts.feedback },
+        { id: "files", label: "ფაილები", icon: ImageIcon, count: counts.uploads },
       ],
     },
     {
@@ -278,12 +325,28 @@ export function AdminDashboard({
   let content: React.ReactNode = null;
   switch (section) {
     case "overview": content = <OverviewPanel />; break;
-    case "users": content = <UsersTable initial={initialUsers} currentUserId={currentUserId} />; break;
-    case "consultations": content = <ConsultationsTable initial={initialConsultations} />; break;
-    case "documents": content = <GeneratedDocsTable initial={initialGeneratedDocs} />; break;
-    case "reviews": content = <ReviewsTable initial={initialReviews} />; break;
-    case "feedback": content = <FeedbackTable initial={initialFeedback} />; break;
-    case "files": content = <UploadsTable initial={initialUploads} />; break;
+    case "users":
+      content = users === null
+        ? <SectionLoading />
+        : <UsersTable initial={users} currentUserId={currentUserId} onUsersChange={setUsers} />;
+      break;
+    case "consultations":
+      content = consultations === null ? <SectionLoading /> : <ConsultationsTable initial={consultations} />;
+      break;
+    case "documents":
+      content = generatedDocs === null ? <SectionLoading /> : <GeneratedDocsTable initial={generatedDocs} />;
+      break;
+    case "reviews":
+      content = reviews === null ? <SectionLoading /> : <ReviewsTable initial={reviews} />;
+      break;
+    case "feedback":
+      content = feedback === null ? <SectionLoading /> : <FeedbackTable initial={feedback} />;
+      break;
+    case "files":
+      content = uploads === null
+        ? <SectionLoading />
+        : <UploadsTable initial={uploads} onFilesChange={setUploads} />;
+      break;
     case "cms": content = <CMSPanel />; break;
     case "theme": content = <ThemePanel />; break;
     case "plans": content = <PlansPanel />; break;
@@ -326,11 +389,13 @@ export function AdminDashboard({
 function UsersTable({
   initial,
   currentUserId,
+  onUsersChange,
 }: {
   initial: UserRow[];
   currentUserId: string;
+  onUsersChange: (updater: (prev: UserRow[] | null) => UserRow[] | null) => void;
 }) {
-  const [users, setUsers] = useState<UserRow[]>(initial);
+  const users = initial;
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -345,7 +410,7 @@ function UsersTable({
       const res = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) { toast.error(data?.error ?? "წაშლა ვერ მოხერხდა"); return; }
-      setUsers((prev) => prev.filter((x) => x.id !== u.id));
+      onUsersChange((prev) => (prev ?? []).filter((x) => x.id !== u.id));
       toast.success("მომხმარებელი წაიშალა");
     } catch { toast.error("ქსელის შეცდომა"); }
     finally { setBusyId(null); }
@@ -405,7 +470,7 @@ function UsersTable({
         currentUserId={currentUserId}
         onClose={() => setEditing(null)}
         onSaved={(updated) => {
-          setUsers((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+          onUsersChange((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)));
           setEditing(null);
         }}
       />
@@ -795,8 +860,14 @@ function FeedbackTable({ initial }: { initial: FeedbackRow[] }) {
 
 /* -------------------------------- Files -------------------------------- */
 
-function UploadsTable({ initial }: { initial: UploadRow[] }) {
-  const [files, setFiles] = useState<UploadRow[]>(initial);
+function UploadsTable({
+  initial,
+  onFilesChange,
+}: {
+  initial: UploadRow[];
+  onFilesChange: (updater: (prev: UploadRow[] | null) => UploadRow[] | null) => void;
+}) {
+  const files = initial;
   const [editing, setEditing] = useState<UploadRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -807,7 +878,7 @@ function UploadsTable({ initial }: { initial: UploadRow[] }) {
       const res = await fetch(`/api/admin/uploads/${f.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) { toast.error(data?.error ?? "წაშლა ვერ მოხერხდა"); return; }
-      setFiles((prev) => prev.filter((x) => x.id !== f.id));
+      onFilesChange((prev) => (prev ?? []).filter((x) => x.id !== f.id));
       toast.success("ფაილი წაიშალა");
     } catch { toast.error("ქსელის შეცდომა"); }
     finally { setBusyId(null); }
@@ -875,7 +946,7 @@ function UploadsTable({ initial }: { initial: UploadRow[] }) {
         file={editing}
         onClose={() => setEditing(null)}
         onSaved={(id, note) => {
-          setFiles((prev) => prev.map((x) => (x.id === id ? { ...x, note } : x)));
+          onFilesChange((prev) => (prev ?? []).map((x) => (x.id === id ? { ...x, note } : x)));
           setEditing(null);
         }}
       />

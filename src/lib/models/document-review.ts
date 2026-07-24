@@ -43,6 +43,8 @@ const DocumentReviewSchema = new Schema(
   { timestamps: true }
 );
 
+DocumentReviewSchema.index({ createdAt: -1 });
+
 export type DocumentReviewDoc = InferSchemaType<typeof DocumentReviewSchema> & { _id: unknown };
 
 export const DocumentReview: Model<DocumentReviewDoc> =

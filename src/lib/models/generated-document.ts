@@ -16,6 +16,8 @@ const GeneratedDocumentSchema = new Schema(
   { timestamps: true }
 );
 
+GeneratedDocumentSchema.index({ createdAt: -1 });
+
 export type GeneratedDocumentDoc = InferSchemaType<typeof GeneratedDocumentSchema> & { _id: unknown };
 
 export const GeneratedDocument: Model<GeneratedDocumentDoc> =

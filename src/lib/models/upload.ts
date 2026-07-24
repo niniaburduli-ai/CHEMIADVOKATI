@@ -14,6 +14,8 @@ const UploadSchema = new Schema(
   { timestamps: true }
 );
 
+UploadSchema.index({ createdAt: -1 });
+
 export type UploadDoc = InferSchemaType<typeof UploadSchema> & { _id: unknown };
 
 export const Upload: Model<UploadDoc> =
