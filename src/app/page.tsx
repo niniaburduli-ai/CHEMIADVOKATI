@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, BadgeCheck, Star } from "lucide-react"
 import { AnimateIn } from "@/components/site/AnimateIn"
@@ -158,19 +159,22 @@ export default async function Home() {
           {/* Statue is static; the scale mechanism is a separate overlay layer so only it can swing. */}
           <div className="absolute inset-y-0 right-0 w-full lg:w-[62%] flex items-end justify-center pointer-events-none select-none">
             <div className="relative h-full" style={{ aspectRatio: "900 / 1371" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/kartlis_deda_5.png"
                 alt=""
                 aria-hidden="true"
-                className="absolute inset-0 h-full w-full object-contain drop-shadow-[0_10px_50px_rgba(0,0,0,0.45)]"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 62vw"
+                className="object-contain drop-shadow-[0_10px_50px_rgba(0,0,0,0.45)]"
               />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/kartlis_deda_scale.png"
                 alt=""
                 aria-hidden="true"
-                className="absolute animate-scale-sway object-contain"
+                fill
+                sizes="(max-width: 1024px) 47vw, 29vw"
+                className="animate-scale-sway object-contain"
                 style={{ left: "52.78%", top: "20.57%", width: "46.67%", height: "20.42%" }}
               />
             </div>

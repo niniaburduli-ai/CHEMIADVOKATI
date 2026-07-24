@@ -19,6 +19,7 @@ export default function robots(): MetadataRoute.Robots {
         "/chat",
         "/billing",
         "/generate",
+        "/templates",
         "/review",
         "/login",
         "/register",

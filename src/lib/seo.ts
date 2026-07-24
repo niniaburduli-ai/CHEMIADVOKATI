@@ -162,7 +162,7 @@ export function buildMetadata(opts: BuildMetaOpts): Metadata {
 /* ------------------------------------------------------------------ */
 
 /** Organization + LegalService — describes the business to search engines. */
-export function organizationJsonLd() {
+export function organizationJsonLd(sameAs?: string[]) {
   return {
     "@context": "https://schema.org",
     "@type": ["Organization", "LegalService"],
@@ -183,6 +183,7 @@ export function organizationJsonLd() {
       "ხელშეკრულების გენერირება",
       "რისკების ანალიზი",
     ],
+    ...(sameAs && sameAs.length ? { sameAs } : {}),
   }
 }
 

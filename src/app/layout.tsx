@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { getThemeConfig, buildThemeCss } from "@/lib/theme";
+import { getSiteConfig } from "@/lib/cms";
 import { getLocale } from "@/lib/i18n/locale";
 import { JsonLd } from "@/components/site/JsonLd";
 import {
@@ -106,6 +107,8 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const [themeConfig, locale] = await Promise.all([getThemeConfig(), getLocale()]);
   const themeCss = buildThemeCss(themeConfig);
+  const siteConfig = await getSiteConfig(locale);
+  const sameAs = Object.values(siteConfig.socialLinks ?? {}).filter((v): v is string => !!v);
 
   return (
     <html
@@ -117,7 +120,7 @@ export default async function RootLayout({
         {/* Admin-editable theme: overrides globals.css tokens (see lib/theme.ts). */}
         <style id="cms-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />
         {/* Site-wide structured data: Organization/LegalService + WebSite search box. */}
-        <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
+        <JsonLd data={[organizationJsonLd(sameAs), webSiteJsonLd()]} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <Header />
           <TestModeBanner />
