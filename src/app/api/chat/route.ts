@@ -37,6 +37,8 @@ import {
 } from "@/lib/legal/openrouter";
 import { DelimiterSplitter } from "@/lib/streaming/delimiter-splitter";
 import { encodeReset, encodeMeta } from "@/lib/streaming/chat-protocol";
+import { maskPII, unmaskPII, type PiiMap } from "@/lib/privacy/pii-mask";
+import { PiiUnmaskStream } from "@/lib/privacy/pii-unmask-stream";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -126,20 +128,23 @@ async function tryWebFallback(
   isAdmin: boolean,
   quotaSplit: QuotaSplit | null,
   question: string,
+  maskedQuestion: string,
+  piiMap: PiiMap,
   priorCostUsd: number,
   keywords?: string[]
 ): Promise<Response> {
-  const web = await answerViaWebSearch(question, keywords);
+  const web = await answerViaWebSearch(maskedQuestion, keywords);
   const costUsd = priorCostUsd + web.costUsd;
   const prose = web.answer?.prose.trim();
-  if (web.answer && prose && prose !== NOT_FOUND_MSG) {
-    await setCachedAnswer(question, { answer: prose, legalBasis: [], webSources: web.answer.sources });
+  const unmaskedProse = prose ? unmaskPII(prose, piiMap) : prose;
+  if (web.answer && unmaskedProse && unmaskedProse !== NOT_FOUND_MSG) {
+    await setCachedAnswer(maskedQuestion, { answer: unmaskedProse, legalBasis: [], webSources: web.answer.sources });
     return finalizeAnswer({
       userId,
       isAdmin,
       quotaSplit,
       question,
-      answer: prose,
+      answer: unmaskedProse,
       legalBasis: [],
       webSources: web.answer.sources,
       modelTier: "web",
@@ -359,6 +364,7 @@ export async function POST(req: Request) {
     );
   }
   const question = parsed.data.question;
+  const { masked: maskedQuestion, map: piiMap } = maskPII(question);
 
   await dbConnect();
   let user = await User.findById(session.user.id).lean();
@@ -376,7 +382,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { value: cached, embedding: questionEmbedding } = await getCachedAnswer(question);
+  const { value: cached, embedding: questionEmbedding } = await getCachedAnswer(maskedQuestion);
   if (cached) {
     return finalizeAnswer({
       userId: session.user.id,
@@ -391,7 +397,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const expanded = await expandQuery(question);
+  const expanded = await expandQuery(maskedQuestion);
   const selected =
     expanded.sourceIds.length > 0
       ? APPROVED_SOURCES.filter((s) => expanded.sourceIds.includes(s.id))
@@ -411,7 +417,7 @@ export async function POST(req: Request) {
   }
 
   if (fetched.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.costUsd, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, maskedQuestion, piiMap, expanded.costUsd, expanded.keywords);
   }
 
   const searchQuery: SearchQuery = {
@@ -421,7 +427,7 @@ export async function POST(req: Request) {
   };
   const matches = searchSources(fetched, searchQuery, 10);
   if (matches.length === 0) {
-    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, expanded.costUsd, expanded.keywords);
+    return tryWebFallback(session.user.id, isAdmin, quotaSplit, question, maskedQuestion, piiMap, expanded.costUsd, expanded.keywords);
   }
 
   // Only pay Perplexity's per-request search fee once we know it'll actually
@@ -431,9 +437,9 @@ export async function POST(req: Request) {
   // decided this question is a pure fact/definition lookup that the law text
   // already answers fully — practical/real-world context is explicitly
   // secondary color (SYSTEM_PROMPT rule 10), not needed on every request.
-  const web = expanded.needsWebContext ? await searchWebContext(question) : null;
+  const web = expanded.needsWebContext ? await searchWebContext(maskedQuestion) : null;
   const userPrompt = buildGroundedPrompt(
-    question,
+    maskedQuestion,
     matches.map((m) => ({ ...m, lawTitle: cleanLawName(m.lawTitle) })),
     web?.summary
   );
@@ -447,16 +453,22 @@ export async function POST(req: Request) {
   const bodyStream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let outcome: ChatOutcome;
+      let piiStream = new PiiUnmaskStream(piiMap);
       try {
-        const gen = runChatStream(messages, matches, question, expanded.keywords, web);
+        const gen = runChatStream(messages, matches, maskedQuestion, expanded.keywords, web);
         let r = await gen.next();
         while (!r.done) {
           const ev = r.value;
-          controller.enqueue(
-            encoder.encode(ev.type === "chunk" ? ev.text : encodeReset())
-          );
+          if (ev.type === "chunk") {
+            controller.enqueue(encoder.encode(piiStream.push(ev.text)));
+          } else {
+            piiStream = new PiiUnmaskStream(piiMap);
+            controller.enqueue(encoder.encode(encodeReset()));
+          }
           r = await gen.next();
         }
+        const trailing = piiStream.finish();
+        if (trailing) controller.enqueue(encoder.encode(trailing));
         outcome = r.value;
       } catch {
         outcome = { kind: "technical_error" };
@@ -475,9 +487,11 @@ export async function POST(req: Request) {
         return;
       }
 
+      const unmaskedAnswer = unmaskPII(outcome.text, piiMap);
+
       await setCachedAnswer(
-        question,
-        { answer: outcome.text, legalBasis: outcome.legalBasis, webSources: outcome.webSources },
+        maskedQuestion,
+        { answer: unmaskedAnswer, legalBasis: outcome.legalBasis, webSources: outcome.webSources },
         questionEmbedding
       );
 
@@ -499,7 +513,7 @@ export async function POST(req: Request) {
         Consultation.create({
           userId: session.user.id,
           question,
-          answer: outcome.text,
+          answer: unmaskedAnswer,
           sources,
           modelTier: outcome.modelTier,
           costUsd: expanded.costUsd + (web?.costUsd ?? 0) + outcome.costUsd,
